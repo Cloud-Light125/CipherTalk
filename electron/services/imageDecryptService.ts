@@ -112,6 +112,14 @@ export class ImageDecryptService {
   private hdNotFoundCache = new Set<string>()  // 高清图失败缓存
   private nativeLogged = false
   private datPathIndex = new Map<string, string>()
+  // wxgf/HEVC→JPG 转码结果按内容哈希缓存（同一张贴纸会在很多条消息里重复出现，
+  // 磁盘缓存是按每条消息的 .dat 路径分的，不会互相命中，这里补一层内容级去重）
+  private wxgfResultCache = new Map<string, Buffer>()
+  private wxgfConvertInFlight = new Map<string, Promise<Buffer | null>>()
+  // 已知会导致 ffmpeg 卡死超时的帧，命中直接跳过转码，避免同一张坏图反复触发
+  private wxgfConvertBlacklist = new Set<string>()
+  private static readonly WXGF_CACHE_LIMIT = 200
+  private ffmpegPathLogged = false
   private datPathIndexLoaded = false
   private datPathIndexWriteTimer: ReturnType<typeof setTimeout> | null = null
   private prewarmKeys = new Set<string>()
@@ -2953,7 +2961,12 @@ export class ImageDecryptService {
 
     let fallbackJpg: Buffer | null = null
     for (const hevcData of hevcStreams) {
-      const jpgData = await this.convertHevcToJpg(hevcData)
+      const hevcHash = crypto.createHash('md5').update(hevcData).digest('hex')
+      if (this.wxgfConvertBlacklist.has(hevcHash)) {
+        console.warn(`[ImageDecrypt] wxgf 帧命中超时黑名单，跳过 ffmpeg 转码: ${hevcHash}`)
+        continue
+      }
+      const jpgData = await this.convertHevcToJpgCached(hevcHash, hevcData)
       if (jpgData && jpgData.length > 0) {
         if (!this.isProbablyBlankConvertedJpeg(jpgData)) {
           return { data: jpgData, isWxgf: false }
@@ -3142,26 +3155,74 @@ export class ImageDecryptService {
   private getFfmpegPath(): string {
     // 尝试获取 ffmpeg-static 的路径
     const staticPath = getStaticFfmpegPath()
+    let resolved: string
     if (staticPath) {
       // 处理 asar 打包的情况
       const unpackedPath = staticPath.replace('app.asar', 'app.asar.unpacked')
       if (existsSync(unpackedPath)) {
-        return unpackedPath
+        resolved = unpackedPath
+      } else if (existsSync(staticPath)) {
+        resolved = staticPath
+      } else {
+        // 回退到系统 PATH
+        console.warn(`[ImageDecrypt] ffmpeg-static 未找到解压路径，尝试使用系统 ffmpeg: ${staticPath}`)
+        resolved = 'ffmpeg'
       }
-      if (existsSync(staticPath)) {
-        return staticPath
-      }
+    } else {
+      resolved = 'ffmpeg'
     }
-    // 回退到系统 PATH
-    console.warn(`[ImageDecrypt] ffmpeg-static 未找到解压路径，尝试使用系统 ffmpeg: ${staticPath}`)
-    return 'ffmpeg'
+    if (!this.ffmpegPathLogged) {
+      this.ffmpegPathLogged = true
+      console.log(`[ImageDecrypt] wxgf 转码使用 ffmpeg 路径: ${resolved}`)
+    }
+    return resolved
+  }
+
+  /**
+   * 转码结果按内容哈希缓存 + 进行中的相同请求去重。
+   * 同一张贴纸会在很多条消息里重复出现，磁盘缓存按 .dat 路径分（互相不命中），
+   * 这里在内容层面避免重复起 ffmpeg 进程。
+   */
+  private convertHevcToJpgCached(hash: string, hevcData: Buffer): Promise<Buffer | null> {
+    const cached = this.wxgfResultCache.get(hash)
+    if (cached) return Promise.resolve(cached)
+
+    const pending = this.wxgfConvertInFlight.get(hash)
+    if (pending) return pending
+
+    const task = this.convertHevcToJpg(hevcData, hash)
+      .then((result) => {
+        if (result && result.length > 0) this.rememberWxgfResult(hash, result)
+        return result
+      })
+      .finally(() => {
+        this.wxgfConvertInFlight.delete(hash)
+      })
+    this.wxgfConvertInFlight.set(hash, task)
+    return task
+  }
+
+  private rememberWxgfResult(hash: string, data: Buffer): void {
+    if (this.wxgfResultCache.size >= ImageDecryptService.WXGF_CACHE_LIMIT) {
+      const oldest = this.wxgfResultCache.keys().next().value
+      if (oldest) this.wxgfResultCache.delete(oldest)
+    }
+    this.wxgfResultCache.set(hash, data)
+  }
+
+  private blacklistWxgfHash(hash: string): void {
+    if (this.wxgfConvertBlacklist.size >= ImageDecryptService.WXGF_CACHE_LIMIT) {
+      const oldest = this.wxgfConvertBlacklist.values().next().value
+      if (oldest) this.wxgfConvertBlacklist.delete(oldest)
+    }
+    this.wxgfConvertBlacklist.add(hash)
   }
 
   /**
    * 使用 ffmpeg 将 HEVC 裸流转换为 JPG
    * 使用 spawn + 管道，最小化开销
    */
-  private convertHevcToJpg(hevcData: Buffer): Promise<Buffer | null> {
+  private convertHevcToJpg(hevcData: Buffer, hash?: string): Promise<Buffer | null> {
     const ffmpeg = this.getFfmpegPath()
     // console.log(`[ImageDecrypt] 使用 ffmpeg: ${ffmpeg}`)
 
@@ -3190,8 +3251,10 @@ export class ImageDecryptService {
       // wxgf 内嵌的 still-image HEVC 裸流缺帧边界分隔符时，ffmpeg 会等下一个 access unit
       // 才输出当前帧，导致进程永久阻塞、不退出 → 聊天里划过大量 wxgf 图会攒成成千上万个
       // 卡死的 ffmpeg.exe（各带一个 conhost 窗口）。补超时 kill，与语音转换路径保持一致。
+      // 同一帧内容超时一次就拉黑，避免同一张坏图反复触发（见 blacklistWxgfHash）。
       const killTimer = setTimeout(() => {
         console.error('[ImageDecrypt] ffmpeg 转换超时，强制结束进程')
+        if (hash) this.blacklistWxgfHash(hash)
         try { proc.kill() } catch { /* 已退出 */ }
         resolve(null)
       }, 15000)

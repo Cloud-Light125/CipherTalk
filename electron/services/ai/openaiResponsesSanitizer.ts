@@ -177,11 +177,33 @@ function requestUrl(input: RequestInfo | URL): string {
   return input.url || ''
 }
 
+/**
+ * 开了 Zero Data Retention 的 OpenAI org 调 /responses 不显式传 store:false 会 400
+ * "Store must be set to false"。默认关闭存储对隐私类产品本就是更安全的默认值，
+ * 这里统一补上，不用每个调用方各自记得传 providerOptions。
+ */
+function injectStoreFalse(bodyText: string): string {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(bodyText)
+  } catch {
+    return bodyText
+  }
+  if (!isRecord(parsed) || 'store' in parsed) return bodyText
+  parsed.store = false
+  return JSON.stringify(parsed)
+}
+
 export function withOpenAIResponsesSanitizer(baseFetch: typeof globalThis.fetch | undefined): typeof globalThis.fetch {
   const f = baseFetch ?? (globalThis.fetch as typeof globalThis.fetch)
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const res = await f(input, init)
     const url = requestUrl(input)
+    let nextInit = init
+    if (/\/responses(?:\?|$)/.test(url) && typeof init?.body === 'string') {
+      const patchedBody = injectStoreFalse(init.body)
+      if (patchedBody !== init.body) nextInit = { ...init, body: patchedBody }
+    }
+    const res = await f(input, nextInit)
     const contentType = res.headers.get('content-type') || ''
     if (!res.ok || !/\/responses(?:\?|$)/.test(url) || !contentType.includes('application/json')) {
       return res
