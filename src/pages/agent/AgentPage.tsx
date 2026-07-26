@@ -769,6 +769,10 @@ export default function AgentPage() {
   const messagesRef = useRef<UIMessage[]>(messages)
   messagesRef.current = messages
   const lastSavedMessagesRef = useRef('')
+  const pendingSaveSignaturesRef = useRef(new Set<string>())
+  const conversationSaveRetryTimerRef = useRef<number | null>(null)
+  const conversationSaveErrorRef = useRef('')
+  const flushConversationMessagesToStorageRef = useRef<(options?: { refreshRecords?: boolean }) => boolean>(() => false)
   const streamingSaveTimerRef = useRef<number | null>(null)
   const lastStreamingSaveAtRef = useRef(0)
   const [modelOpen, setModelOpen] = useState(false)
@@ -1143,6 +1147,7 @@ export default function AgentPage() {
   ) => {
     const result = await saveConversationMessages(targetId, nextMessages, nextScope)
     if (result?.success) void refreshConversationRecords()
+    return result
   }, [refreshConversationRecords, saveConversationMessages])
 
   const persistLocalAgentConversationMessages = useCallback(async (
@@ -1187,15 +1192,41 @@ export default function AgentPage() {
 
     const signature = signatureAgentMessages(messagesToPersist)
     if (signature === lastSavedMessagesRef.current) return false
-    lastSavedMessagesRef.current = signature
+    if (pendingSaveSignaturesRef.current.has(signature)) return false
 
-    if (options.refreshRecords) {
-      void persistConversationMessages(targetId, messagesToPersist, activeScopeRef.current)
-    } else {
-      void saveConversationMessages(targetId, messagesToPersist, activeScopeRef.current)
-    }
+    const savePromise = options.refreshRecords
+      ? persistConversationMessages(targetId, messagesToPersist, activeScopeRef.current)
+      : saveConversationMessages(targetId, messagesToPersist, activeScopeRef.current)
+    if (!savePromise) return false
+
+    pendingSaveSignaturesRef.current.add(signature)
+    void savePromise
+      .then((result) => {
+        if (!result?.success) throw new Error(result?.error || '未知数据库错误')
+        lastSavedMessagesRef.current = signature
+        const previousError = conversationSaveErrorRef.current
+        conversationSaveErrorRef.current = ''
+        if (previousError) setAgentNotice((current) => current === previousError ? '' : current)
+      })
+      .catch((saveError) => {
+        const message = `对话记录保存失败：${saveError instanceof Error ? saveError.message : String(saveError)}`
+        console.error('[Agent] failed to save conversation', saveError)
+        conversationSaveErrorRef.current = message
+        setAgentNotice(message)
+        if (conversationSaveRetryTimerRef.current !== null) {
+          window.clearTimeout(conversationSaveRetryTimerRef.current)
+        }
+        conversationSaveRetryTimerRef.current = window.setTimeout(() => {
+          conversationSaveRetryTimerRef.current = null
+          flushConversationMessagesToStorageRef.current(options)
+        }, 1500)
+      })
+      .finally(() => {
+        pendingSaveSignaturesRef.current.delete(signature)
+      })
     return true
   }, [persistConversationMessages, saveConversationMessages, setMessages])
+  flushConversationMessagesToStorageRef.current = flushConversationMessagesToStorage
 
   const saveCurrentConversationForShare = useCallback(async (): Promise<number | null> => {
     const targetId = conversationIdRef.current
@@ -1214,8 +1245,15 @@ export default function AgentPage() {
 
     const signature = signatureAgentMessages(messagesToPersist)
     if (signature !== lastSavedMessagesRef.current) {
-      lastSavedMessagesRef.current = signature
-      await persistConversationMessages(targetId, messagesToPersist, activeScopeRef.current)
+      const result = await persistConversationMessages(targetId, messagesToPersist, activeScopeRef.current)
+      if (result?.success) {
+        lastSavedMessagesRef.current = signature
+      } else {
+        const message = `对话记录保存失败：${result?.error || '未知数据库错误'}`
+        conversationSaveErrorRef.current = message
+        setAgentNotice(message)
+        return null
+      }
     }
     return targetId
   }, [persistConversationMessages, setMessages])
@@ -1230,7 +1268,10 @@ export default function AgentPage() {
       originClientId: clientIdRef.current,
     })
     const record = result.success ? normalizeConversationRecord(result.conversation) : null
-    if (!record) return null
+    if (!record) {
+      setAgentNotice(`无法创建对话记录：${result.error || '未知数据库错误'}`)
+      return null
+    }
     applyConversationId(record.id)
     conversationUpdatedAtRef.current = Number(record.updatedAt || Date.now())
     setConversationTitle(record.title)
@@ -1247,7 +1288,10 @@ export default function AgentPage() {
       originClientId: clientIdRef.current,
     })
     const record = result.success ? normalizeConversationRecord(result.conversation) : null
-    if (!record) return null
+    if (!record) {
+      setAgentNotice(`无法创建对话记录：${result.error || '未知数据库错误'}`)
+      return null
+    }
     applyConversationId(record.id)
     conversationUpdatedAtRef.current = Number(record.updatedAt || Date.now())
     setConversationTitle(record.title)
@@ -2026,7 +2070,12 @@ export default function AgentPage() {
       if (!conversationIdRef.current) {
         const fallback = buildFallbackConversationTitle(titleText || text)
         setConversationTitle(fallback)
-        await createConversation(submitScope, fallback)
+        const createdId = await createConversation(submitScope, fallback)
+        if (!createdId) {
+          submitScopeRef.current = null
+          setAgentRunPending(false)
+          return
+        }
       }
 
       if (isFirstUserMessage) generateTitleFromFirstMessage(titleText || text)
@@ -2269,6 +2318,10 @@ export default function AgentPage() {
       if (streamingSaveTimerRef.current !== null) {
         window.clearTimeout(streamingSaveTimerRef.current)
         streamingSaveTimerRef.current = null
+      }
+      if (conversationSaveRetryTimerRef.current !== null) {
+        window.clearTimeout(conversationSaveRetryTimerRef.current)
+        conversationSaveRetryTimerRef.current = null
       }
       flushConversationMessagesToStorage()
     }

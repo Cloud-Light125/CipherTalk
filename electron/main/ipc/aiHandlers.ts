@@ -969,6 +969,11 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       return { success: true, conversation: agentConversationStore.create(payload || {}) }
     } catch (e) {
+      ctx.getLogService()?.error('AIAgentStorage', '创建 AI 对话记录失败', {
+        cachePath: ctx.getConfigService()?.getCacheBasePath(),
+        scope: payload?.scope,
+        ...errorToLogData(e),
+      })
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
   })
@@ -1040,6 +1045,13 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
       const conversation = agentConversationStore.replaceMessages(id, nextMessages, { originClientId })
       return { success: true, conversation, staleMerged: isStale && shouldMergeIfStale }
     } catch (e) {
+      ctx.getLogService()?.error('AIAgentStorage', '保存 AI 对话消息失败', {
+        cachePath: ctx.getConfigService()?.getCacheBasePath(),
+        conversationId: Number(payload?.id || 0),
+        messageCount: Array.isArray(payload?.messages) ? payload.messages.length : 0,
+        scope: payload?.scope,
+        ...errorToLogData(e),
+      })
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
   })

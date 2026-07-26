@@ -1078,7 +1078,6 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
   useEffect(() => {
     if (status !== 'ready' || !conversationId || messages.length === 0) return
     if (messages.length === lastSavedCountRef.current) return
-    lastSavedCountRef.current = messages.length
     const baseUpdatedAt = conversationUpdatedAtRef.current
     const shouldPushToWechat = conversationSourceRef.current === 'wechat' || conversationSourceRef.current === 'wechat-persona'
     const wechatPushes = shouldPushToWechat
@@ -1090,45 +1089,66 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
         .filter((item) => item.bubbles.length > 0)
       : []
     for (const item of wechatPushes) wechatPushPendingMessageIdsRef.current.add(item.messageId)
+    let cancelled = false
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
 
-    void window.electronAPI.agent.saveConversationMessages({
-      id: conversationId,
-      messages,
-      baseUpdatedAt,
-      mergeIfStale: true,
-      originClientId: clientIdRef.current,
-    })
-      .then(async (result: any) => {
-        if (result?.success && result.conversation) {
-          conversationUpdatedAtRef.current = Number(result.conversation.updatedAt || conversationUpdatedAtRef.current)
-          for (const item of wechatPushes) {
-            try {
-              const pushResult = await window.electronAPI.agent.sendConversationReplyToWechat({
-                conversationId,
-                messageId: item.messageId,
-                bubbles: item.bubbles,
-              })
-              if (!pushResult.success) {
-                console.warn('[PersonaChat] failed to push reply to WeChat bot', pushResult.error)
-              } else {
-                wechatKnownAssistantMessageIdsRef.current.add(item.messageId)
-              }
-            } catch (pushError) {
-              console.warn('[PersonaChat] error while pushing reply to WeChat bot', pushError)
-            } finally {
-              wechatPushPendingMessageIdsRef.current.delete(item.messageId)
-            }
-          }
-          if (result.staleMerged) await loadConversationIntoState(conversationId)
-        } else {
-          for (const item of wechatPushes) wechatPushPendingMessageIdsRef.current.delete(item.messageId)
+    const save = async (attempt: number) => {
+      try {
+        const result = await window.electronAPI.agent.saveConversationMessages({
+          id: conversationId,
+          messages,
+          baseUpdatedAt: conversationUpdatedAtRef.current || baseUpdatedAt,
+          mergeIfStale: true,
+          originClientId: clientIdRef.current,
+        })
+        if (!result?.success || !result.conversation) {
+          throw new Error(result?.error || '未知数据库错误')
         }
-        return window.electronAPI.persona.reflect({ sessionId, conversationId })
-      })
-      .catch(() => {
+        if (cancelled) return
+
+        lastSavedCountRef.current = messages.length
+        const savedConversation = result.conversation as { updatedAt?: number }
+        conversationUpdatedAtRef.current = Number(savedConversation.updatedAt || conversationUpdatedAtRef.current)
+        setVoiceCloneStatus((current) => current?.text.startsWith('对话记录保存失败') ? null : current)
+        for (const item of wechatPushes) {
+          try {
+            const pushResult = await window.electronAPI.agent.sendConversationReplyToWechat({
+              conversationId,
+              messageId: item.messageId,
+              bubbles: item.bubbles,
+            })
+            if (!pushResult.success) {
+              console.warn('[PersonaChat] failed to push reply to WeChat bot', pushResult.error)
+            } else {
+              wechatKnownAssistantMessageIdsRef.current.add(item.messageId)
+            }
+          } catch (pushError) {
+            console.warn('[PersonaChat] error while pushing reply to WeChat bot', pushError)
+          } finally {
+            wechatPushPendingMessageIdsRef.current.delete(item.messageId)
+          }
+        }
+        if (result.staleMerged) await loadConversationIntoState(conversationId)
+        await window.electronAPI.persona.reflect({ sessionId, conversationId })
+      } catch (saveError) {
+        if (cancelled) return
+        const message = saveError instanceof Error ? saveError.message : String(saveError)
+        console.error('[PersonaChat] failed to save conversation', saveError)
+        if (attempt < 3) {
+          retryTimer = setTimeout(() => { void save(attempt + 1) }, 1000 * (attempt + 1))
+          return
+        }
         for (const item of wechatPushes) wechatPushPendingMessageIdsRef.current.delete(item.messageId)
-        /* save failure should not interrupt chat */
-      })
+        setVoiceCloneStatus({ ok: false, text: `对话记录保存失败：${message}` })
+      }
+    }
+
+    void save(0)
+    return () => {
+      cancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
+      for (const item of wechatPushes) wechatPushPendingMessageIdsRef.current.delete(item.messageId)
+    }
   }, [status, conversationId, messages, sessionId, loadConversationIntoState])
 
   useEffect(() => {
@@ -1375,32 +1395,39 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
     }
   }
 
-  const ensureConversation = async () => {
+  const ensureConversation = async (): Promise<number | null> => {
     inputValueRef.current = ''
-    if (!conversationIdRef.current) {
-      try {
-        const created = await window.electronAPI.agent.createConversation({
-          scope: { kind: 'persona', sessionId, displayName },
-          title: `${displayName || sessionId}的分身`,
-          originClientId: clientIdRef.current,
-        })
-        if (created.success && created.conversation) {
-          const record = created.conversation as { id: number; updatedAt?: number }
-          setConversationId(record.id)
-          conversationIdRef.current = record.id
-          conversationUpdatedAtRef.current = Number(record.updatedAt || Date.now())
-          conversationSourceRef.current = String((record as { source?: unknown }).source || '')
-          wechatKnownAssistantMessageIdsRef.current = new Set()
-          wechatPushPendingMessageIdsRef.current = new Set()
-        }
-      } catch { /* 创建失败不阻塞发送，本轮不持久化 */ }
+    if (conversationIdRef.current) return conversationIdRef.current
+    try {
+      const created = await window.electronAPI.agent.createConversation({
+        scope: { kind: 'persona', sessionId, displayName },
+        title: `${displayName || sessionId}的分身`,
+        originClientId: clientIdRef.current,
+      })
+      if (!created.success || !created.conversation) {
+        throw new Error(created.error || '未知数据库错误')
+      }
+      const record = created.conversation as { id: number; updatedAt?: number }
+      setConversationId(record.id)
+      conversationIdRef.current = record.id
+      conversationUpdatedAtRef.current = Number(record.updatedAt || Date.now())
+      conversationSourceRef.current = String((record as { source?: unknown }).source || '')
+      wechatKnownAssistantMessageIdsRef.current = new Set()
+      wechatPushPendingMessageIdsRef.current = new Set()
+      setVoiceCloneStatus((current) => current?.text.startsWith('无法创建对话记录') ? null : current)
+      return record.id
+    } catch (createError) {
+      const message = createError instanceof Error ? createError.message : String(createError)
+      console.error('[PersonaChat] failed to create conversation', createError)
+      setVoiceCloneStatus({ ok: false, text: `无法创建对话记录：${message}` })
+      return null
     }
   }
 
   const handleSendText = async (rawText: string) => {
     const text = rawText.trim()
     if (!text || busy) return
-    await ensureConversation()
+    if (!await ensureConversation()) return
     // 不直接触发 AI：先进待发缓冲，停顿几秒后这一串一起交给对方回
     pendingRef.current = [...pendingRef.current, text]
     setPendingTexts(pendingRef.current)
@@ -1572,7 +1599,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
     try {
       callPlayerRef.current = createRealtimePcmPlayer()
       callEventOffRef.current = window.electronAPI.voiceRealtime.onEvent(callId, handleRealtimeEvent)
-      await ensureConversation()
+      if (!await ensureConversation()) throw new Error('无法创建对话记录')
       clearPending()
       const started = await window.electronAPI.voiceRealtime.start({
         callId,
@@ -1621,7 +1648,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
     }
     const text = message.text.trim()
     if (message.files.length > 0) {
-      await ensureConversation()
+      if (!await ensureConversation()) return
       clearPending()
       await sendMessage({
         parts: [
