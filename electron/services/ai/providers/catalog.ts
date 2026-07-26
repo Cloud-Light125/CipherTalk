@@ -99,14 +99,16 @@ const RELAYONE_PROVIDER_DEFINITION: AIProviderMetadata = {
   id: 'relayone',
   name: 'relayone',
   displayName: 'RelayOne（官方推荐）',
-  description: '密语官方中转：一个 Key 直连全模型，国内可用，注册即用',
+  description: '一个 Key 直连全模型，国内可用，注册即用',
   protocol: 'openai-compatible',
   baseURL: 'https://aiapi.aiqji.cn/v1',
   models: [],
   modelDetails: [],
   pricing: '低于官方价',
   pricingDetail: { input: 0, output: 0 },
-  website: 'https://hicccc.cc'
+  website: 'https://hicccc.cc',
+  // 中转站里同时挂了多种模型（GPT / Claude / Gemini 等），不同模型走的接口格式不一样，需要手选
+  protocolOptions: ['openai-responses', 'openai-compatible', 'anthropic', 'google']
 }
 
 export const CODEX_SUBSCRIPTION_PROVIDER_ID = 'openai-codex'
