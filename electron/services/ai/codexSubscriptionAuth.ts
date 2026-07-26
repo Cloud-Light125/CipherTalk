@@ -409,13 +409,15 @@ export async function getValidCodexSubscriptionCredentials(options: CodexSubscri
   return pending
 }
 
-function responseRequestUrl(input: RequestInfo | URL): URL {
+type FetchRequestInput = Parameters<typeof globalThis.fetch>[0]
+
+function responseRequestUrl(input: FetchRequestInput): URL {
   if (input instanceof URL) return input
   if (typeof input === 'string') return new URL(input)
   return new URL(input.url)
 }
 
-async function sanitizeResponsesBody(input: RequestInfo | URL, init?: RequestInit): Promise<BodyInit | null | undefined> {
+async function sanitizeResponsesBody(input: FetchRequestInput, init?: RequestInit): Promise<RequestInit['body']> {
   const directBody = init?.body
   let text: string | null = typeof directBody === 'string' ? directBody : null
   if (text === null && typeof Request !== 'undefined') {
@@ -438,7 +440,7 @@ async function sanitizeResponsesBody(input: RequestInfo | URL, init?: RequestIni
 
 export function createCodexSubscriptionFetch(options: CodexSubscriptionFetchOptions): typeof globalThis.fetch {
   const baseFetch = options.baseFetch ?? globalThis.fetch
-  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+  return (async (input: FetchRequestInput, init?: RequestInit) => {
     const sourceUrl = responseRequestUrl(input)
     if (!sourceUrl.pathname.includes('/v1/responses')) return baseFetch(input, init)
 

@@ -171,7 +171,9 @@ export function sanitizeOpenAIResponsesJson(bodyText: string): string {
   return JSON.stringify(parsed)
 }
 
-function requestUrl(input: RequestInfo | URL): string {
+type FetchRequestInput = Parameters<typeof globalThis.fetch>[0]
+
+function requestUrl(input: FetchRequestInput): string {
   if (typeof input === 'string') return input
   if (input instanceof URL) return input.toString()
   return input.url || ''
@@ -196,7 +198,7 @@ function injectStoreFalse(bodyText: string): string {
 
 export function withOpenAIResponsesSanitizer(baseFetch: typeof globalThis.fetch | undefined): typeof globalThis.fetch {
   const f = baseFetch ?? (globalThis.fetch as typeof globalThis.fetch)
-  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+  return (async (input: FetchRequestInput, init?: RequestInit) => {
     const url = requestUrl(input)
     let nextInit = init
     if (/\/responses(?:\?|$)/.test(url) && typeof init?.body === 'string') {
