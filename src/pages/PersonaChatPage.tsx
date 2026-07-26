@@ -35,8 +35,6 @@ import { HoldToTalkSubmit } from '@/components/ai-elements/hold-to-talk-submit'
 import { parseWechatEmoji } from '../utils/wechatEmoji'
 import { getAIProviders, type AIModelInfo, type AIProviderInfo } from '../types/ai'
 import type { AgentConversationUpdatedEvent, PersonaBuildProgressInfo, PersonaRecordInfo, VoiceRealtimeEvent } from '../types/electron'
-import { parseAgentMessageMetadata } from './agent/agentConversationHelpers'
-import { formatTokenCount } from './agent/AgentUsageStats'
 import { AgentReasoningEffortControl } from './agent/AgentReasoningEffortControl'
 
 type Phase = 'loading' | 'confirm' | 'building' | 'chat'
@@ -545,26 +543,6 @@ function PersonaMessageAttachment({ file, isMine }: { file: FileUIPart; isMine: 
       isMine ? 'rounded-tr-sm bg-success-soft text-success-soft-foreground' : 'rounded-tl-sm'
     )}>
       {file.filename || '附件'}
-    </div>
-  )
-}
-
-function PersonaMessageUsageLine({ metadata }: { metadata: unknown }) {
-  const parsed = parseAgentMessageMetadata(metadata)
-  if (!parsed?.usage) return null
-
-  const inputTokens = Number(parsed.usage.inputTokens)
-  const outputTokens = Number(parsed.usage.outputTokens)
-  const totalTokens = Number(parsed.usage.totalTokens)
-  const parts = [
-    Number.isFinite(inputTokens) ? `输入 ${formatTokenCount(inputTokens)}` : '',
-    Number.isFinite(outputTokens) ? `输出 ${formatTokenCount(outputTokens)}` : '',
-    Number.isFinite(totalTokens) ? `共 ${formatTokenCount(totalTokens)}` : '',
-  ].filter(Boolean)
-
-  return (
-    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted">
-      {parts.length > 0 && <span>{parts.join(' · ')}</span>}
     </div>
   )
 }
@@ -2065,9 +2043,6 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
                     </div>
                   )
                 })}
-                {!isMine && (
-                  <PersonaMessageUsageLine metadata={message.metadata} />
-                )}
               </div>
               {isMine && <PersonaAvatar name="我" avatarUrl={myAvatarUrl} size={38} />}
             </div>
