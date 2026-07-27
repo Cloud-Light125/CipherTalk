@@ -365,11 +365,12 @@ export class RelayOneService {
 
   async getCheckoutInfo(): Promise<RelayOneCheckoutInfo> {
     const payload = asRecord(await this.request('/payment/checkout-info', { authenticated: true }))
-    const methods = getItems(payload, ['payment_methods', 'paymentMethods', 'methods']).map((value): RelayOnePaymentMethod => {
+    const methods = getItems(payload, ['payment_types', 'paymentTypes', 'payment_methods', 'paymentMethods', 'methods']).map((value): RelayOnePaymentMethod => {
       const source = asRecord(value)
+      const directValue = typeof value === 'string' || typeof value === 'number' ? String(value).trim() : ''
       return {
-        id: firstString(source, ['id', 'code', 'value', 'name']),
-        name: firstString(source, ['name', 'label', 'title', 'id']),
+        id: firstString(source, ['payment_type', 'paymentType', 'type', 'id', 'code', 'value', 'name'], directValue),
+        name: firstString(source, ['name', 'label', 'title', 'payment_type', 'paymentType', 'type', 'id'], directValue),
         enabled: firstBoolean(source, ['enabled', 'is_enabled', 'active'], true)
       }
     })
@@ -388,8 +389,9 @@ export class RelayOneService {
   async createPaymentOrder(input: RelayOneCreatePaymentOrderInput): Promise<RelayOnePaymentOrder> {
     const amount = Number(input.amount)
     if (!Number.isFinite(amount) || amount <= 0) throw new Error('充值金额必须大于 0')
-    const body: JsonRecord = { amount }
-    if (input.paymentMethod?.trim()) body.payment_method = input.paymentMethod.trim()
+    const paymentType = input.paymentType?.trim()
+    if (!paymentType) throw new Error('请选择支付方式')
+    const body: JsonRecord = { amount, payment_type: paymentType }
     return normalizePaymentOrder(await this.request('/payment/orders', { method: 'POST', body, authenticated: true }))
   }
 
@@ -397,6 +399,17 @@ export class RelayOneService {
     const normalizedOrderId = orderId.trim()
     if (!normalizedOrderId) throw new Error('缺少订单 ID')
     return normalizePaymentOrder(await this.request(`/payment/orders/${encodeURIComponent(normalizedOrderId)}`, { authenticated: true }))
+  }
+
+  async cancelPaymentOrder(orderId: string): Promise<RelayOnePaymentOrder> {
+    const normalizedOrderId = orderId.trim()
+    if (!normalizedOrderId) throw new Error('缺少订单 ID')
+    await this.request(`/payment/orders/${encodeURIComponent(normalizedOrderId)}/cancel`, {
+      method: 'POST',
+      body: {},
+      authenticated: true
+    })
+    return this.getPaymentOrder(normalizedOrderId)
   }
 
   private requireSession(): RelayOneSession {

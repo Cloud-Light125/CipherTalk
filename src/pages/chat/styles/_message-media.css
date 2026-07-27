@@ -280,6 +280,19 @@
   object-fit: cover;
   opacity: 0.78;
 }
+.image-stack__preview-image,
+.image-stack__preview-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.image-stack__preview-image {
+  object-fit: cover;
+  opacity: 0.78;
+}
+.image-stack__preview-placeholder {
+  background: var(--bg-secondary);
+}
 .image-stack__layer .image-update-button,
 .image-stack__layer .image-loading-overlay,
 .image-stack__layer .media-badge {

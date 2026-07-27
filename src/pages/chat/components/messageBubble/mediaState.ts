@@ -61,7 +61,9 @@ export function subscribeImageCacheResolved(callback: (payload: ImageCacheResolv
 
 const imageDecryptQueue: Array<() => Promise<void>> = []
 let isProcessingQueue = false
-const MAX_CONCURRENT_DECRYPTS = 2
+// Chat rendering prioritizes responsiveness over throughput. Batch decrypt has
+// its own main-process concurrency and is not limited by this visible-item queue.
+const MAX_CONCURRENT_DECRYPTS = 1
 
 async function processDecryptQueue() {
   if (isProcessingQueue) return

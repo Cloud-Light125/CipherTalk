@@ -1811,6 +1811,7 @@ export interface ElectronAPI {
     getCheckoutInfo: () => Promise<RelayOneIpcResult<RelayOneCheckoutInfo>>
     createPaymentOrder: (input: RelayOneCreatePaymentOrderInput) => Promise<RelayOneIpcResult<RelayOnePaymentOrder>>
     getPaymentOrder: (orderId: string) => Promise<RelayOneIpcResult<RelayOnePaymentOrder>>
+    cancelPaymentOrder: (orderId: string) => Promise<RelayOneIpcResult<RelayOnePaymentOrder>>
     onStatusChanged: (callback: (status: RelayOneStatus) => void) => () => void
     onProviderApplied: (callback: () => void) => () => void
   }

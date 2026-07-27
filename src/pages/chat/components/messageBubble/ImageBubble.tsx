@@ -94,7 +94,6 @@ function ImageBubble({ message, session, hasImageKey, onContextMenu }: ImageBubb
 
   const imageUpdateCheckedRef = useRef<string | null>(null)
   const imageClickTimerRef = useRef<number | null>(null)
-  const imageUpgradeTimerRef = useRef<number | null>(null)
   const imageRecoveringRef = useRef(false)
   const imageRecoverRetryCountRef = useRef(0)
   const lastRecoverTriedPathRef = useRef<string | null>(null)
@@ -313,35 +312,6 @@ function ImageBubble({ message, session, hasImageKey, onContextMenu }: ImageBubb
     session.username,
     detectImageMimeFromBase64
   ])
-
-  // 若已显示缩略图且检测到高清图可用，循环尝试升级
-  useEffect(() => {
-    if (!isVisible) return
-    if (!imageLocalPath) return
-    if (!imageLocalPath.toLowerCase().includes('_thumb')) return
-    if (!imageHasUpdate) return
-
-    if (imageUpgradeTimerRef.current) {
-      window.clearInterval(imageUpgradeTimerRef.current)
-    }
-
-    imageUpgradeTimerRef.current = window.setInterval(() => {
-      if (!imageLoading) {
-        void requestImageDecrypt(true)
-      }
-    }, 6000)
-
-    if (!imageLoading) {
-      void requestImageDecrypt(true)
-    }
-
-    return () => {
-      if (imageUpgradeTimerRef.current) {
-        window.clearInterval(imageUpgradeTimerRef.current)
-        imageUpgradeTimerRef.current = null
-      }
-    }
-  }, [isVisible, imageLocalPath, imageHasUpdate, imageLoading, requestImageDecrypt])
 
   const handleOpenImage = useCallback(() => {
     if (!imageLocalPath) return

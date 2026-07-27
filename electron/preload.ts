@@ -966,6 +966,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getCheckoutInfo: () => ipcRenderer.invoke('relayOne:getCheckoutInfo') as Promise<RelayOneIpcResult<RelayOneCheckoutInfo>>,
     createPaymentOrder: (input: RelayOneCreatePaymentOrderInput) => ipcRenderer.invoke('relayOne:createPaymentOrder', input) as Promise<RelayOneIpcResult<RelayOnePaymentOrder>>,
     getPaymentOrder: (orderId: string) => ipcRenderer.invoke('relayOne:getPaymentOrder', orderId) as Promise<RelayOneIpcResult<RelayOnePaymentOrder>>,
+    cancelPaymentOrder: (orderId: string) => ipcRenderer.invoke('relayOne:cancelPaymentOrder', orderId) as Promise<RelayOneIpcResult<RelayOnePaymentOrder>>,
     onStatusChanged: (callback: (status: RelayOneStatus) => void): (() => void) => {
       const listener = (_event: unknown, status: RelayOneStatus) => callback(status)
       ipcRenderer.on('relayOne:statusChanged', listener)

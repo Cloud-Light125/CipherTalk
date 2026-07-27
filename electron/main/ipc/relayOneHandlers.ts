@@ -70,4 +70,5 @@ export function registerRelayOneHandlers(ctx: MainProcessContext): void {
   ipcMain.handle('relayOne:getCheckoutInfo', async () => invoke(() => service.getCheckoutInfo()))
   ipcMain.handle('relayOne:createPaymentOrder', async (_event, input: RelayOneCreatePaymentOrderInput) => invoke(() => service.createPaymentOrder(input)))
   ipcMain.handle('relayOne:getPaymentOrder', async (_event, orderId: string) => invoke(() => service.getPaymentOrder(String(orderId || ''))))
+  ipcMain.handle('relayOne:cancelPaymentOrder', async (_event, orderId: string) => invoke(() => service.cancelPaymentOrder(String(orderId || ''))))
 }

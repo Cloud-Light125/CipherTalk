@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from '@gravity-ui/icons'
 import type { ChatSession, Message } from '../../../../types/models'
 import { getMessageDomKey } from '../../utils/messageKeys'
 import ImageBubble from './ImageBubble'
+import { imageDataUrlCache, subscribeImageCacheResolved } from './mediaState'
 
 interface ImageStackBubbleProps {
   messages: Message[]
@@ -20,6 +21,38 @@ type SwitchDirection = 'previous' | 'next'
 const CARD_SWITCH_DURATION = 360
 const IMAGE_STACK_WIDTH = 180
 const IMAGE_STACK_HEIGHT = 240
+
+function CachedStackPreview({ message }: { message: Message }) {
+  const cacheKey = message.imageMd5 || message.imageDatName || `local:${message.localId}`
+  const [localPath, setLocalPath] = useState(() => imageDataUrlCache.get(cacheKey))
+
+  useEffect(() => {
+    return subscribeImageCacheResolved((payload) => {
+      const matches =
+        payload.cacheKey === cacheKey ||
+        (payload.imageMd5 && payload.imageMd5 === message.imageMd5) ||
+        (payload.imageDatName && payload.imageDatName === message.imageDatName)
+      if (matches) {
+        imageDataUrlCache.set(cacheKey, payload.localPath)
+        setLocalPath(payload.localPath)
+      }
+    })
+  }, [cacheKey, message.imageDatName, message.imageMd5])
+
+  if (!localPath) {
+    return <div className="image-stack__preview-placeholder" />
+  }
+
+  return (
+    <img
+      src={localPath}
+      alt=""
+      className="image-stack__preview-image"
+      decoding="async"
+      onError={() => setLocalPath(undefined)}
+    />
+  )
+}
 
 function ImageStackBubble({
   messages,
@@ -98,21 +131,17 @@ function ImageStackBubble({
       <div className="image-stack__stage">
         <div className="image-stack__layer image-stack__layer--left" aria-hidden="true">
           {previousMessage && (
-            <ImageBubble
+            <CachedStackPreview
               key={getMessageDomKey(previousMessage)}
               message={previousMessage}
-              session={session}
-              hasImageKey={hasImageKey}
             />
           )}
         </div>
         <div className="image-stack__layer image-stack__layer--right" aria-hidden="true">
           {nextMessage && (
-            <ImageBubble
+            <CachedStackPreview
               key={getMessageDomKey(nextMessage)}
               message={nextMessage}
-              session={session}
-              hasImageKey={hasImageKey}
             />
           )}
         </div>

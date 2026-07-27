@@ -116,6 +116,7 @@ export class ImageDecryptService {
   // 磁盘缓存是按每条消息的 .dat 路径分的，不会互相命中，这里补一层内容级去重）
   private wxgfResultCache = new Map<string, Buffer>()
   private wxgfConvertInFlight = new Map<string, Promise<Buffer | null>>()
+  private wxgfConvertTail: Promise<void> = Promise.resolve()
   // 已知会导致 ffmpeg 卡死超时的帧，命中直接跳过转码，避免同一张坏图反复触发
   private wxgfConvertBlacklist = new Set<string>()
   private static readonly WXGF_CACHE_LIMIT = 200
@@ -3190,7 +3191,10 @@ export class ImageDecryptService {
     const pending = this.wxgfConvertInFlight.get(hash)
     if (pending) return pending
 
-    const task = this.convertHevcToJpg(hevcData, hash)
+    // FFmpeg is already asynchronous, but multiple decoders can still consume
+    // every CPU core and make Electron rendering visibly stall. Keep chat-time
+    // HEVC conversion to one process at a time across all decrypt requests.
+    const task = this.enqueueWxgfConversion(hevcData, hash)
       .then((result) => {
         if (result && result.length > 0) this.rememberWxgfResult(hash, result)
         return result
@@ -3199,6 +3203,15 @@ export class ImageDecryptService {
         this.wxgfConvertInFlight.delete(hash)
       })
     this.wxgfConvertInFlight.set(hash, task)
+    return task
+  }
+
+  private enqueueWxgfConversion(hevcData: Buffer, hash: string): Promise<Buffer | null> {
+    const task = this.wxgfConvertTail.then(
+      () => this.convertHevcToJpg(hevcData, hash),
+      () => this.convertHevcToJpg(hevcData, hash)
+    )
+    this.wxgfConvertTail = task.then(() => undefined, () => undefined)
     return task
   }
 

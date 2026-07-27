@@ -36,13 +36,18 @@ parentPort.on('message', (req: DecryptRequest) => {
       const aesKey = aesKeyB64 ? Buffer.from(aesKeyB64, 'base64') : null
       outcome = decryptDatLegacy(datPath, xorKey, aesKey, fallbackReason)
     }
+    // Use a standalone ArrayBuffer and transfer ownership to the main process.
+    // Sending a Buffer directly makes worker_threads clone the whole image, and
+    // the pool then has to copy the cloned Uint8Array into another Buffer.
+    const data = new Uint8Array(outcome.data.length)
+    data.set(outcome.data)
     parentPort!.postMessage({
       id,
       ok: true,
-      data: outcome.data,
+      data,
       source: outcome.source,
       fallbackReason: outcome.fallbackReason
-    })
+    }, [data.buffer])
   } catch (e: any) {
     parentPort!.postMessage({ id, ok: false, error: e?.message || String(e) })
   }

@@ -275,7 +275,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   const handleCreateOrder = () => runAction('create-order', async () => {
     const nextOrder = await relayOneService.createPaymentOrder({
       amount: Number(rechargeAmount),
-      paymentMethod: paymentMethod || undefined
+      paymentType: paymentMethod
     })
     setOrder(nextOrder)
     if (nextOrder.paymentUrl) {
@@ -284,6 +284,15 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
       showMessage('订单已创建，但服务端未返回支付页面', false)
     }
   })
+
+  const handleCancelOrder = () => {
+    if (!order || order.status !== 'pending') return
+    if (!window.confirm('确认取消这个待支付订单？')) return
+    void runAction('cancel-order', async () => {
+      setOrder(await relayOneService.cancelPaymentOrder(order.id))
+      showMessage('订单已取消', true)
+    })
+  }
 
   if (loading) {
     return <div className="flex min-h-12 items-center gap-2 border-y border-divider px-1 text-sm text-muted-foreground"><Spinner size="sm" />正在读取 RelayOne 账户...</div>
@@ -463,7 +472,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
                   <Select.Popover><ListBox>{activePaymentMethods.map((method) => <ListBox.Item key={method.id} id={method.id} textValue={method.name}>{method.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
                 </Select>
               ) : <div />}
-              <Button type="button" variant="primary" size="sm" className="self-end" onPress={handleCreateOrder} isDisabled={Boolean(action)}>
+              <Button type="button" variant="primary" size="sm" className="self-end" onPress={handleCreateOrder} isDisabled={Boolean(action) || !paymentMethod}>
                 {action === 'create-order' ? <Spinner size="sm" /> : <ArrowUpRight width={16} height={16} />}创建订单
               </Button>
             </div>
@@ -473,6 +482,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
                 <Alert.Indicator>{order.status === 'paid' ? <CircleCheck width={18} height={18} /> : <Wallet width={18} height={18} />}</Alert.Indicator>
                 <Alert.Content><Alert.Title>订单 {statusLabel(order.status)}</Alert.Title><Alert.Description>{order.id} · {formatMoney(order.amount, order.currency)}{order.status === 'pending' ? '，正在每 3 秒查询状态' : ''}</Alert.Description></Alert.Content>
                 {order.paymentUrl && order.status === 'pending' && <Button type="button" variant="outline" size="sm" onPress={() => void window.electronAPI.shell.openExternal(order.paymentUrl!)}><ArrowUpRight width={16} height={16} />打开支付页</Button>}
+                {order.status === 'pending' && <Button type="button" variant="danger-soft" size="sm" onPress={handleCancelOrder} isDisabled={Boolean(action)}>{action === 'cancel-order' && <Spinner size="sm" />}取消订单</Button>}
               </Alert>
             )}
           </section>

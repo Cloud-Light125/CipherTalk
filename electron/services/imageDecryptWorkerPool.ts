@@ -98,9 +98,13 @@ class ImageDecryptWorkerPool {
         if (!pending) return
         this.pendingByWorker.delete(worker)
         if (msg?.ok) {
+          const bytes = msg.data as Uint8Array
           pending.resolve({
-            // 结构化克隆后是 Uint8Array，包回 Buffer
-            data: Buffer.isBuffer(msg.data) ? msg.data : Buffer.from(msg.data),
+            // worker transfers the backing store, so this view does not copy
+            // the complete decoded image again on the main-process thread.
+            data: Buffer.isBuffer(bytes)
+              ? bytes
+              : Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength),
             source: msg.source,
             fallbackReason: msg.fallbackReason
           })

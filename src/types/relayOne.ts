@@ -115,7 +115,7 @@ export interface RelayOnePaymentOrder {
 
 export interface RelayOneCreatePaymentOrderInput {
   amount: number
-  paymentMethod?: string
+  paymentType: string
 }
 
 export type RelayOneIpcResult<T = void> =

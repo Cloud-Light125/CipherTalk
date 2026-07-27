@@ -41,6 +41,7 @@ export const relayOneService = {
   getCheckoutInfo: (): Promise<RelayOneCheckoutInfo> => unwrap(window.electronAPI.relayOne.getCheckoutInfo()),
   createPaymentOrder: (input: RelayOneCreatePaymentOrderInput): Promise<RelayOnePaymentOrder> => unwrap(window.electronAPI.relayOne.createPaymentOrder(input)),
   getPaymentOrder: (orderId: string): Promise<RelayOnePaymentOrder> => unwrap(window.electronAPI.relayOne.getPaymentOrder(orderId)),
+  cancelPaymentOrder: (orderId: string): Promise<RelayOnePaymentOrder> => unwrap(window.electronAPI.relayOne.cancelPaymentOrder(orderId)),
   onStatusChanged: (callback: (status: RelayOneStatus) => void): (() => void) => window.electronAPI.relayOne.onStatusChanged(callback),
   onProviderApplied: (callback: () => void): (() => void) => window.electronAPI.relayOne.onProviderApplied(callback)
 }

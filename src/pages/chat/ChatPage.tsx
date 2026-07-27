@@ -39,7 +39,6 @@ function getMessageCacheKey(message: Message): string {
 // 减小单次 prepend 的渲染阻塞（一次性 mount 50 条约卡 180ms，25 条约减半）。
 const INITIAL_PAGE_SIZE = 50
 const HISTORY_PAGE_SIZE = 25
-const IMAGE_PREWARM_LIMIT = 40
 // 会话列表分页大小（后端按原始行分页，最多单次 1000）
 const SESSION_PAGE_SIZE = 300
 
@@ -64,54 +63,6 @@ function mergeRefreshedSessions(prev: ChatSession[], page: ChatSession[]): ChatS
   const inPage = new Set(page.map(s => s.username))
   const tail = prev.filter(s => !inPage.has(s.username))
   return tail.length > 0 ? [...head, ...tail] : head
-}
-
-type ImagePrewarmPayload = {
-  sessionId?: string
-  imageMd5?: string
-  imageDatName?: string
-  createTime?: number
-}
-
-function buildImagePrewarmPayloads(messages: Message[], sessionId: string, limit = IMAGE_PREWARM_LIMIT): ImagePrewarmPayload[] {
-  const payloads: ImagePrewarmPayload[] = []
-  const seen = new Set<string>()
-
-  const addPayload = (payload: ImagePrewarmPayload) => {
-    const imageKey = payload.imageMd5 || payload.imageDatName
-    if (!imageKey) return
-    const dedupeKey = [
-      payload.sessionId || '',
-      imageKey,
-      payload.imageDatName || '',
-      payload.createTime || 0
-    ].join('|')
-    if (seen.has(dedupeKey)) return
-    seen.add(dedupeKey)
-    payloads.push(payload)
-  }
-
-  for (let i = messages.length - 1; i >= 0 && payloads.length < limit; i -= 1) {
-    const message = messages[i]
-    if (message.localType === 3 && (message.imageMd5 || message.imageDatName)) {
-      addPayload({
-        sessionId,
-        imageMd5: message.imageMd5 || undefined,
-        imageDatName: message.imageDatName || undefined,
-        createTime: message.createTime
-      })
-    }
-
-    if (message.quotedImageMd5) {
-      addPayload({
-        sessionId,
-        imageMd5: message.quotedImageMd5,
-        createTime: message.createTime
-      })
-    }
-  }
-
-  return payloads
 }
 
 function ChatPage(_props: ChatPageProps) {
@@ -181,7 +132,6 @@ function ChatPage(_props: ChatPageProps) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<Message[]>([])
-  const imagePrewarmSignatureRef = useRef('')
   const isLoadingMoreRef = useRef(false)
   const scrollToBottomAfterRenderRef = useRef(false)
   // 虚拟列表滚动信号：ChatPage 表达"该置底/置顶"的意图，递增令 MessageListVirtual 用 scrollToIndex 落点
@@ -1481,27 +1431,6 @@ function ChatPage(_props: ChatPageProps) {
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
-
-  useEffect(() => {
-    if (!currentSessionId || hasImageKey === false || messages.length === 0) return
-
-    const payloads = buildImagePrewarmPayloads(messages, currentSessionId)
-    if (payloads.length === 0) return
-
-    const signature = payloads
-      .map(item => `${item.sessionId || ''}:${item.imageMd5 || ''}:${item.imageDatName || ''}:${item.createTime || 0}`)
-      .join('|')
-    if (signature === imagePrewarmSignatureRef.current) return
-    imagePrewarmSignatureRef.current = signature
-
-    const timer = window.setTimeout(() => {
-      void window.electronAPI.image.prewarm(payloads).catch(() => { })
-    }, 300)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
-  }, [currentSessionId, hasImageKey, messages])
 
   useEffect(() => {
     currentOffsetRef.current = currentOffset
