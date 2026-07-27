@@ -101,6 +101,10 @@ function extractApiKey(value: unknown): { rawKey: string; entity: JsonRecord } {
   }
 }
 
+function isUsableApiKey(value: string): boolean {
+  return Boolean(value && !/[*•…]|\.\.\./.test(value))
+}
+
 function maskSecret(value: string): string {
   const text = value.trim()
   if (!text) return ''
@@ -134,6 +138,7 @@ function normalizeApiKey(value: unknown): RelayOneApiKey {
     groupId: firstString(source, ['group_id', 'groupId']) || undefined,
     groupName: firstString(source, ['group_name', 'groupName', 'group']) || undefined,
     enabled: firstBoolean(source, ['enabled', 'is_enabled', 'active'], true),
+    isApplied: false,
     createdAt: firstString(source, ['created_at', 'createdAt']) || undefined,
     expiresAt: firstString(source, ['expires_at', 'expiresAt']) || undefined,
     lastUsedAt: firstString(source, ['last_used_at', 'lastUsedAt']) || undefined
@@ -176,6 +181,7 @@ function normalizePaymentOrder(value: unknown): RelayOnePaymentOrder {
 export class RelayOneService {
   private tempToken: string | null = null
   private refreshPromise: Promise<boolean> | null = null
+  private readonly apiKeySecrets = new Map<string, string>()
 
   constructor(
     private readonly getConfigService: () => ConfigService | null,
@@ -265,6 +271,7 @@ export class RelayOneService {
       }
     } finally {
       this.tempToken = null
+      this.apiKeySecrets.clear()
       this.sessionStore.clear()
     }
   }
@@ -279,7 +286,14 @@ export class RelayOneService {
 
   async listApiKeys(): Promise<RelayOneApiKey[]> {
     const payload = await this.request('/keys', { authenticated: true })
-    return getItems(payload, ['items', 'list', 'keys', 'data']).map(normalizeApiKey)
+    const currentApiKey = this.getConfigService()?.getAIProviderConfig('relayone')?.apiKey || ''
+    this.apiKeySecrets.clear()
+    return getItems(payload, ['items', 'list', 'keys', 'data']).map((value) => {
+      const { rawKey, entity } = extractApiKey(value)
+      const normalized = normalizeApiKey(entity)
+      if (normalized.id && isUsableApiKey(rawKey)) this.apiKeySecrets.set(normalized.id, rawKey)
+      return { ...normalized, isApplied: Boolean(currentApiKey && rawKey === currentApiKey) }
+    })
   }
 
   async createApiKey(input: RelayOneCreateKeyInput): Promise<RelayOneCreateKeyResult> {
@@ -293,10 +307,25 @@ export class RelayOneService {
 
     this.applyApiKeyToAI(rawKey)
     const normalized = normalizeApiKey(entity)
+    if (normalized.id) this.apiKeySecrets.set(normalized.id, rawKey)
     return {
-      apiKey: { ...normalized, keyPreview: normalized.keyPreview || maskSecret(rawKey) },
+      apiKey: { ...normalized, keyPreview: normalized.keyPreview || maskSecret(rawKey), isApplied: true },
       appliedToAI: true
     }
+  }
+
+  async applyApiKey(keyId: string): Promise<void> {
+    const normalizedKeyId = keyId.trim()
+    if (!normalizedKeyId) throw new Error('缺少 Key ID')
+    let apiKey = this.apiKeySecrets.get(normalizedKeyId)
+    if (!apiKey) {
+      await this.listApiKeys()
+      apiKey = this.apiKeySecrets.get(normalizedKeyId)
+    }
+    if (!apiKey) {
+      throw new Error('RelayOne 未返回该 Key 的完整密钥，无法直接应用；请新建一个 Key')
+    }
+    this.applyApiKeyToAI(apiKey)
   }
 
   async updateApiKeyGroup(keyId: string, groupId: string): Promise<RelayOneApiKey> {
@@ -314,6 +343,7 @@ export class RelayOneService {
     const normalizedKeyId = keyId.trim()
     if (!normalizedKeyId) throw new Error('缺少 Key ID')
     await this.request(`/keys/${encodeURIComponent(normalizedKeyId)}`, { method: 'DELETE', authenticated: true })
+    this.apiKeySecrets.delete(normalizedKeyId)
   }
 
   async listAvailableGroups(): Promise<RelayOneGroup[]> {

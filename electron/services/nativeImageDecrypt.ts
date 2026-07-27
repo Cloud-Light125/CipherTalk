@@ -21,6 +21,7 @@ type NativeAddonMetadata = {
   vendor?: string
   source?: string
   platforms?: string[]
+  safeNativePlatforms?: string[]
 }
 
 let cachedAddon: NativeAddon | null | undefined
@@ -32,7 +33,13 @@ function logNativeImage(level: 'log' | 'warn' | 'error', ...args: any[]): void {
 }
 
 function shouldEnableNative(): boolean {
-  return process.env.CIPHERTALK_IMAGE_NATIVE !== '0'
+  if (process.env.CIPHERTALK_IMAGE_NATIVE === '0') return false
+  const metadata = nativeAddonMetadata()
+  const platformKey = `${getPlatformDir()}-${getArchDir()}`
+
+  // 旧版插件缺少 FFmpeg 超时，Windows 版本还会弹控制台。安全能力按平台记录，
+  // 防止只重编译一个平台时误启用其他平台的旧二进制。
+  return metadata?.safeNativePlatforms?.includes(platformKey) === true
 }
 
 function expandAsarCandidates(filePath: string): string[] {

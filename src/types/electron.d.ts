@@ -1803,6 +1803,7 @@ export interface ElectronAPI {
     getCurrentUser: () => Promise<RelayOneIpcResult<RelayOneUser>>
     listApiKeys: () => Promise<RelayOneIpcResult<RelayOneApiKey[]>>
     createApiKey: (input: RelayOneCreateKeyInput) => Promise<RelayOneIpcResult<RelayOneCreateKeyResult>>
+    applyApiKey: (keyId: string) => Promise<RelayOneIpcResult<void>>
     updateApiKeyGroup: (keyId: string, groupId: string) => Promise<RelayOneIpcResult<RelayOneApiKey>>
     deleteApiKey: (keyId: string) => Promise<RelayOneIpcResult<void>>
     listAvailableGroups: () => Promise<RelayOneIpcResult<RelayOneGroup[]>>

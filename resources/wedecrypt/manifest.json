@@ -3,6 +3,9 @@
   "version": "source-present-selfbuilt",
   "vendor": "CipherTalk",
   "source": "native/image-decrypt",
+  "safeNativePlatforms": [
+    "win32-x64"
+  ],
   "activeBinaries": {
     "win32-x64": "self-built-from-repo-source",
     "macos-arm64": "self-built-from-repo-source"

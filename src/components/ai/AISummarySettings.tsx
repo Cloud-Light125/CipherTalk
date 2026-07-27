@@ -968,7 +968,6 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                       onProviderApplied={handleRelayOneProviderApplied}
                       showMessage={showMessage}
                       hasConfiguredApiKey={Boolean(apiKey.trim())}
-                      portalHost={settingsPagePortalHost}
                     />
                   </div>
                 )}

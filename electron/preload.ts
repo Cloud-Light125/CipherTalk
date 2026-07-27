@@ -958,6 +958,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getCurrentUser: () => ipcRenderer.invoke('relayOne:getCurrentUser') as Promise<RelayOneIpcResult<RelayOneUser>>,
     listApiKeys: () => ipcRenderer.invoke('relayOne:listApiKeys') as Promise<RelayOneIpcResult<RelayOneApiKey[]>>,
     createApiKey: (input: RelayOneCreateKeyInput) => ipcRenderer.invoke('relayOne:createApiKey', input) as Promise<RelayOneIpcResult<RelayOneCreateKeyResult>>,
+    applyApiKey: (keyId: string) => ipcRenderer.invoke('relayOne:applyApiKey', keyId) as Promise<RelayOneIpcResult<void>>,
     updateApiKeyGroup: (keyId: string, groupId: string) => ipcRenderer.invoke('relayOne:updateApiKeyGroup', keyId, groupId) as Promise<RelayOneIpcResult<RelayOneApiKey>>,
     deleteApiKey: (keyId: string) => ipcRenderer.invoke('relayOne:deleteApiKey', keyId) as Promise<RelayOneIpcResult<void>>,
     listAvailableGroups: () => ipcRenderer.invoke('relayOne:listAvailableGroups') as Promise<RelayOneIpcResult<RelayOneGroup[]>>,

@@ -58,6 +58,7 @@ export interface RelayOneApiKey {
   groupId?: string
   groupName?: string
   enabled: boolean
+  isApplied: boolean
   createdAt?: string
   expiresAt?: string
   lastUsedAt?: string

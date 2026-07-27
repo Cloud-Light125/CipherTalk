@@ -56,6 +56,11 @@ export function registerRelayOneHandlers(ctx: MainProcessContext): void {
     if (result.success) ctx.broadcastToWindows('relayOne:providerApplied')
     return result
   })
+  ipcMain.handle('relayOne:applyApiKey', async (_event, keyId: string) => {
+    const result = await invoke(() => service.applyApiKey(String(keyId || '')))
+    if (result.success) ctx.broadcastToWindows('relayOne:providerApplied')
+    return result
+  })
   ipcMain.handle('relayOne:updateApiKeyGroup', async (_event, keyId: string, groupId: string) => (
     invoke(() => service.updateApiKeyGroup(String(keyId || ''), String(groupId || '')))
   ))

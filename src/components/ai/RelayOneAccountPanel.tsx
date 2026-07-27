@@ -6,15 +6,16 @@ import {
   Chip,
   CloseButton,
   Description,
-  Drawer,
   InputGroup,
   Label,
   ListBox,
+  Modal,
   Select,
   Spinner,
   Tabs,
   TextField,
   Typography,
+  useOverlayState,
   type Key
 } from '@heroui/react'
 import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, Plus, TrashBin, Wallet } from '@gravity-ui/icons'
@@ -34,7 +35,6 @@ interface RelayOneAccountPanelProps {
   onProviderApplied: () => void | Promise<void>
   showMessage: (text: string, success: boolean) => void
   hasConfiguredApiKey: boolean
-  portalHost: HTMLElement | null
 }
 
 type AuthTab = 'login' | 'register'
@@ -77,7 +77,7 @@ function groupLabel(groupId: string | undefined, groups: RelayOneGroup[]): strin
   return groups.find((group) => group.id === groupId)?.name || groupId
 }
 
-export default function RelayOneAccountPanel({ onProviderApplied, showMessage, hasConfiguredApiKey, portalHost }: RelayOneAccountPanelProps) {
+export default function RelayOneAccountPanel({ onProviderApplied, showMessage, hasConfiguredApiKey }: RelayOneAccountPanelProps) {
   const [status, setStatus] = useState<RelayOneStatus>(EMPTY_STATUS)
   const [publicSettings, setPublicSettings] = useState<RelayOnePublicSettings | null>(null)
   const [user, setUser] = useState<RelayOneUser | null>(null)
@@ -101,7 +101,11 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   const [loading, setLoading] = useState(true)
   const [action, setAction] = useState('')
   const [error, setError] = useState('')
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [accountModalOpen, setAccountModalOpen] = useState(false)
+  const accountModalState = useOverlayState({
+    isOpen: accountModalOpen,
+    onOpenChange: setAccountModalOpen
+  })
 
   const activeGroups = useMemo(() => groups.filter((group) => group.enabled), [groups])
   const activePaymentMethods = useMemo(
@@ -242,8 +246,15 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     await relayOneService.createApiKey({ name: newKeyName, groupId: newKeyGroupId || undefined })
     setApiKeys(await relayOneService.listApiKeys())
     await onProviderApplied()
-    setDrawerOpen(false)
+    setAccountModalOpen(false)
     showMessage('API Key 已创建并应用到当前 AI 配置', true)
+  })
+
+  const handleApplyKey = (keyId: string) => runAction(`apply-${keyId}`, async () => {
+    await relayOneService.applyApiKey(keyId)
+    await onProviderApplied()
+    setAccountModalOpen(false)
+    showMessage('API Key 已应用到当前 AI 配置', true)
   })
 
   const handleUpdateKeyGroup = (keyId: string, groupId: string) => runAction(`group-${keyId}`, async () => {
@@ -280,17 +291,6 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
 
   const accountContent = (
     <div className="space-y-5">
-      {status.authenticated && (
-        <div className="flex items-center justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" isIconOnly aria-label="刷新 RelayOne 账户" onPress={() => void initialize()} isDisabled={Boolean(action)}>
-              <ArrowsRotateLeft width={16} height={16} />
-            </Button>
-            <Button type="button" variant="outline" size="sm" onPress={handleLogout} isDisabled={Boolean(action)}>
-              {action === 'logout' && <Spinner size="sm" />}退出
-            </Button>
-        </div>
-      )}
-
       {!status.encryptionAvailable && (
         <Alert status="warning">
           <Alert.Content>
@@ -423,15 +423,26 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
             </div>
             <div className="divide-y divide-divider border-y border-divider">
               {apiKeys.length === 0 ? <div className="py-5 text-sm text-muted-foreground">暂无 API Key</div> : apiKeys.map((item) => (
-                <div key={item.id} className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
-                  <div className="min-w-0"><div className="truncate text-sm font-medium">{item.name}</div><div className="truncate font-mono text-xs text-muted-foreground">{item.keyPreview || '密钥仅在创建时可见'}</div></div>
+                <div key={item.id} className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,1fr)_240px_auto]">
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="truncate text-sm font-medium">{item.name}</div>
+                      {item.isApplied && <Chip size="sm" variant="soft" color="success"><Chip.Label>使用中</Chip.Label></Chip>}
+                    </div>
+                    <div className="truncate font-mono text-xs text-muted-foreground">{item.keyPreview || '密钥仅在创建时可见'}</div>
+                  </div>
                   <Select selectedKey={item.groupId || DEFAULT_GROUP_KEY} onSelectionChange={(key: Key | null) => void handleUpdateKeyGroup(item.id, key == null || String(key) === DEFAULT_GROUP_KEY ? '' : String(key))} placeholder="默认分组" variant="secondary" fullWidth isDisabled={Boolean(action)}>
                     <Select.Trigger><Select.Value>{({ defaultChildren }) => groupLabel(item.groupId, activeGroups) || defaultChildren}</Select.Value><Select.Indicator /></Select.Trigger>
                     <Select.Popover><ListBox><ListBox.Item id={DEFAULT_GROUP_KEY} textValue="默认分组">默认分组<ListBox.ItemIndicator /></ListBox.Item>{activeGroups.map((group) => <ListBox.Item key={group.id} id={group.id} textValue={group.name}>{group.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
                   </Select>
-                  <Button type="button" variant="danger-soft" size="sm" isIconOnly aria-label={`删除 ${item.name}`} onPress={() => handleDeleteKey(item.id)} isDisabled={Boolean(action)}>
-                    {action === `delete-${item.id}` ? <Spinner size="sm" /> : <TrashBin width={16} height={16} />}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant={item.isApplied ? 'outline' : 'primary'} size="sm" onPress={() => void handleApplyKey(item.id)} isDisabled={Boolean(action) || item.isApplied}>
+                      {action === `apply-${item.id}` && <Spinner size="sm" />}{item.isApplied ? '使用中' : '使用'}
+                    </Button>
+                    <Button type="button" variant="danger-soft" size="sm" isIconOnly aria-label={`删除 ${item.name}`} onPress={() => handleDeleteKey(item.id)} isDisabled={Boolean(action)}>
+                      {action === `delete-${item.id}` ? <Spinner size="sm" /> : <TrashBin width={16} height={16} />}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -470,28 +481,43 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     </div>
   )
 
-  const drawer = (
-    <Drawer.Backdrop
-      isOpen={drawerOpen}
-      onOpenChange={setDrawerOpen}
-      variant="transparent"
-      className="absolute inset-0 z-160 bg-backdrop/40 backdrop-blur-sm"
-    >
-      <Drawer.Content placement="right" className="absolute inset-y-0 right-0 flex w-full justify-end">
-        <Drawer.Dialog aria-label="RelayOne 账户管理" className="relative h-full w-full max-w-3xl rounded-l-lg border border-border/70 bg-overlay p-0 shadow-overlay">
-          <Drawer.Header className="border-border/60 border-b px-5 py-4">
-            <div>
-              <Drawer.Heading className="text-base font-semibold text-foreground">RelayOne 账户管理</Drawer.Heading>
-              <p className="mt-1 text-xs text-muted-foreground">余额、API Key、分组与充值</p>
-            </div>
-            <CloseButton aria-label="关闭 RelayOne 账户管理" className="absolute right-4 top-4" onPress={() => setDrawerOpen(false)} />
-          </Drawer.Header>
-          <Drawer.Body className="overflow-y-auto p-5">
-            {accountContent}
-          </Drawer.Body>
-        </Drawer.Dialog>
-      </Drawer.Content>
-    </Drawer.Backdrop>
+  const accountModal = (
+    <Modal state={accountModalState}>
+      <Modal.Backdrop variant="blur" className="z-2000">
+        <Modal.Container
+          size="lg"
+          scroll="inside"
+          placement="center"
+          className="w-full! max-w-308! max-h-[calc(100vh-32px)]! p-4!"
+        >
+          <Modal.Dialog aria-label="RelayOne 账户管理" className="max-w-none!">
+            <Modal.Header className="gap-2 border-b border-divider">
+              <div className="flex justify-end">
+                <CloseButton aria-label="关闭 RelayOne 账户管理" onPress={() => setAccountModalOpen(false)} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Modal.Heading className="min-w-0 text-base font-semibold text-foreground">RelayOne 账户管理</Modal.Heading>
+                {status.authenticated && (
+                  <Button type="button" variant="outline" size="sm" isIconOnly aria-label="刷新 RelayOne 账户" onPress={() => void initialize()} isDisabled={Boolean(action)}>
+                    <ArrowsRotateLeft width={16} height={16} />
+                  </Button>
+                )}
+              </div>
+            </Modal.Header>
+            <Modal.Body className="mt-0! px-5 pb-5 pt-0">
+              {accountContent}
+            </Modal.Body>
+            {status.authenticated && (
+              <Modal.Footer className="justify-end border-t border-divider pt-4">
+                <Button type="button" variant="danger" size="sm" onPress={handleLogout} isDisabled={Boolean(action)}>
+                  {action === 'logout' && <Spinner size="sm" />}退出
+                </Button>
+              </Modal.Footer>
+            )}
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   )
 
   return (
@@ -520,11 +546,11 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
           </div>
         )}
         {!status.encryptionAvailable && <span className="shrink-0 text-xs text-warning">仅本次会话</span>}
-        <Button type="button" variant={status.authenticated && hasConfiguredApiKey ? 'outline' : 'primary'} size="sm" className="shrink-0" onPress={() => setDrawerOpen(true)}>
+        <Button type="button" variant={status.authenticated && hasConfiguredApiKey ? 'outline' : 'primary'} size="sm" className="shrink-0" onPress={() => setAccountModalOpen(true)}>
           {status.authenticated ? (hasConfiguredApiKey ? '账户管理' : '创建 Key') : '登录 / 注册'}
         </Button>
       </div>
-      {portalHost && createPortal(drawer, portalHost)}
+      {createPortal(accountModal, document.body)}
     </>
   )
 }

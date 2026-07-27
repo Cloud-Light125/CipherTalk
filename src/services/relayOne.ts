@@ -33,6 +33,7 @@ export const relayOneService = {
   getCurrentUser: (): Promise<RelayOneUser> => unwrap(window.electronAPI.relayOne.getCurrentUser()),
   listApiKeys: (): Promise<RelayOneApiKey[]> => unwrap(window.electronAPI.relayOne.listApiKeys()),
   createApiKey: (input: RelayOneCreateKeyInput): Promise<RelayOneCreateKeyResult> => unwrap(window.electronAPI.relayOne.createApiKey(input)),
+  applyApiKey: (keyId: string): Promise<void> => unwrap(window.electronAPI.relayOne.applyApiKey(keyId)),
   updateApiKeyGroup: (keyId: string, groupId: string): Promise<RelayOneApiKey> => unwrap(window.electronAPI.relayOne.updateApiKeyGroup(keyId, groupId)),
   deleteApiKey: (keyId: string): Promise<void> => unwrap(window.electronAPI.relayOne.deleteApiKey(keyId)),
   listAvailableGroups: (): Promise<RelayOneGroup[]> => unwrap(window.electronAPI.relayOne.listAvailableGroups()),

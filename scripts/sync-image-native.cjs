@@ -67,8 +67,9 @@ function removeLegacyOutput(platformDir, archDir, outputName) {
   }
 }
 
-function buildManifest() {
+function buildManifest(safePlatformKey) {
   const baseDir = path.join(projectRoot, 'resources', 'wedecrypt')
+  const manifestPath = path.join(baseDir, 'manifest.json')
   const matrix = [
     ['win32', 'x64'],
     ['win32', 'arm64'],
@@ -88,17 +89,28 @@ function buildManifest() {
     platforms.push(key)
   }
 
+  let previousSafePlatforms = []
+  try {
+    const previous = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+    if (Array.isArray(previous.safeNativePlatforms)) {
+      previousSafePlatforms = previous.safeNativePlatforms
+    }
+  } catch { }
+  const safeNativePlatforms = Array.from(new Set([...previousSafePlatforms, safePlatformKey]))
+    .filter(key => platforms.includes(key))
+
   const manifest = {
     name: addonName,
     version: 'source-present-selfbuilt',
     vendor: 'CipherTalk',
     source: 'native/image-decrypt',
+    safeNativePlatforms,
     activeBinaries,
     platforms
   }
 
   fs.mkdirSync(baseDir, { recursive: true })
-  fs.writeFileSync(path.join(baseDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
 }
 
 function main() {
@@ -118,7 +130,7 @@ function main() {
   fs.mkdirSync(outputDir, { recursive: true })
   fs.copyFileSync(builtLibrary, outputPath)
   removeLegacyOutput(platformDir, archDir, outputName)
-  buildManifest()
+  buildManifest(`${platformDir}-${archDir}`)
 
   console.log(`[sync-image-native] synced ${builtLibrary} -> ${outputPath}`)
 }
