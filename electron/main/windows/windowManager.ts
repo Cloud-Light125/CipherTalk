@@ -6,7 +6,8 @@ import {
   nativeTheme,
   screen,
   Tray,
-  type BrowserWindowConstructorOptions
+  type BrowserWindowConstructorOptions,
+  type MenuItemConstructorOptions
 } from 'electron'
 import { createHash } from 'crypto'
 import { join } from 'path'
@@ -849,6 +850,55 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
         tray.destroy()
         ctx.setTray(null)
       }
+    },
+
+    setupApplicationMenu() {
+      const openSettings = () => {
+        manager.focusMainWindow('/settings')
+      }
+      const settingsItem: MenuItemConstructorOptions = {
+        label: '设置…',
+        accelerator: 'CommandOrControl+,',
+        click: openSettings,
+      }
+
+      const template: MenuItemConstructorOptions[] = []
+      if (process.platform === 'darwin') {
+        template.push({
+          label: app.name,
+          submenu: [
+            { role: 'about' },
+            { type: 'separator' },
+            settingsItem,
+            { type: 'separator' },
+            { role: 'services' },
+            { type: 'separator' },
+            { role: 'hide' },
+            { role: 'hideOthers' },
+            { role: 'unhide' },
+            { type: 'separator' },
+            { role: 'quit' },
+          ],
+        })
+        template.push({ role: 'fileMenu' })
+      } else {
+        template.push({
+          label: '文件',
+          submenu: [
+            settingsItem,
+            { type: 'separator' },
+            { role: 'quit' },
+          ],
+        })
+      }
+
+      template.push(
+        { role: 'editMenu' },
+        { role: 'viewMenu' },
+        { role: 'windowMenu' },
+      )
+
+      Menu.setApplicationMenu(Menu.buildFromTemplate(template))
     },
 
     focusMainWindow(route?: string) {

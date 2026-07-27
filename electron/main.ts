@@ -248,6 +248,7 @@ if (gotSingleInstanceLock) {
     }
 
     ctx.getWindowManager().setDockIcon()
+    ctx.getWindowManager().setupApplicationMenu()
 
     if (!configService.get('mcpProxyToken')) {
       markStartupMilestone('startup:mcp-token-create-start')

@@ -132,10 +132,6 @@ function AgentMessageItemImpl({
     : []
   const orderedSegments = buildRenderSegments(message.parts)
   const chainSegmentCount = orderedSegments.reduce((count, segment) => count + (segment.kind === 'chain' ? 1 : 0), 0)
-  const lastChainSegmentIndex = orderedSegments.reduce(
-    (lastIndex, segment, index) => segment.kind === 'chain' ? index : lastIndex,
-    -1,
-  )
   const persistedSingleChainElapsedMs = chainSegmentCount === 1 ? persistedProcessingElapsedMs : undefined
   // 一条消息里同一画布可能有多次 data-canvas（多轮编辑），只保留最后一条引用行
   const lastCanvasRefIndexById = new Map<string, number>()
@@ -212,7 +208,7 @@ function AgentMessageItemImpl({
           const reasoningActive = isReasoningStreaming && index === message.parts.length - 1
           return (
             <MessageResponse
-              className="text-foreground text-sm"
+              className="border-border/60 border-l-2 pl-3 text-[15px] leading-6 text-muted-foreground"
               isStreaming={reasoningActive}
               key={`chain-${index}`}
               showStreamingIndicator={false}
@@ -289,8 +285,9 @@ function AgentMessageItemImpl({
           {orderedSegments.map((segment, segmentIndex) => {
             const isLastSegment = segmentIndex === orderedSegments.length - 1
             if (segment.kind === 'chain') {
-              // 每个过程区块独立计时；新过程出现后，前一个区块立即冻结为“已处理”。
-              const segmentActive = chainActive && segmentIndex === lastChainSegmentIndex
+              // 过程块仅在仍是消息末尾时保持展开；一旦开始输出正文（或后续新过程），立即收起为「已处理」。
+              // 不要用 busy 贯穿整轮：否则思考结束后、正文流式输出期间思考链仍展开，和正文样式混淆。
+              const segmentActive = chainActive && isLastSegment
               return (
                 <div className="space-y-2" key={`chain-${segment.items[0]?.index ?? 0}`}>
                   {renderChainSegment(segment.items, segmentActive)}
