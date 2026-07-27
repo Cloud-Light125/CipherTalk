@@ -54,10 +54,20 @@ function firstString(source: JsonRecord, keys: string[], fallback = ''): string 
 
 function optionalNumber(source: JsonRecord, keys: string[]): number | undefined {
   for (const key of keys) {
-    const value = Number(source[key])
+    const rawValue = source[key]
+    if (rawValue === null || rawValue === undefined || rawValue === '') continue
+    const value = Number(rawValue)
     if (Number.isFinite(value)) return value
   }
   return undefined
+}
+
+function numericGroupId(value: string | undefined, defaultValue?: number): number | undefined {
+  const text = value?.trim() || ''
+  if (!text) return defaultValue
+  const groupId = Number(text)
+  if (!Number.isSafeInteger(groupId) || groupId < 0) throw new Error('RelayOne 分组 ID 无效')
+  return groupId
 }
 
 function firstBoolean(source: JsonRecord, keys: string[], fallback: boolean): boolean {
@@ -70,6 +80,22 @@ function firstBoolean(source: JsonRecord, keys: string[], fallback: boolean): bo
   return fallback
 }
 
+function localizeErrorMessage(message: string): string {
+  const normalized = message.trim().toLowerCase()
+  const translations: Array<[RegExp, string]> = [
+    [/invalid email or password/, '邮箱或密码错误'],
+    [/invalid (verification|verify) code/, '邮箱验证码错误'],
+    [/invalid (two[- ]factor|2fa|totp) code/, '两步验证码错误'],
+    [/email (already exists|already registered|is already in use)/, '该邮箱已注册'],
+    [/user not found/, '用户不存在'],
+    [/insufficient (balance|funds|quota)/, '账户余额不足'],
+    [/order not found/, '订单不存在'],
+    [/(api )?key not found/, 'API Key 不存在'],
+    [/token (has )?expired/, '登录状态已过期，请重新登录']
+  ]
+  return translations.find(([pattern]) => pattern.test(normalized))?.[1] || message
+}
+
 function getItems(value: unknown, keys: string[]): unknown[] {
   if (Array.isArray(value)) return value
   const source = asRecord(value)
@@ -77,7 +103,10 @@ function getItems(value: unknown, keys: string[]): unknown[] {
     if (Array.isArray(source[key])) return source[key] as unknown[]
     const mapped = asRecord(source[key])
     if (Object.keys(mapped).length > 0) {
-      return Object.entries(mapped).map(([id, item]) => ({ id, ...asRecord(item) }))
+      return Object.entries(mapped).map(([id, item]) => {
+        const itemRecord = asRecord(item)
+        return Object.keys(itemRecord).length > 0 ? { id, ...itemRecord } : { id, value: item }
+      })
     }
   }
   return []
@@ -105,11 +134,20 @@ function isUsableApiKey(value: string): boolean {
   return Boolean(value && !/[*•…]|\.\.\./.test(value))
 }
 
+const MASKED_SECRET_SEGMENT = '****************'
+
 function maskSecret(value: string): string {
   const text = value.trim()
   if (!text) return ''
-  if (text.length <= 8) return `${text.slice(0, 2)}***`
-  return `${text.slice(0, 4)}***${text.slice(-4)}`
+  if (text.length <= 8) return `${text.slice(0, 2)}${MASKED_SECRET_SEGMENT}`
+  return `${text.slice(0, 4)}${MASKED_SECRET_SEGMENT}${text.slice(-4)}`
+}
+
+function normalizeSecretPreview(value: string): string {
+  const text = value.trim()
+  if (!text) return ''
+  if (isUsableApiKey(text)) return maskSecret(text)
+  return text.replace(/(?:[*•…]+|\.\.\.)+/g, MASKED_SECRET_SEGMENT)
 }
 
 function normalizeUser(value: unknown): RelayOneUser {
@@ -131,10 +169,11 @@ function normalizeUser(value: unknown): RelayOneUser {
 function normalizeApiKey(value: unknown): RelayOneApiKey {
   const source = asRecord(value)
   const rawKey = firstString(source, ['key', 'api_key', 'apiKey', 'token', 'value'])
+  const keyPreview = firstString(source, ['key_preview', 'keyPreview', 'masked_key'], rawKey)
   return {
     id: firstString(source, ['id', 'key_id', 'keyId']),
     name: firstString(source, ['name', 'key_name', 'keyName'], '未命名 Key'),
-    keyPreview: firstString(source, ['key_preview', 'keyPreview', 'masked_key'], maskSecret(rawKey)),
+    keyPreview: normalizeSecretPreview(keyPreview),
     groupId: firstString(source, ['group_id', 'groupId']) || undefined,
     groupName: firstString(source, ['group_name', 'groupName', 'group']) || undefined,
     enabled: firstBoolean(source, ['enabled', 'is_enabled', 'active'], true),
@@ -151,7 +190,8 @@ function normalizeGroup(value: unknown): RelayOneGroup {
     id: firstString(source, ['id', 'group_id', 'groupId', 'name']),
     name: firstString(source, ['name', 'group_name', 'groupName', 'id']),
     description: firstString(source, ['description', 'desc']) || undefined,
-    enabled: firstBoolean(source, ['enabled', 'is_enabled', 'active'], true)
+    enabled: firstBoolean(source, ['enabled', 'is_enabled', 'active'], true),
+    rateMultiplier: optionalNumber(source, ['rate_multiplier', 'rateMultiplier', 'rate']) || 1
   }
 }
 
@@ -204,7 +244,7 @@ export class RelayOneService {
     return {
       siteName: firstString(source, ['site_name', 'siteName', 'name'], 'RelayOne'),
       registrationEnabled: firstBoolean(source, ['registration_enabled', 'registrationEnabled', 'enable_registration'], true),
-      emailVerificationEnabled: firstBoolean(source, ['email_verification_enabled', 'emailVerificationEnabled', 'enable_email_verification'], false),
+      emailVerificationEnabled: firstBoolean(source, ['email_verify_enabled', 'email_verification_enabled', 'emailVerificationEnabled', 'enable_email_verification'], false),
       promoCodeEnabled: firstBoolean(source, ['promo_code_enabled', 'promoCodeEnabled', 'enable_promo_code'], false),
       invitationCodeEnabled: firstBoolean(source, ['invitation_code_enabled', 'invitationCodeEnabled', 'enable_invitation_code'], false),
       totpEnabled: firstBoolean(source, ['totp_enabled', 'totpEnabled', 'enable_totp'], false),
@@ -300,7 +340,8 @@ export class RelayOneService {
     const name = input.name.trim()
     if (!name) throw new Error('请输入 Key 名称')
     const body: JsonRecord = { name }
-    if (input.groupId?.trim()) body.group_id = input.groupId.trim()
+    const groupId = numericGroupId(input.groupId)
+    if (groupId !== undefined) body.group_id = groupId
     const payload = await this.request('/keys', { method: 'POST', body, authenticated: true })
     const { rawKey, entity } = extractApiKey(payload)
     if (!rawKey) throw new Error('RelayOne 已创建 Key，但响应中未包含可应用的密钥')
@@ -333,7 +374,7 @@ export class RelayOneService {
     if (!normalizedKeyId) throw new Error('缺少 Key ID')
     const payload = await this.request(`/keys/${encodeURIComponent(normalizedKeyId)}`, {
       method: 'PUT',
-      body: { group_id: groupId.trim() },
+      body: { group_id: numericGroupId(groupId, 0) },
       authenticated: true
     })
     return normalizeApiKey(payload)
@@ -353,13 +394,20 @@ export class RelayOneService {
 
   async listGroupRates(): Promise<RelayOneGroupRate[]> {
     const payload = await this.request('/groups/rates', { authenticated: true })
-    return getItems(payload, ['items', 'list', 'rates', 'groups', 'data']).map((value) => {
+    const source = asRecord(payload)
+    const nestedItems = getItems(payload, ['items', 'list', 'rates', 'groups', 'data'])
+    const items = nestedItems.length > 0
+      ? nestedItems
+      : Object.entries(source).map(([id, value]) => ({ id, value }))
+    return items.flatMap((value): RelayOneGroupRate[] => {
       const source = asRecord(value)
-      return {
+      const rate = optionalNumber(source, ['rate', 'ratio', 'multiplier', 'value'])
+      if (rate === undefined) return []
+      return [{
         groupId: firstString(source, ['group_id', 'groupId', 'id', 'name']),
         groupName: firstString(source, ['group_name', 'groupName', 'name', 'id']),
-        rate: optionalNumber(source, ['rate', 'ratio', 'multiplier']) || 1
-      }
+        rate
+      }]
     })
   }
 
@@ -439,7 +487,7 @@ export class RelayOneService {
       apiKey,
       model: existing?.model || '',
       baseURL: RELAYONE_INFERENCE_BASE_URL,
-      protocol: 'openai-compatible'
+      protocol: 'openai-responses'
     })
   }
 
@@ -517,7 +565,7 @@ export class RelayOneService {
     }
     const envelope = asRecord(payload)
     const envelopeCode = envelope.code
-    const message = firstString(envelope, ['message', 'msg', 'error'])
+    const message = localizeErrorMessage(firstString(envelope, ['message', 'msg', 'error']))
 
     if (!response.ok) {
       throw new RelayOneApiError(message || `RelayOne 请求失败（HTTP ${response.status}）`, response.status, typeof envelopeCode === 'string' || typeof envelopeCode === 'number' ? envelopeCode : undefined)

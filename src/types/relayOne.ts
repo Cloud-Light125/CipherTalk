@@ -79,6 +79,7 @@ export interface RelayOneGroup {
   name: string
   description?: string
   enabled: boolean
+  rateMultiplier: number
 }
 
 export interface RelayOneGroupRate {

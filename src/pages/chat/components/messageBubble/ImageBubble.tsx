@@ -70,13 +70,14 @@ interface ImageBubbleProps {
   session: ChatSession
   hasImageKey?: boolean
   onContextMenu?: (e: React.MouseEvent, message: Message, handlers?: any) => void
+  onImageReady?: () => void
 }
 
 /**
  * 图片消息气泡（localType === 3）
  * 支持懒加载、解密、缓存、缩略图升级、实况照片等
  */
-function ImageBubble({ message, session, hasImageKey, onContextMenu }: ImageBubbleProps) {
+function ImageBubble({ message, session, hasImageKey, onContextMenu, onImageReady }: ImageBubbleProps) {
   const syncVersion = useRef(0)
   // We'll use a ref that gets updated - simplest way to track sync version without full store import
   // In practice the parent or store passes this
@@ -452,7 +453,10 @@ function ImageBubble({ message, session, hasImageKey, onContextMenu }: ImageBubb
           style={{ width: '100%', height: '100%' }}
           decoding="async"
           onClick={() => { void handleOpenImage() }}
-          onLoad={() => setImageError(false)}
+          onLoad={() => {
+            setImageError(false)
+            onImageReady?.()
+          }}
           onError={() => {
             setImageError(true)
             void recoverBrokenImagePath()
@@ -524,7 +528,8 @@ function ImageBubble({ message, session, hasImageKey, onContextMenu }: ImageBubb
 function areImageBubblePropsEqual(prev: ImageBubbleProps, next: ImageBubbleProps) {
   return prev.message === next.message &&
     prev.session === next.session &&
-    prev.hasImageKey === next.hasImageKey
+    prev.hasImageKey === next.hasImageKey &&
+    prev.onImageReady === next.onImageReady
 }
 
 export default memo(ImageBubble, areImageBubblePropsEqual)

@@ -100,7 +100,7 @@ const RELAYONE_PROVIDER_DEFINITION: AIProviderMetadata = {
   name: 'relayone',
   displayName: 'RelayOne（官方推荐）',
   description: '一个 Key 直连全模型，国内可用，注册即用',
-  protocol: 'openai-compatible',
+  protocol: 'openai-responses',
   baseURL: 'https://aiapi.aiqji.cn/v1',
   models: [],
   modelDetails: [],

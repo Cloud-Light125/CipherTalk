@@ -77,6 +77,22 @@ function groupLabel(groupId: string | undefined, groups: RelayOneGroup[]): strin
   return groups.find((group) => group.id === groupId)?.name || groupId
 }
 
+function groupRate(groupId: string | undefined, groupName: string, rates: RelayOneGroupRate[]): number | undefined {
+  if (groupId) {
+    return rates.find((rate) => rate.groupId === groupId || rate.groupName === groupName)?.rate
+  }
+  return rates.find((rate) => {
+    const normalizedId = rate.groupId.trim().toLowerCase()
+    const normalizedName = rate.groupName.trim().toLowerCase()
+    return !normalizedId || normalizedId === 'default' || normalizedId === DEFAULT_GROUP_KEY || normalizedName === '默认分组' || normalizedName === 'default'
+  })?.rate
+}
+
+function GroupRateChip({ rate }: { rate: number | undefined }) {
+  if (rate === undefined) return null
+  return <Chip size="sm" variant="soft" color="accent" className="shrink-0"><Chip.Label>{rate}x</Chip.Label></Chip>
+}
+
 export default function RelayOneAccountPanel({ onProviderApplied, showMessage, hasConfiguredApiKey }: RelayOneAccountPanelProps) {
   const [status, setStatus] = useState<RelayOneStatus>(EMPTY_STATUS)
   const [publicSettings, setPublicSettings] = useState<RelayOnePublicSettings | null>(null)
@@ -89,7 +105,9 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   const [authTab, setAuthTab] = useState<AuthTab>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
+  const [verificationCountdown, setVerificationCountdown] = useState(0)
   const [promoCode, setPromoCode] = useState('')
   const [invitationCode, setInvitationCode] = useState('')
   const [twoFactorCode, setTwoFactorCode] = useState('')
@@ -124,8 +142,16 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
 
     if (results[0].status === 'fulfilled') setUser(results[0].value)
     if (results[1].status === 'fulfilled') setApiKeys(results[1].value)
-    if (results[2].status === 'fulfilled') setGroups(results[2].value)
-    if (results[3].status === 'fulfilled') setRates(results[3].value)
+    const nextGroups = results[2].status === 'fulfilled' ? results[2].value : []
+    if (results[2].status === 'fulfilled') setGroups(nextGroups)
+    if (results[3].status === 'fulfilled') {
+      const userRates = results[3].value
+      setRates(nextGroups.length > 0 ? nextGroups.map((group) => ({
+        groupId: group.id,
+        groupName: group.name,
+        rate: userRates.find((rate) => rate.groupId === group.id)?.rate ?? group.rateMultiplier
+      })) : userRates)
+    }
     if (results[4].status === 'fulfilled') {
       const checkout = results[4].value
       setCheckoutInfo(checkout)
@@ -179,6 +205,14 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     return () => window.clearInterval(timer)
   }, [loadAccountData, order, showMessage])
 
+  useEffect(() => {
+    if (verificationCountdown <= 0) return
+    const timer = window.setTimeout(() => {
+      setVerificationCountdown((current) => Math.max(0, current - 1))
+    }, 1000)
+    return () => window.clearTimeout(timer)
+  }, [verificationCountdown])
+
   const runAction = async (name: string, operation: () => Promise<void>) => {
     setAction(name)
     setError('')
@@ -216,6 +250,8 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   })
 
   const handleRegister = () => runAction('register', async () => {
+    if (!confirmPassword) throw new Error('请再次输入密码')
+    if (password !== confirmPassword) throw new Error('两次输入的密码不一致')
     await relayOneService.register({
       email,
       password,
@@ -224,12 +260,14 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
       invitationCode: invitationCode || undefined
     })
     setAuthTab('login')
+    setConfirmPassword('')
     setVerificationCode('')
     showMessage('注册成功，请登录', true)
   })
 
   const handleSendCode = () => runAction('send-code', async () => {
     await relayOneService.sendVerificationCode(email)
+    setVerificationCountdown(60)
     showMessage('验证码已发送', true)
   })
 
@@ -319,90 +357,92 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
       )}
 
       {!status.authenticated ? (
-        requiresTwoFactor ? (
-          <div className="max-w-lg space-y-4">
-            <TextField fullWidth value={twoFactorCode} onChange={setTwoFactorCode}>
-              <Label>两步验证码</Label>
-              <InputGroup variant="secondary" fullWidth><InputGroup.Input inputMode="numeric" autoComplete="one-time-code" placeholder="请输入验证码" /></InputGroup>
-            </TextField>
-            <div className="flex gap-2">
-              <Button type="button" variant="primary" size="sm" onPress={handleVerifyTwoFactor} isDisabled={Boolean(action)}>
+        <div className="mx-auto w-full max-w-md py-2">
+          {requiresTwoFactor ? (
+            <div className="space-y-4">
+              <TextField fullWidth value={twoFactorCode} onChange={setTwoFactorCode}>
+                <Label>两步验证码</Label>
+                <InputGroup variant="secondary" fullWidth><InputGroup.Input inputMode="numeric" autoComplete="one-time-code" placeholder="请输入验证码" /></InputGroup>
+              </TextField>
+              <Button type="button" variant="primary" className="w-full" onPress={handleVerifyTwoFactor} isDisabled={Boolean(action)}>
                 {action === '2fa' && <Spinner size="sm" />}验证并登录
               </Button>
-              <Button type="button" variant="outline" size="sm" onPress={() => { setRequiresTwoFactor(false); setTwoFactorCode('') }}>返回</Button>
+              <Button type="button" variant="tertiary" className="w-full" onPress={() => { setRequiresTwoFactor(false); setTwoFactorCode('') }}>返回登录</Button>
             </div>
-          </div>
-        ) : (
-          <Tabs selectedKey={authTab} onSelectionChange={(key) => setAuthTab(String(key) as AuthTab)} className="w-full">
-            <Tabs.ListContainer>
-              <Tabs.List aria-label="RelayOne 账户操作">
-                <Tabs.Tab id="login">登录<Tabs.Indicator /></Tabs.Tab>
-                {publicSettings?.registrationEnabled !== false && <Tabs.Tab id="register">注册<Tabs.Indicator /></Tabs.Tab>}
-              </Tabs.List>
-            </Tabs.ListContainer>
-            <Tabs.Panel id="login" className="pt-4">
-              <div className="grid max-w-2xl gap-4 md:grid-cols-2">
-                <TextField fullWidth value={email} onChange={setEmail}>
-                  <Label>邮箱</Label>
-                  <InputGroup variant="secondary" fullWidth><InputGroup.Input type="email" autoComplete="email" placeholder="name@example.com" /></InputGroup>
-                </TextField>
-                <TextField fullWidth value={password} onChange={setPassword}>
-                  <Label>密码</Label>
-                  <InputGroup variant="secondary" fullWidth><InputGroup.Input type="password" autoComplete="current-password" placeholder="请输入密码" /></InputGroup>
-                </TextField>
-              </div>
-              <Button type="button" variant="primary" size="sm" className="mt-4" onPress={handleLogin} isDisabled={Boolean(action)}>
-                {action === 'login' && <Spinner size="sm" />}登录 RelayOne
-              </Button>
-            </Tabs.Panel>
-            <Tabs.Panel id="register" className="pt-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <TextField fullWidth value={email} onChange={setEmail}>
-                  <Label>邮箱</Label>
-                  <InputGroup variant="secondary" fullWidth><InputGroup.Input type="email" autoComplete="email" placeholder="name@example.com" /></InputGroup>
-                </TextField>
-                <TextField fullWidth value={password} onChange={setPassword}>
-                  <Label>密码</Label>
-                  <InputGroup variant="secondary" fullWidth><InputGroup.Input type="password" autoComplete="new-password" placeholder="设置登录密码" /></InputGroup>
-                </TextField>
-                {publicSettings?.emailVerificationEnabled && (
-                  <TextField fullWidth value={verificationCode} onChange={setVerificationCode}>
-                    <Label>邮箱验证码</Label>
-                    <InputGroup variant="secondary" fullWidth>
-                      <InputGroup.Input autoComplete="one-time-code" placeholder="验证码" />
-                      <InputGroup.Suffix>
-                        <Button type="button" variant="tertiary" size="sm" onPress={handleSendCode} isDisabled={Boolean(action)}>{action === 'send-code' ? <Spinner size="sm" /> : '发送'}</Button>
-                      </InputGroup.Suffix>
-                    </InputGroup>
+          ) : (
+            <Tabs selectedKey={authTab} onSelectionChange={(key) => setAuthTab(String(key) as AuthTab)} className="w-full">
+              <Tabs.ListContainer>
+                <Tabs.List aria-label="RelayOne 账户操作" className="w-full *:flex-1">
+                  <Tabs.Tab id="login">登录<Tabs.Indicator /></Tabs.Tab>
+                  {publicSettings?.registrationEnabled !== false && <Tabs.Tab id="register">注册<Tabs.Indicator /></Tabs.Tab>}
+                </Tabs.List>
+              </Tabs.ListContainer>
+              <Tabs.Panel id="login" className="pt-5">
+                <div className="space-y-4">
+                  <TextField fullWidth value={email} onChange={setEmail}>
+                    <Label>邮箱</Label>
+                    <InputGroup variant="secondary" fullWidth><InputGroup.Input type="email" autoComplete="email" placeholder="name@example.com" /></InputGroup>
                   </TextField>
-                )}
-                {publicSettings?.promoCodeEnabled && (
-                  <TextField fullWidth value={promoCode} onChange={setPromoCode}>
-                    <Label>优惠码</Label>
-                    <InputGroup variant="secondary" fullWidth><InputGroup.Input placeholder="选填" /></InputGroup>
+                  <TextField fullWidth value={password} onChange={setPassword}>
+                    <Label>密码</Label>
+                    <InputGroup variant="secondary" fullWidth><InputGroup.Input type="password" autoComplete="current-password" placeholder="请输入密码" /></InputGroup>
                   </TextField>
-                )}
-                {publicSettings?.invitationCodeEnabled && (
-                  <TextField fullWidth value={invitationCode} onChange={setInvitationCode}>
-                    <Label>邀请码</Label>
-                    <InputGroup variant="secondary" fullWidth><InputGroup.Input placeholder="请输入邀请码" /></InputGroup>
+                  <Button type="button" variant="primary" className="w-full" onPress={handleLogin} isDisabled={Boolean(action)}>
+                    {action === 'login' && <Spinner size="sm" />}登录 RelayOne
+                  </Button>
+                </div>
+              </Tabs.Panel>
+              <Tabs.Panel id="register" className="pt-5">
+                <div className="space-y-4">
+                  <TextField fullWidth value={email} onChange={setEmail}>
+                    <Label>邮箱</Label>
+                    <InputGroup variant="secondary" fullWidth><InputGroup.Input type="email" autoComplete="email" placeholder="name@example.com" /></InputGroup>
                   </TextField>
-                )}
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Button type="button" variant="primary" size="sm" onPress={handleRegister} isDisabled={Boolean(action)}>
-                  {action === 'register' && <Spinner size="sm" />}注册
-                </Button>
-                {(publicSettings?.agreementUrl || publicSettings?.privacyUrl) && (
-                  <div className="flex gap-3 text-xs">
-                    {publicSettings.agreementUrl && <button type="button" className="text-accent hover:underline" onClick={() => void window.electronAPI.shell.openExternal(publicSettings.agreementUrl!)}>用户协议</button>}
-                    {publicSettings.privacyUrl && <button type="button" className="text-accent hover:underline" onClick={() => void window.electronAPI.shell.openExternal(publicSettings.privacyUrl!)}>隐私政策</button>}
-                  </div>
-                )}
-              </div>
-            </Tabs.Panel>
-          </Tabs>
-        )
+                  <TextField fullWidth value={password} onChange={setPassword}>
+                    <Label>密码</Label>
+                    <InputGroup variant="secondary" fullWidth><InputGroup.Input type="password" autoComplete="new-password" placeholder="设置登录密码" /></InputGroup>
+                  </TextField>
+                  <TextField fullWidth value={confirmPassword} onChange={setConfirmPassword}>
+                    <Label>确认密码</Label>
+                    <InputGroup variant="secondary" fullWidth><InputGroup.Input type="password" autoComplete="new-password" placeholder="再次输入密码" /></InputGroup>
+                  </TextField>
+                  {publicSettings?.emailVerificationEnabled && (
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+                      <TextField fullWidth value={verificationCode} onChange={setVerificationCode}>
+                        <Label>邮箱验证码</Label>
+                        <InputGroup variant="secondary" fullWidth><InputGroup.Input autoComplete="one-time-code" placeholder="验证码" /></InputGroup>
+                      </TextField>
+                      <Button type="button" variant="outline" className="min-w-28" onPress={handleSendCode} isDisabled={Boolean(action) || verificationCountdown > 0 || !email.trim()}>
+                        {action === 'send-code' ? <Spinner size="sm" /> : verificationCountdown > 0 ? `${verificationCountdown} 秒` : '发送验证码'}
+                      </Button>
+                    </div>
+                  )}
+                  {publicSettings?.promoCodeEnabled && (
+                    <TextField fullWidth value={promoCode} onChange={setPromoCode}>
+                      <Label>优惠码</Label>
+                      <InputGroup variant="secondary" fullWidth><InputGroup.Input placeholder="选填" /></InputGroup>
+                    </TextField>
+                  )}
+                  {publicSettings?.invitationCodeEnabled && (
+                    <TextField fullWidth value={invitationCode} onChange={setInvitationCode}>
+                      <Label>邀请码</Label>
+                      <InputGroup variant="secondary" fullWidth><InputGroup.Input placeholder="请输入邀请码" /></InputGroup>
+                    </TextField>
+                  )}
+                  <Button type="button" variant="primary" className="w-full" onPress={handleRegister} isDisabled={Boolean(action)}>
+                    {action === 'register' && <Spinner size="sm" />}创建账户
+                  </Button>
+                  {(publicSettings?.agreementUrl || publicSettings?.privacyUrl) && (
+                    <div className="flex justify-center gap-4 text-xs">
+                      {publicSettings.agreementUrl && <button type="button" className="text-accent hover:underline" onClick={() => void window.electronAPI.shell.openExternal(publicSettings.agreementUrl!)}>用户协议</button>}
+                      {publicSettings.privacyUrl && <button type="button" className="text-accent hover:underline" onClick={() => void window.electronAPI.shell.openExternal(publicSettings.privacyUrl!)}>隐私政策</button>}
+                    </div>
+                  )}
+                </div>
+              </Tabs.Panel>
+            </Tabs>
+          )}
+        </div>
       ) : (
         <div className="space-y-6">
           <section className="grid gap-3 border-y border-divider py-4 sm:grid-cols-3">
@@ -411,7 +451,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
             <div><div className="text-xs text-muted-foreground">余额</div><div className="mt-1 text-sm font-semibold text-success">{formatMoney(user?.balance, checkoutInfo?.currency || 'CNY')}</div></div>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3 border-b border-divider pb-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div><Typography.Heading level={4} className="text-sm">API Key</Typography.Heading><Description>新建 Key 会直接应用到 CipherTalk 的 RelayOne 模型配置。</Description></div>
               <Chip size="sm" variant="soft" color="accent"><Chip.Label>{apiKeys.length} 个</Chip.Label></Chip>
@@ -423,14 +463,35 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
               </TextField>
               <Select selectedKey={newKeyGroupId || DEFAULT_GROUP_KEY} onSelectionChange={(key: Key | null) => setNewKeyGroupId(key == null || String(key) === DEFAULT_GROUP_KEY ? '' : String(key))} placeholder="默认分组" variant="secondary" fullWidth>
                 <Label>分组</Label>
-                <Select.Trigger><Select.Value>{({ defaultChildren }) => groupLabel(newKeyGroupId, activeGroups) || defaultChildren}</Select.Value><Select.Indicator /></Select.Trigger>
-                <Select.Popover><ListBox><ListBox.Item id={DEFAULT_GROUP_KEY} textValue="默认分组">默认分组<ListBox.ItemIndicator /></ListBox.Item>{activeGroups.map((group) => <ListBox.Item key={group.id} id={group.id} textValue={group.name}>{group.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+                <Select.Trigger>
+                  <Select.Value>{({ defaultChildren }) => (
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate">{groupLabel(newKeyGroupId, activeGroups) || defaultChildren}</span>
+                      <GroupRateChip rate={groupRate(newKeyGroupId, groupLabel(newKeyGroupId, activeGroups), rates)} />
+                    </span>
+                  )}</Select.Value>
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id={DEFAULT_GROUP_KEY} textValue="默认分组">
+                      <span className="flex min-w-0 flex-1 items-center gap-2"><span>默认分组</span><GroupRateChip rate={groupRate(undefined, '默认分组', rates)} /></span>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                    {activeGroups.map((group) => (
+                      <ListBox.Item key={group.id} id={group.id} textValue={group.name}>
+                        <span className="flex min-w-0 flex-1 items-center gap-2"><span className="truncate">{group.name}</span><GroupRateChip rate={groupRate(group.id, group.name, rates)} /></span>
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
               </Select>
               <Button type="button" variant="primary" size="sm" className="self-end" onPress={handleCreateKey} isDisabled={Boolean(action)}>
                 {action === 'create-key' ? <Spinner size="sm" /> : <Plus width={16} height={16} />}创建并应用
               </Button>
             </div>
-            <div className="h-52 divide-y divide-divider overflow-y-auto overscroll-contain border-y border-divider scrollbar">
+            <div className="h-52 divide-y divide-divider overflow-y-auto overscroll-contain border-t border-divider scrollbar">
               {apiKeys.length === 0 ? <div className="py-5 text-sm text-muted-foreground">暂无 API Key</div> : apiKeys.map((item) => (
                 <div key={item.id} className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,1fr)_240px_auto]">
                   <div className="min-w-0">
@@ -441,8 +502,29 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
                     <div className="truncate font-mono text-xs text-muted-foreground">{item.keyPreview || '密钥仅在创建时可见'}</div>
                   </div>
                   <Select selectedKey={item.groupId || DEFAULT_GROUP_KEY} onSelectionChange={(key: Key | null) => void handleUpdateKeyGroup(item.id, key == null || String(key) === DEFAULT_GROUP_KEY ? '' : String(key))} placeholder="默认分组" variant="secondary" fullWidth isDisabled={Boolean(action)}>
-                    <Select.Trigger><Select.Value>{({ defaultChildren }) => groupLabel(item.groupId, activeGroups) || defaultChildren}</Select.Value><Select.Indicator /></Select.Trigger>
-                    <Select.Popover><ListBox><ListBox.Item id={DEFAULT_GROUP_KEY} textValue="默认分组">默认分组<ListBox.ItemIndicator /></ListBox.Item>{activeGroups.map((group) => <ListBox.Item key={group.id} id={group.id} textValue={group.name}>{group.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+                    <Select.Trigger>
+                      <Select.Value>{({ defaultChildren }) => (
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="truncate">{groupLabel(item.groupId, activeGroups) || defaultChildren}</span>
+                          <GroupRateChip rate={groupRate(item.groupId, groupLabel(item.groupId, activeGroups), rates)} />
+                        </span>
+                      )}</Select.Value>
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        <ListBox.Item id={DEFAULT_GROUP_KEY} textValue="默认分组">
+                          <span className="flex min-w-0 flex-1 items-center gap-2"><span>默认分组</span><GroupRateChip rate={groupRate(undefined, '默认分组', rates)} /></span>
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                        {activeGroups.map((group) => (
+                          <ListBox.Item key={group.id} id={group.id} textValue={group.name}>
+                            <span className="flex min-w-0 flex-1 items-center gap-2"><span className="truncate">{group.name}</span><GroupRateChip rate={groupRate(group.id, group.name, rates)} /></span>
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
                   </Select>
                   <div className="flex items-center gap-2">
                     <Button type="button" variant={item.isApplied ? 'outline' : 'primary'} size="sm" onPress={() => void handleApplyKey(item.id)} isDisabled={Boolean(action) || item.isApplied}>
@@ -455,10 +537,9 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
                 </div>
               ))}
             </div>
-            {rates.length > 0 && <div className="flex flex-wrap gap-2">{rates.map((rate) => <Chip key={rate.groupId} size="sm" variant="soft"><Chip.Label>{rate.groupName} {rate.rate}x</Chip.Label></Chip>)}</div>}
           </section>
 
-          <section className="space-y-3 border-t border-divider pt-5">
+          <section className="mt-0! space-y-3 pt-3">
             <div className="flex items-center gap-2"><Wallet width={18} height={18} /><Typography.Heading level={4} className="text-sm">账户充值</Typography.Heading></div>
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
               <TextField fullWidth value={rechargeAmount} onChange={setRechargeAmount}>
@@ -498,10 +579,10 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
           size="lg"
           scroll="inside"
           placement="center"
-          className="w-full! max-w-308! max-h-[calc(100vh-32px)]! p-4!"
+          className={`w-full! max-h-[calc(100vh-32px)]! p-4! ${status.authenticated ? 'max-w-220!' : 'max-w-156!'}`}
         >
           <Modal.Dialog aria-label="RelayOne 账户管理" className="max-w-none!">
-            <Modal.Header className="gap-2 border-b border-divider">
+            <Modal.Header className="gap-2 border-b border-divider pb-3">
               <div className="flex justify-end">
                 <CloseButton aria-label="关闭 RelayOne 账户管理" onPress={() => setAccountModalOpen(false)} />
               </div>

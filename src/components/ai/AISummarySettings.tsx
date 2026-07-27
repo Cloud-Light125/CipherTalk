@@ -483,14 +483,14 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
     setField('aiProvider', 'relayone')
     setField('aiApiKey', relayOneConfig.apiKey)
     setField('aiModel', relayOneConfig.model || '')
-    setCustomProtocol(relayOneConfig.protocol || 'openai-compatible')
+    setCustomProtocol(relayOneConfig.protocol || 'openai-responses')
     setModelListError('')
 
     const result = await window.electronAPI.ai.listModels({
       provider: 'relayone',
       apiKey: relayOneConfig.apiKey,
       baseURL: relayOneConfig.baseURL || 'https://aiapi.aiqji.cn/v1',
-      protocol: relayOneConfig.protocol || 'openai-compatible'
+      protocol: relayOneConfig.protocol || 'openai-responses'
     })
     if (!result.success || !result.models) {
       setModelListError(result.error || 'RelayOne 模型列表刷新失败')
