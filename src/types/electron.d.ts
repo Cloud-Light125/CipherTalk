@@ -6,6 +6,23 @@ import type {
 } from './models'
 import type { AccountProfile, AccountProfileInput, AccountProfilePatch } from './account'
 import type { AIModelInfo, AIProviderInfo } from './ai'
+import type {
+  RelayOneApiKey,
+  RelayOneCheckoutInfo,
+  RelayOneCreateKeyInput,
+  RelayOneCreateKeyResult,
+  RelayOneCreatePaymentOrderInput,
+  RelayOneGroup,
+  RelayOneGroupRate,
+  RelayOneIpcResult,
+  RelayOneLoginInput,
+  RelayOneLoginResult,
+  RelayOnePaymentOrder,
+  RelayOnePublicSettings,
+  RelayOneRegisterInput,
+  RelayOneStatus,
+  RelayOneUser
+} from './relayOne'
 import type { AgentReasoningEffort } from '../features/aiagent/transport/ipcChatTransport'
 
 export interface EmbeddingConfig {
@@ -1774,6 +1791,27 @@ export interface ElectronAPI {
       content?: string
       error?: string
     }>
+  }
+  relayOne: {
+    getStatus: () => Promise<RelayOneIpcResult<RelayOneStatus>>
+    getPublicSettings: () => Promise<RelayOneIpcResult<RelayOnePublicSettings>>
+    sendVerificationCode: (email: string) => Promise<RelayOneIpcResult<void>>
+    register: (input: RelayOneRegisterInput) => Promise<RelayOneIpcResult<void>>
+    login: (input: RelayOneLoginInput) => Promise<RelayOneIpcResult<RelayOneLoginResult>>
+    verifyTwoFactor: (code: string) => Promise<RelayOneIpcResult<RelayOneLoginResult>>
+    logout: () => Promise<RelayOneIpcResult<void>>
+    getCurrentUser: () => Promise<RelayOneIpcResult<RelayOneUser>>
+    listApiKeys: () => Promise<RelayOneIpcResult<RelayOneApiKey[]>>
+    createApiKey: (input: RelayOneCreateKeyInput) => Promise<RelayOneIpcResult<RelayOneCreateKeyResult>>
+    updateApiKeyGroup: (keyId: string, groupId: string) => Promise<RelayOneIpcResult<RelayOneApiKey>>
+    deleteApiKey: (keyId: string) => Promise<RelayOneIpcResult<void>>
+    listAvailableGroups: () => Promise<RelayOneIpcResult<RelayOneGroup[]>>
+    listGroupRates: () => Promise<RelayOneIpcResult<RelayOneGroupRate[]>>
+    getCheckoutInfo: () => Promise<RelayOneIpcResult<RelayOneCheckoutInfo>>
+    createPaymentOrder: (input: RelayOneCreatePaymentOrderInput) => Promise<RelayOneIpcResult<RelayOnePaymentOrder>>
+    getPaymentOrder: (orderId: string) => Promise<RelayOneIpcResult<RelayOnePaymentOrder>>
+    onStatusChanged: (callback: (status: RelayOneStatus) => void) => () => void
+    onProviderApplied: (callback: () => void) => () => void
   }
   codexSubscription: {
     getStatus: () => Promise<CodexSubscriptionStatus>

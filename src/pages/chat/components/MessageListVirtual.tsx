@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import { ChevronDown, CircleDashed } from '@gravity-ui/icons'
 import { Button } from '@heroui/react'
@@ -7,6 +7,7 @@ import ChatBackground from '../../../components/ChatBackground'
 import type { ChatSession, Message } from '../../../types/models'
 import type { ContextMenuState, QuoteStyle } from '../types'
 import { getMessageDomKey } from '../utils/messageKeys'
+import { getImageGroupInfo, isStackableImageGroup, type ImageGroupInfo } from '../utils/imageGroup'
 import { isGroupChat, isSystemMessage } from '../utils/messageGuards'
 import { formatDateDivider, shouldShowDateDivider } from '../utils/time'
 import MessageBubble from './messageBubble/MessageBubble'
@@ -34,6 +35,82 @@ interface MessageListVirtualProps {
   topSignal: number
 }
 
+interface MessageListItem {
+  key: string
+  message: Message
+  lastMessage: Message
+  imageGroup?: {
+    info: ImageGroupInfo
+    messages: Message[]
+  }
+  expandedImageGroup?: {
+    info: ImageGroupInfo
+    messages: Message[]
+    index: number
+  }
+}
+
+const IMAGE_GROUP_COLLAPSE_DURATION = 300
+const IMAGE_GROUP_STAGGER = 36
+const IMAGE_GROUP_SETTLE_DURATION = 360
+
+function createMessageListItems(messages: Message[], expandedGroups: Set<string>, selectMode: boolean): MessageListItem[] {
+  const items: MessageListItem[] = []
+
+  for (let index = 0; index < messages.length;) {
+    const message = messages[index]
+    const groupInfo = getImageGroupInfo(message)
+
+    if (!selectMode && isStackableImageGroup(groupInfo)) {
+      const groupedMessages = [message]
+      let nextIndex = index + 1
+
+      while (nextIndex < messages.length) {
+        const nextInfo = getImageGroupInfo(messages[nextIndex])
+        if (!nextInfo || nextInfo.id !== groupInfo.id) break
+        groupedMessages.push(messages[nextIndex])
+        nextIndex += 1
+      }
+
+      if (!expandedGroups.has(groupInfo.id)) {
+        const newestMessage = groupedMessages[groupedMessages.length - 1]
+        items.push({
+          key: `image-group:${groupInfo.id}`,
+          message: newestMessage,
+          lastMessage: newestMessage,
+          imageGroup: { info: groupInfo, messages: groupedMessages }
+        })
+        index = nextIndex
+        continue
+      }
+
+      groupedMessages.forEach((groupedMessage, groupIndex) => {
+        items.push({
+          key: getMessageDomKey(groupedMessage),
+          message: groupedMessage,
+          lastMessage: groupedMessage,
+          expandedImageGroup: {
+            info: groupInfo,
+            messages: groupedMessages,
+            index: groupIndex
+          }
+        })
+      })
+      index = nextIndex
+      continue
+    }
+
+    items.push({
+      key: getMessageDomKey(message),
+      message,
+      lastMessage: message
+    })
+    index += 1
+  }
+
+  return items
+}
+
 export function MessageListVirtual({
   currentSession,
   isLoadingMessages,
@@ -55,6 +132,84 @@ export function MessageListVirtual({
   topSignal
 }: MessageListVirtualProps) {
   const vRef = useRef<VirtualizerHandle>(null)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set())
+  const [collapsingGroups, setCollapsingGroups] = useState<Set<string>>(() => new Set())
+  const [settlingGroups, setSettlingGroups] = useState<Set<string>>(() => new Set())
+  const groupMotionTimersRef = useRef<Map<string, number>>(new Map())
+  const messageItems = useMemo(
+    () => createMessageListItems(messages, expandedGroups, selectMode),
+    [expandedGroups, messages, selectMode]
+  )
+
+  useEffect(() => {
+    const timers = groupMotionTimersRef.current
+    return () => {
+      timers.forEach(timer => window.clearTimeout(timer))
+      timers.clear()
+    }
+  }, [])
+
+  const expandImageGroup = useCallback((groupId: string) => {
+    const existingTimer = groupMotionTimersRef.current.get(groupId)
+    if (existingTimer !== undefined) {
+      window.clearTimeout(existingTimer)
+      groupMotionTimersRef.current.delete(groupId)
+    }
+    setSettlingGroups(current => {
+      if (!current.has(groupId)) return current
+      const next = new Set(current)
+      next.delete(groupId)
+      return next
+    })
+    setExpandedGroups(current => {
+      const next = new Set(current)
+      next.add(groupId)
+      return next
+    })
+  }, [])
+
+  const collapseImageGroup = useCallback((groupId: string, imageCount: number) => {
+    if (groupMotionTimersRef.current.has(groupId)) return
+
+    setCollapsingGroups(current => {
+      const next = new Set(current)
+      next.add(groupId)
+      return next
+    })
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const collapseDelay = reduceMotion
+      ? 0
+      : IMAGE_GROUP_COLLAPSE_DURATION + Math.max(0, imageCount - 1) * IMAGE_GROUP_STAGGER
+    const collapseTimer = window.setTimeout(() => {
+      setExpandedGroups(current => {
+        const next = new Set(current)
+        next.delete(groupId)
+        return next
+      })
+      setCollapsingGroups(current => {
+        const next = new Set(current)
+        next.delete(groupId)
+        return next
+      })
+      setSettlingGroups(current => {
+        const next = new Set(current)
+        next.add(groupId)
+        return next
+      })
+
+      const settleTimer = window.setTimeout(() => {
+        setSettlingGroups(current => {
+          const next = new Set(current)
+          next.delete(groupId)
+          return next
+        })
+        groupMotionTimersRef.current.delete(groupId)
+      }, reduceMotion ? 0 : IMAGE_GROUP_SETTLE_DURATION)
+      groupMotionTimersRef.current.set(groupId, settleTimer)
+    }, collapseDelay)
+    groupMotionTimersRef.current.set(groupId, collapseTimer)
+  }, [])
 
   // 稳健置底：scrollToIndex 在大列表/未测量时可能落点偏差，rAF 后再校正一次到底。
   const scrollToBottomRobust = useCallback((count: number) => {
@@ -70,10 +225,10 @@ export function MessageListVirtual({
   // 判据：上一帧的首项现在出现在 index>0 → 头部插入了新内容（即使滑动窗口同时裁了尾部，
   // 长度不变也能正确识别；append+裁头时旧首项被裁掉，findIndex=-1，不会误判为 prepend）。
   const prevFirstKeyRef = useRef<string | null>(null)
-  const firstKey = messages.length ? getMessageDomKey(messages[0]) : null
+  const firstKey = messageItems[0]?.key || null
   let isPrepend = false
   if (prevFirstKeyRef.current !== null && firstKey !== prevFirstKeyRef.current) {
-    const idx = messages.findIndex((m) => getMessageDomKey(m) === prevFirstKeyRef.current)
+    const idx = messageItems.findIndex(item => item.key === prevFirstKeyRef.current)
     if (idx > 0) isPrepend = true
   }
 
@@ -83,17 +238,17 @@ export function MessageListVirtual({
 
   // 最新消息数（ref，供信号驱动的置底读取，避免 effect 依赖 messages.length 而误触发）
   const messagesLenRef = useRef(0)
-  messagesLenRef.current = messages.length
+  messagesLenRef.current = messageItems.length
 
   // ===== 切换会话置底：每个会话首次出现消息时滚到底 =====
   const initialScrolledForRef = useRef<string | null>(null)
   useLayoutEffect(() => {
     const sid = currentSession.username
-    if (!messages.length) return
+    if (!messageItems.length) return
     if (initialScrolledForRef.current === sid) return
     initialScrolledForRef.current = sid
-    requestAnimationFrame(() => scrollToBottomRobust(messages.length))
-  }, [currentSession.username, messages.length, scrollToBottomRobust])
+    requestAnimationFrame(() => scrollToBottomRobust(messageItems.length))
+  }, [currentSession.username, messageItems.length, scrollToBottomRobust])
 
   // ===== 置底信号：同会话刷新/初始加载/新消息粘底等 ChatPage 明确要求置底的场景 =====
   const prevBottomSignalRef = useRef(bottomSignal)
@@ -112,28 +267,38 @@ export function MessageListVirtual({
   }, [topSignal])
 
   const handleScrollToBottomClick = useCallback(() => {
-    if (messages.length) {
-      vRef.current?.scrollToIndex(messages.length - 1, { align: 'end', smooth: true })
+    if (messageItems.length) {
+      vRef.current?.scrollToIndex(messageItems.length - 1, { align: 'end', smooth: true })
     } else {
       scrollToBottom(true)
     }
-  }, [messages.length, scrollToBottom])
+  }, [messageItems.length, scrollToBottom])
 
-  const rows = useMemo(() => messages.map((msg, index) => {
-    const prevMsg = index > 0 ? messages[index - 1] : undefined
+  const rows = useMemo(() => messageItems.map((item, index) => {
+    const msg = item.message
+    const prevMsg = index > 0 ? messageItems[index - 1].lastMessage : undefined
     const showDateDivider = shouldShowDateDivider(msg, prevMsg)
     const showTime = !prevMsg || (msg.createTime - prevMsg.createTime > 300)
     const isSent = msg.isSend === 1
     const isSystem = isSystemMessage(msg)
     const wrapperClass = isSystem ? 'system' : (isSent ? 'sent' : 'received')
-    const messageDomKey = getMessageDomKey(msg)
+    const messageDomKey = item.key
     const isSelectable = selectMode && !isSystem
     const isSelected = selectedMessages.has(msg.localId)
+    const expandedImageGroup = item.expandedImageGroup
+    const expandedGroupId = expandedImageGroup?.info.id
+    const isCollapsing = Boolean(expandedGroupId && collapsingGroups.has(expandedGroupId))
+    const isSettling = Boolean(item.imageGroup && settlingGroups.has(item.imageGroup.info.id))
+    const groupMotionStyle = expandedImageGroup ? {
+      '--image-group-order': expandedImageGroup.index,
+      '--image-group-reverse-order': expandedImageGroup.messages.length - expandedImageGroup.index - 1
+    } as React.CSSProperties : undefined
 
     return (
       <div
         key={messageDomKey}
-        className={`message-wrapper vlist-row ${wrapperClass}${isSelectable ? ' selectable' : ''}${isSelectable && isSelected ? ' selected' : ''}`}
+        className={`message-wrapper vlist-row ${wrapperClass}${isSelectable ? ' selectable' : ''}${isSelectable && isSelected ? ' selected' : ''}${expandedImageGroup ? ' image-group-expanded-item' : ''}${isCollapsing ? ' is-collapsing' : ''}${isSettling ? ' image-group-settling' : ''}`}
+        style={groupMotionStyle}
         data-message-key={messageDomKey}
         onClick={isSelectable ? () => onToggleSelect(msg.localId) : undefined}
       >
@@ -168,11 +333,20 @@ export function MessageListVirtual({
             })
           }}
           isSelected={selectedMessages.has(msg.localId)}
+          imageGroup={item.imageGroup ? {
+            messages: item.imageGroup.messages,
+            count: Math.max(item.imageGroup.info.count, item.imageGroup.messages.length),
+            onExpand: () => expandImageGroup(item.imageGroup!.info.id)
+          } : undefined}
+          imageGroupCollapse={expandedImageGroup?.index === 0 ? {
+            count: Math.max(expandedImageGroup.info.count, expandedImageGroup.messages.length),
+            onCollapse: () => collapseImageGroup(expandedImageGroup.info.id, expandedImageGroup.messages.length)
+          } : undefined}
         />
       </div>
     )
   }), [
-    messages,
+    messageItems,
     currentSession,
     myAvatarUrl,
     hasImageKey,
@@ -180,7 +354,11 @@ export function MessageListVirtual({
     selectedMessages,
     selectMode,
     onToggleSelect,
-    setContextMenu
+    setContextMenu,
+    collapsingGroups,
+    settlingGroups,
+    expandImageGroup,
+    collapseImageGroup
   ])
 
   if (isLoadingMessages && messages.length === 0) {

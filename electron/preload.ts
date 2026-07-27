@@ -1,5 +1,22 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { AccountProfile } from '../src/types/account'
+import type {
+  RelayOneApiKey,
+  RelayOneCheckoutInfo,
+  RelayOneCreateKeyInput,
+  RelayOneCreateKeyResult,
+  RelayOneCreatePaymentOrderInput,
+  RelayOneGroup,
+  RelayOneGroupRate,
+  RelayOneIpcResult,
+  RelayOneLoginInput,
+  RelayOneLoginResult,
+  RelayOnePaymentOrder,
+  RelayOnePublicSettings,
+  RelayOneRegisterInput,
+  RelayOneStatus,
+  RelayOneUser
+} from '../src/types/relayOne'
 import type { AgentReasoningEffort } from './services/agent/types'
 
 function getMcpLaunchConfigSafe(): Promise<{
@@ -928,6 +945,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
     listModels: (options: { provider: string; apiKey?: string; baseURL?: string; protocol?: 'openai-responses' | 'openai-compatible' | 'anthropic' | 'google' | 'codex-subscription' }) => ipcRenderer.invoke('ai:listModels', options),
     estimateCost: (messageCount: number, provider: string) => ipcRenderer.invoke('ai:estimateCost', messageCount, provider),
     readGuide: (guideName: string) => ipcRenderer.invoke('ai:readGuide', guideName)
+  },
+
+  relayOne: {
+    getStatus: () => ipcRenderer.invoke('relayOne:getStatus') as Promise<RelayOneIpcResult<RelayOneStatus>>,
+    getPublicSettings: () => ipcRenderer.invoke('relayOne:getPublicSettings') as Promise<RelayOneIpcResult<RelayOnePublicSettings>>,
+    sendVerificationCode: (email: string) => ipcRenderer.invoke('relayOne:sendVerificationCode', email) as Promise<RelayOneIpcResult<void>>,
+    register: (input: RelayOneRegisterInput) => ipcRenderer.invoke('relayOne:register', input) as Promise<RelayOneIpcResult<void>>,
+    login: (input: RelayOneLoginInput) => ipcRenderer.invoke('relayOne:login', input) as Promise<RelayOneIpcResult<RelayOneLoginResult>>,
+    verifyTwoFactor: (code: string) => ipcRenderer.invoke('relayOne:verifyTwoFactor', code) as Promise<RelayOneIpcResult<RelayOneLoginResult>>,
+    logout: () => ipcRenderer.invoke('relayOne:logout') as Promise<RelayOneIpcResult<void>>,
+    getCurrentUser: () => ipcRenderer.invoke('relayOne:getCurrentUser') as Promise<RelayOneIpcResult<RelayOneUser>>,
+    listApiKeys: () => ipcRenderer.invoke('relayOne:listApiKeys') as Promise<RelayOneIpcResult<RelayOneApiKey[]>>,
+    createApiKey: (input: RelayOneCreateKeyInput) => ipcRenderer.invoke('relayOne:createApiKey', input) as Promise<RelayOneIpcResult<RelayOneCreateKeyResult>>,
+    updateApiKeyGroup: (keyId: string, groupId: string) => ipcRenderer.invoke('relayOne:updateApiKeyGroup', keyId, groupId) as Promise<RelayOneIpcResult<RelayOneApiKey>>,
+    deleteApiKey: (keyId: string) => ipcRenderer.invoke('relayOne:deleteApiKey', keyId) as Promise<RelayOneIpcResult<void>>,
+    listAvailableGroups: () => ipcRenderer.invoke('relayOne:listAvailableGroups') as Promise<RelayOneIpcResult<RelayOneGroup[]>>,
+    listGroupRates: () => ipcRenderer.invoke('relayOne:listGroupRates') as Promise<RelayOneIpcResult<RelayOneGroupRate[]>>,
+    getCheckoutInfo: () => ipcRenderer.invoke('relayOne:getCheckoutInfo') as Promise<RelayOneIpcResult<RelayOneCheckoutInfo>>,
+    createPaymentOrder: (input: RelayOneCreatePaymentOrderInput) => ipcRenderer.invoke('relayOne:createPaymentOrder', input) as Promise<RelayOneIpcResult<RelayOnePaymentOrder>>,
+    getPaymentOrder: (orderId: string) => ipcRenderer.invoke('relayOne:getPaymentOrder', orderId) as Promise<RelayOneIpcResult<RelayOnePaymentOrder>>,
+    onStatusChanged: (callback: (status: RelayOneStatus) => void): (() => void) => {
+      const listener = (_event: unknown, status: RelayOneStatus) => callback(status)
+      ipcRenderer.on('relayOne:statusChanged', listener)
+      return () => ipcRenderer.removeListener('relayOne:statusChanged', listener)
+    },
+    onProviderApplied: (callback: () => void): (() => void) => {
+      const listener = () => callback()
+      ipcRenderer.on('relayOne:providerApplied', listener)
+      return () => ipcRenderer.removeListener('relayOne:providerApplied', listener)
+    }
   },
 
   codexSubscription: {

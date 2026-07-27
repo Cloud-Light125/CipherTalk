@@ -40,6 +40,7 @@ import TtsTab from '../settings/tabs/TtsTab'
 import ImageGenTab from '../settings/tabs/ImageGenTab'
 import LocalCodingAgentSettings from './LocalCodingAgentSettings'
 import ChatGPTSubscriptionAuth from './ChatGPTSubscriptionAuth'
+import RelayOneAccountPanel from './RelayOneAccountPanel'
 
 type AiProviderProtocol = configService.AiProviderProtocol
 type PresetTab = 'name' | 'provider' | 'config'
@@ -474,6 +475,38 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
     setProviderConfigs(configs || {})
   }
 
+  const handleRelayOneProviderApplied = async () => {
+    const relayOneConfig = await configService.getAiProviderConfig('relayone')
+    if (!relayOneConfig) return
+
+    setProviderConfigs(prev => ({ ...prev, relayone: relayOneConfig }))
+    setField('aiProvider', 'relayone')
+    setField('aiApiKey', relayOneConfig.apiKey)
+    setField('aiModel', relayOneConfig.model || '')
+    setCustomProtocol(relayOneConfig.protocol || 'openai-compatible')
+    setModelListError('')
+
+    const result = await window.electronAPI.ai.listModels({
+      provider: 'relayone',
+      apiKey: relayOneConfig.apiKey,
+      baseURL: relayOneConfig.baseURL || 'https://aiapi.aiqji.cn/v1',
+      protocol: relayOneConfig.protocol || 'openai-compatible'
+    })
+    if (!result.success || !result.models) {
+      setModelListError(result.error || 'RelayOne 模型列表刷新失败')
+      return
+    }
+
+    setRemoteModels(result.models)
+    setRemoteModelDetails(result.modelDetails || [])
+    if (!relayOneConfig.model && result.models[0]) {
+      const nextConfig = { ...relayOneConfig, model: result.models[0] }
+      await configService.setAiProviderConfig('relayone', nextConfig)
+      setProviderConfigs(prev => ({ ...prev, relayone: nextConfig }))
+      setField('aiModel', result.models[0])
+    }
+  }
+
   const loadPresets = async () => {
     setPresets(await configService.getAiConfigPresets())
   }
@@ -889,7 +922,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
           </div>
         )}
 
-        {configMode === 'llm' && (
+        {configMode === 'llm' && provider !== 'relayone' && (
           <Alert status="accent">
             <Alert.Indicator>
               <Rocket width={20} height={20} />
@@ -910,7 +943,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
           </Alert>
         )}
 
-        {configMode === 'llm' && (
+        {configMode === 'llm' && isCodexSubscription && (
           <Card>
             <Card.Content>
               <ChatGPTSubscriptionAuth compact onAuthenticationChange={setCodexAuthenticated} />
@@ -929,6 +962,16 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
 
             <Form onSubmit={handleSaveCurrentProvider}>
               <Card.Content>
+                {provider === 'relayone' && (
+                  <div className="mb-4">
+                    <RelayOneAccountPanel
+                      onProviderApplied={handleRelayOneProviderApplied}
+                      showMessage={showMessage}
+                      hasConfiguredApiKey={Boolean(apiKey.trim())}
+                      portalHost={settingsPagePortalHost}
+                    />
+                  </div>
+                )}
                 <Fieldset className="w-full">
                   <Fieldset.Group className="grid gap-4">
                     <Select
@@ -1015,30 +1058,35 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                     )}
                   </div>
 
-                  {!isCodexSubscription && <TextField fullWidth value={apiKey} onChange={(value) => setField('aiApiKey', value)} type={showApiKey ? 'text' : 'password'}>
-                    <Label>API 密钥</Label>
-                    <InputGroup variant="secondary" fullWidth>
-                      <InputGroup.Input
-                        type={showApiKey ? 'text' : 'password'}
-                        placeholder={provider === 'ollama' ? '本地服务无需密钥（可选）' : '请输入 API 密钥'}
-                      />
-                      <InputGroup.Suffix>
-                        <Tooltip delay={0}>
-                          <Button
-                            type="button"
-                            variant="tertiary"
-                            size="sm"
-                            isIconOnly
-                            onPress={() => setShowApiKey(!showApiKey)}
-                            aria-label={showApiKey ? '隐藏 API 密钥' : '显示 API 密钥'}
-                          >
-                            {showApiKey ? <EyeSlash width={18} height={18} /> : <Eye width={18} height={18} />}
-                          </Button>
-                          <Tooltip.Content>{showApiKey ? '隐藏 API 密钥' : '显示 API 密钥'}</Tooltip.Content>
-                        </Tooltip>
-                      </InputGroup.Suffix>
-                    </InputGroup>
-                  </TextField>}
+                  {!isCodexSubscription && (
+                    <div className="space-y-1">
+                      <TextField fullWidth value={apiKey} onChange={(value) => setField('aiApiKey', value)} type={showApiKey ? 'text' : 'password'}>
+                        <Label>API 密钥</Label>
+                        <InputGroup variant="secondary" fullWidth>
+                          <InputGroup.Input
+                            type={showApiKey ? 'text' : 'password'}
+                            placeholder={provider === 'ollama' ? '本地服务无需密钥（可选）' : '请输入 API 密钥'}
+                          />
+                          <InputGroup.Suffix>
+                            <Tooltip delay={0}>
+                              <Button
+                                type="button"
+                                variant="tertiary"
+                                size="sm"
+                                isIconOnly
+                                onPress={() => setShowApiKey(!showApiKey)}
+                                aria-label={showApiKey ? '隐藏 API 密钥' : '显示 API 密钥'}
+                              >
+                                {showApiKey ? <EyeSlash width={18} height={18} /> : <Eye width={18} height={18} />}
+                              </Button>
+                              <Tooltip.Content>{showApiKey ? '隐藏 API 密钥' : '显示 API 密钥'}</Tooltip.Content>
+                            </Tooltip>
+                          </InputGroup.Suffix>
+                        </InputGroup>
+                      </TextField>
+                      {provider === 'relayone' && <Description>通过上方账户创建 Key 后会自动填入，并刷新模型列表。</Description>}
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <div className="flex min-w-0 items-end gap-2">

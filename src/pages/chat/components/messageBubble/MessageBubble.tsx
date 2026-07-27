@@ -5,6 +5,7 @@ import { useChatStore } from '../../../../stores/chatStore'
 import type { ChatSession, Message } from '../../../../types/models'
 import { emojiDataUrlCache, enqueueDecrypt, imageDataUrlCache } from './mediaState'
 import ImageBubble from './ImageBubble'
+import ImageStackBubble from './ImageStackBubble'
 import SystemBubble from './SystemBubble'
 import TextBubble from './TextBubble'
 import VideoBubble from './VideoBubble'
@@ -21,6 +22,15 @@ interface MessageBubbleProps {
   isSelected?: boolean;
   selectMode?: boolean;
   quoteStyle?: 'default' | 'wechat' | 'card';
+  imageGroup?: {
+    messages: Message[];
+    count: number;
+    onExpand: () => void;
+  };
+  imageGroupCollapse?: {
+    count: number;
+    onCollapse: () => void;
+  };
 }
 
 /**
@@ -36,7 +46,7 @@ interface MessageBubbleProps {
  *
  * 注意：拍一拍消息（appmsg type=62）虽为 localType 49，但由 isSystem 检测捕获并路由到 SystemBubble
  */
-function MessageBubble({ message, session, showTime, myAvatarUrl, isGroupChat, hasImageKey, onContextMenu, isSelected, selectMode, quoteStyle = 'default' }: MessageBubbleProps) {
+function MessageBubble({ message, session, showTime, myAvatarUrl, isGroupChat, hasImageKey, onContextMenu, isSelected, selectMode, quoteStyle = 'default', imageGroup, imageGroupCollapse }: MessageBubbleProps) {
   const syncVersion = useChatStore(state => state.syncVersion)
   const lastSyncVersionRef = useRef(syncVersion)
 
@@ -268,6 +278,36 @@ function MessageBubble({ message, session, showTime, myAvatarUrl, isGroupChat, h
   // 实际消息体路由（无 quotes）
   const renderContentBody = () => {
     if (isImage) {
+      if (imageGroup) {
+        return (
+          <ImageStackBubble
+            messages={imageGroup.messages}
+            count={imageGroup.count}
+            session={session}
+            hasImageKey={hasImageKey}
+            onExpand={imageGroup.onExpand}
+            onContextMenu={onContextMenu}
+          />
+        )
+      }
+      if (imageGroupCollapse) {
+        return (
+          <div className="image-group-expanded-content">
+            <button
+              type="button"
+              className="image-group-collapse"
+              title={`收回 ${imageGroupCollapse.count} 张图片`}
+              onClick={(event) => {
+                event.stopPropagation()
+                imageGroupCollapse.onCollapse()
+              }}
+            >
+              收回 {imageGroupCollapse.count}
+            </button>
+            <ImageBubble message={message} session={session} hasImageKey={hasImageKey} onContextMenu={onContextMenu} />
+          </div>
+        )
+      }
       return <ImageBubble message={message} session={session} hasImageKey={hasImageKey} onContextMenu={onContextMenu} />
     }
     if (isVideo) {
@@ -288,7 +328,7 @@ function MessageBubble({ message, session, showTime, myAvatarUrl, isGroupChat, h
       )}
       <div
         ref={bubbleRef}
-        className={`message-bubble ${bubbleClass} quote-style-${quoteStyle} ${isEmoji && message.emojiCdnUrl ? 'emoji' : ''} ${isImage ? 'image' : ''} ${isVideo ? 'video' : ''} ${isVoice ? 'voice' : ''} ${selectMode ? 'select-mode' : ''} ${isSelected ? 'selected' : ''}`}
+        className={`message-bubble ${bubbleClass} quote-style-${quoteStyle} ${isEmoji && message.emojiCdnUrl ? 'emoji' : ''} ${isImage ? 'image' : ''} ${imageGroup ? 'image-group' : ''} ${imageGroupCollapse ? 'image-group-expanded' : ''} ${isVideo ? 'video' : ''} ${isVoice ? 'voice' : ''} ${selectMode ? 'select-mode' : ''} ${isSelected ? 'selected' : ''}`}
         onContextMenu={(e) => {
           if (onContextMenu) {
             onContextMenu(e, message)
@@ -397,7 +437,9 @@ function areMessageBubblePropsEqual(prev: MessageBubbleProps, next: MessageBubbl
     prev.hasImageKey === next.hasImageKey &&
     prev.isSelected === next.isSelected &&
     prev.selectMode === next.selectMode &&
-    prev.quoteStyle === next.quoteStyle
+    prev.quoteStyle === next.quoteStyle &&
+    prev.imageGroup === next.imageGroup &&
+    prev.imageGroupCollapse === next.imageGroupCollapse
 }
 
 export default memo(MessageBubble, areMessageBubblePropsEqual)

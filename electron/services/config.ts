@@ -1051,6 +1051,15 @@ export class ConfigService {
     this.set('aiProviderConfigs', configs)
   }
 
+  setAIProviderConfigAndActivate(providerId: string, config: { apiKey: string; model: string; baseURL?: string; protocol?: 'openai-responses' | 'openai-compatible' | 'anthropic' | 'google' | 'codex-subscription' }): void {
+    if (!this.db) throw new Error('Config database is unavailable')
+    const configs = { ...this.get('aiProviderConfigs'), [providerId]: config }
+    this.db.transaction(() => {
+      this.setStoredValue('aiProviderConfigs', configs)
+      this.setStoredValue('aiCurrentProvider', providerId)
+    })()
+  }
+
   getAllAIProviderConfigs(): { [providerId: string]: { apiKey: string; model: string; baseURL?: string; protocol?: 'openai-responses' | 'openai-compatible' | 'anthropic' | 'google' | 'codex-subscription' } } {
     return this.get('aiProviderConfigs')
   }

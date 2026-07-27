@@ -23,6 +23,7 @@ import { registerMcpHandlers } from './mcpHandlers'
 import { registerNotifyHandlers } from './notifyHandlers'
 import { registerPetHandlers } from './petHandlers'
 import { registerPluginHandlers } from './pluginHandlers'
+import { registerRelayOneHandlers } from './relayOneHandlers'
 import { registerSnsHandlers } from './snsHandlers'
 import { registerSkillHandlers } from './skillHandlers'
 import { registerSttHandlers } from './sttHandlers'
@@ -50,6 +51,7 @@ export function registerModularIpcHandlers(ctx: MainProcessContext): void {
   registerMediaHandlers(ctx)
   registerChatHandlers(ctx)
   registerCodexSubscriptionHandlers(ctx)
+  registerRelayOneHandlers(ctx)
   registerSnsHandlers(ctx)
   registerExportHandlers(ctx)
   registerActivationHandlers(ctx)
