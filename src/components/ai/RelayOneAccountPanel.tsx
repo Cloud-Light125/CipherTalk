@@ -430,7 +430,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
                 {action === 'create-key' ? <Spinner size="sm" /> : <Plus width={16} height={16} />}创建并应用
               </Button>
             </div>
-            <div className="divide-y divide-divider border-y border-divider">
+            <div className="h-52 divide-y divide-divider overflow-y-auto overscroll-contain border-y border-divider scrollbar">
               {apiKeys.length === 0 ? <div className="py-5 text-sm text-muted-foreground">暂无 API Key</div> : apiKeys.map((item) => (
                 <div key={item.id} className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,1fr)_240px_auto]">
                   <div className="min-w-0">
@@ -556,7 +556,8 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
           </div>
         )}
         {!status.encryptionAvailable && <span className="shrink-0 text-xs text-warning">仅本次会话</span>}
-        <Button type="button" variant={status.authenticated && hasConfiguredApiKey ? 'outline' : 'primary'} size="sm" className="shrink-0" onPress={() => setAccountModalOpen(true)}>
+        <Button type="button" variant="primary" size="sm" className="shrink-0" onPress={() => setAccountModalOpen(true)}>
+          <Wallet width={16} height={16} />
           {status.authenticated ? (hasConfiguredApiKey ? '账户管理' : '创建 Key') : '登录 / 注册'}
         </Button>
       </div>
