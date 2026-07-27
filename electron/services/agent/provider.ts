@@ -126,7 +126,7 @@ export function createLanguageModel(config: AgentProviderConfig, options: AgentL
   }
   if (providerKind === 'google') {
     // 显式 cachedContent 缓存：fetch 层自动创建/复用，见 googleCacheFetch.ts
-    return createGoogle({ apiKey, baseURL, name, headers, fetch: withGoogleExplicitCache(fetch) })(model as any)
+    return createGoogle({ apiKey, baseURL: baseURL || undefined, name, headers, fetch: withGoogleExplicitCache(fetch) })(model as any)
   }
   if (providerKind === 'openai-responses') {
     return createOpenAI({ apiKey, baseURL, name, headers, fetch: withOpenAIResponsesSanitizer(fetch) }).responses(model as any)
@@ -154,7 +154,7 @@ export function createProviderFilesApi(config: AgentProviderConfig): FilesV4 | n
     return createAnthropic({ apiKey, baseURL, name, headers, fetch: withAnthropicSanitizer(fetch) }).files()
   }
   if (providerKind === 'google') {
-    return createGoogle({ apiKey, baseURL, name, headers, fetch }).files()
+    return createGoogle({ apiKey, baseURL: baseURL || undefined, name, headers, fetch }).files()
   }
   if (providerKind === 'openai-responses') {
     return createOpenAI({ apiKey, baseURL, name, headers, fetch: withOpenAIResponsesSanitizer(fetch) }).files()
