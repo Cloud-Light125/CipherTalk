@@ -97,6 +97,7 @@ import {
   type AgentConversationRecord,
   type AgentMessageMetadata,
 } from './agentConversationHelpers'
+import { isClearContextCommand } from './agentContextCommands'
 import { formatTokenCount } from './AgentUsageStats'
 import { AgentShareCard, buildAgentSharePreviewData, formatAgentShareFileDate, sanitizeAgentShareFileName, type AgentSharePreviewData } from './AgentShareCard'
 import { AGENT_PENDING_TITLE, ModelWaitingLine, SubAgentProgressPanel, mergeSubAgentProgress, shouldDisplayAgentProgress } from './AgentSubAgentProgress'
@@ -681,6 +682,7 @@ export default function AgentPage() {
   }, [stopSpeakingMessage])
   const [conversationId, setConversationId] = useState<number | null>(null)
   const conversationIdRef = useRef(conversationId)
+  const memoryContextIsolatedRef = useRef(readStoredActiveAgentConversation() === NEW_AGENT_CONVERSATION_MARKER)
   conversationIdRef.current = conversationId
   const applyConversationId = useCallback((nextId: number | null) => {
     const normalized = nextId && nextId > 0 ? nextId : null
@@ -1265,6 +1267,7 @@ export default function AgentPage() {
       title,
       modelProvider: modelConfigProvider(config),
       modelId: modelConfigId(config),
+      memoryContextIsolated: memoryContextIsolatedRef.current,
       originClientId: clientIdRef.current,
     })
     const record = result.success ? normalizeConversationRecord(result.conversation) : null
@@ -1273,6 +1276,7 @@ export default function AgentPage() {
       return null
     }
     applyConversationId(record.id)
+    memoryContextIsolatedRef.current = record.memoryContextIsolated === true
     conversationUpdatedAtRef.current = Number(record.updatedAt || Date.now())
     setConversationTitle(record.title)
     void refreshConversationRecords()
@@ -1285,6 +1289,7 @@ export default function AgentPage() {
       title,
       modelProvider: 'local-coding-agent',
       modelId: agentId,
+      memoryContextIsolated: memoryContextIsolatedRef.current,
       originClientId: clientIdRef.current,
     })
     const record = result.success ? normalizeConversationRecord(result.conversation) : null
@@ -1293,6 +1298,7 @@ export default function AgentPage() {
       return null
     }
     applyConversationId(record.id)
+    memoryContextIsolatedRef.current = record.memoryContextIsolated === true
     conversationUpdatedAtRef.current = Number(record.updatedAt || Date.now())
     setConversationTitle(record.title)
     void refreshConversationRecords()
@@ -1381,6 +1387,7 @@ export default function AgentPage() {
     messagesRef.current = loaded.messages
     lastSavedMessagesRef.current = signatureAgentMessages(loaded.messages)
     applyConversationId(loaded.id)
+    memoryContextIsolatedRef.current = loaded.memoryContextIsolated === true
     conversationUpdatedAtRef.current = Number(loaded.updatedAt || Date.now())
     pendingConversationReloadRef.current = null
     setConversationTitle(loaded.title)
@@ -1427,6 +1434,7 @@ export default function AgentPage() {
         setMessages([])
         messagesRef.current = []
         applyConversationId(null)
+        memoryContextIsolatedRef.current = true
         setConversationTitle('新对话')
         setTitleEditing(false)
         setTitleDraft('')
@@ -1685,6 +1693,7 @@ export default function AgentPage() {
     conversationUpdatedAtRef.current = 0
     pendingConversationReloadRef.current = null
     titleRequestSeqRef.current += 1
+    memoryContextIsolatedRef.current = true
     applyConversationId(null)
     setRecordsOpen(false)
     return true
@@ -1692,7 +1701,7 @@ export default function AgentPage() {
 
   // 跨窗口自动运行（聊天窗口「AI 摘要」）：经 localStorage 递入 {text, mention}，
   // 消费后新建对话并 @目标会话，实际发送由下方 pendingAutoRun effect 完成；
-  // storage 事件覆盖"AI 助手页已挂载"的情况。写入 sessionStorage 的新对话标记
+  // storage 事件覆盖"AI 助手页已挂载"的情况。持久化的新对话标记
   // 会让恢复上次对话的逻辑短路，不会被旧会话覆盖。
   useEffect(() => {
     const consumeAutoRun = () => {
@@ -1734,6 +1743,7 @@ export default function AgentPage() {
         setMessages([])
         messagesRef.current = []
         applyConversationId(null)
+        memoryContextIsolatedRef.current = true
         setConversationTitle('新对话')
         setTitleEditing(false)
         setTitleDraft('')
@@ -1761,6 +1771,14 @@ export default function AgentPage() {
     setRecordDeleting(false)
     if (deleted) setRecordPendingDelete(null)
   }, [handleDeleteRecord, recordPendingDelete])
+
+  const handleClearContext = useCallback(async (): Promise<boolean> => {
+    const cleared = await handleNewConversation()
+    if (cleared) {
+      setAgentNotice('已清空当前对话上下文。历史对话记录和长期记忆均已保留；新对话不会检索以往 Agent 对话日志。')
+    }
+    return cleared
+  }, [handleNewConversation])
 
   const slashCommands = useMemo<SlashCommandItem[]>(() => [
     {
@@ -1802,7 +1820,7 @@ export default function AgentPage() {
       label: '新对话 / 清空',
       description: '清空当前线程并回到新对话',
       icon: PencilToSquare,
-      action: handleNewConversation,
+      action: handleClearContext,
     },
     {
       id: 'workspace',
@@ -1849,7 +1867,7 @@ export default function AgentPage() {
   ], [
     codeWorkspaceState,
     conversationUsage,
-    handleNewConversation,
+    handleClearContext,
     planMode,
     selectedModelData,
   ])
@@ -2012,8 +2030,15 @@ export default function AgentPage() {
       return
     }
     const currentMentions = mentions
-    if (message.files.length === 0 && currentMentions.length === 0 && workspaceFileReferences.length === 0 && await runSlashCommandText(message.text)) {
-      return
+    const isStandaloneTextCommand = message.files.length === 0
+      && currentMentions.length === 0
+      && workspaceFileReferences.length === 0
+    if (isStandaloneTextCommand) {
+      if (await runSlashCommandText(message.text)) return
+      if (isClearContextCommand(message.text)) {
+        await handleClearContext()
+        return
+      }
     }
     const isFirstUserMessage = messages.length === 0
     const firstMessageForTitle = message.text.trim()

@@ -25,6 +25,7 @@ export type AgentConversationRecord = {
   modelId?: string
   source?: string
   externalId?: string | null
+  memoryContextIsolated?: boolean
   createdAt?: number
   updatedAt: number
 }
@@ -39,25 +40,37 @@ export const STREAMING_AGENT_SAVE_INTERVAL_MS = 2000
 
 export function readStoredActiveAgentConversation(): number | 'new' | null {
   if (typeof window === 'undefined') return null
+  let raw: string | null = null
   try {
-    const raw = window.sessionStorage.getItem(ACTIVE_AGENT_CONVERSATION_KEY)
-    if (raw === NEW_AGENT_CONVERSATION_MARKER) return 'new'
-    const id = Number(raw)
-    return Number.isFinite(id) && id > 0 ? id : null
+    raw = window.localStorage.getItem(ACTIVE_AGENT_CONVERSATION_KEY)
   } catch {
-    return null
+    // localStorage 不可用时继续尝试当前窗口的 sessionStorage。
   }
+  if (raw === null) {
+    try {
+      raw = window.sessionStorage.getItem(ACTIVE_AGENT_CONVERSATION_KEY)
+      if (raw !== null) window.localStorage.setItem(ACTIVE_AGENT_CONVERSATION_KEY, raw)
+    } catch {
+      // Web Storage 均不可用时保持空白恢复状态。
+    }
+  }
+  if (raw === NEW_AGENT_CONVERSATION_MARKER) return 'new'
+  const id = Number(raw)
+  return Number.isFinite(id) && id > 0 ? id : null
 }
 
 export function storeActiveAgentConversation(id: number | null): void {
   if (typeof window === 'undefined') return
+  const value = id && id > 0 ? String(id) : NEW_AGENT_CONVERSATION_MARKER
   try {
-    window.sessionStorage.setItem(
-      ACTIVE_AGENT_CONVERSATION_KEY,
-      id && id > 0 ? String(id) : NEW_AGENT_CONVERSATION_MARKER,
-    )
+    window.localStorage.setItem(ACTIVE_AGENT_CONVERSATION_KEY, value)
   } catch {
-    // 某些受限渲染上下文可能禁用 sessionStorage。
+    // localStorage 不可用时仍写入当前窗口的 sessionStorage。
+  }
+  try {
+    window.sessionStorage.setItem(ACTIVE_AGENT_CONVERSATION_KEY, value)
+  } catch {
+    // 某些受限渲染上下文可能禁用 Web Storage。
   }
 }
 
@@ -73,6 +86,7 @@ export function normalizeConversationRecord(value: any): AgentConversationRecord
     modelId: value?.modelId,
     source: typeof value?.source === 'string' ? value.source : undefined,
     externalId: value?.externalId == null ? null : String(value.externalId),
+    memoryContextIsolated: value?.memoryContextIsolated === true,
     createdAt: Number(value?.createdAt || 0) || undefined,
     updatedAt: Number(value?.updatedAt || Date.now()),
   }

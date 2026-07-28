@@ -174,6 +174,7 @@ async function buildDeepSeekHistoryTurnContext(opts: {
   queryText: string
   planMode: boolean
   codeWorkspace: CodeWorkspaceRef | null
+  includeConversationHistory?: boolean
   toolsDisabled?: boolean
   includeWechatOutbound?: boolean
   includeWechatReplyMedia?: boolean
@@ -199,7 +200,11 @@ async function buildDeepSeekHistoryTurnContext(opts: {
   if (cachedMemoryContext === null) {
     runtimeCache.warmStartupMemory(opts.scope, () => memory.buildMemoryContext(opts.scope))
   }
-  const relevantMemoryContext = await memory.preloadRelevantMemories(opts.queryText, opts.scope)
+  const relevantMemoryContext = await memory.preloadRelevantMemories(
+    opts.queryText,
+    opts.scope,
+    opts.includeConversationHistory,
+  )
   return [
     '# 本轮内部上下文',
     '以下内容只适用于紧随其后的用户消息；后续回合若出现新的同类 system 消息，以新的为准。',
@@ -221,6 +226,7 @@ async function upsertDeepSeekHistoryTurnContextMessage(opts: {
   queryText: string
   planMode: boolean
   codeWorkspace: CodeWorkspaceRef | null
+  includeConversationHistory?: boolean
 }): Promise<{ messages: UIMessage[]; changed: boolean; mode: 'history' | 'tail' }> {
   if (!isDeepSeekProvider(opts.providerConfig)) {
     return { messages: opts.messages, changed: false, mode: 'tail' }
@@ -240,6 +246,7 @@ async function upsertDeepSeekHistoryTurnContextMessage(opts: {
     queryText: opts.queryText,
     planMode: opts.planMode,
     codeWorkspace: opts.codeWorkspace,
+    includeConversationHistory: opts.includeConversationHistory,
   })
   if (!content.trim()) return { messages: opts.messages, changed: false, mode: 'tail' }
 
@@ -793,6 +800,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
         queryText: initialLastUserText,
         planMode: payload.planMode === true,
         codeWorkspace: profile.codeWorkspace,
+        includeConversationHistory: storedConversation?.memoryContextIsolated !== true,
       }))
       if (historyTurnContext.changed && payload.conversationId) {
         // 内部上下文注入：只落库、不广播。否则 originClientId 为空会让前端在 busy 时挂起
@@ -876,6 +884,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
           toolProfile: profile.toolProfile,
           codeWorkspace: profile.codeWorkspace,
           turnContextMode: historyTurnContext.mode,
+          memoryContextIsolated: storedConversation?.memoryContextIsolated === true,
           allowWechatReplyMedia: false,
           canvasContext,
         },
@@ -963,6 +972,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     title?: string
     modelProvider?: string
     modelId?: string
+    memoryContextIsolated?: boolean
     originClientId?: string | null
   }) => {
     try {

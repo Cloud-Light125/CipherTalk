@@ -92,6 +92,8 @@ export function buildPlanModeTools(_scope: AgentScope, codeWorkspace?: CodeWorks
 
 export interface BuildChatToolsOptions {
   allowWechatReplyMedia?: boolean
+  /** 是否允许 recall 检索 memory-bank/conversations 下的原始 Agent 对话日志。 */
+  includeConversationHistory?: boolean
   uploadedMediaContext?: AgentUploadedMediaContext
   /** 会话 Canvas 上下文；存在时挂载 canvas_* 工具（chat/hybrid profile）。 */
   canvasContext?: AgentCanvasRunContext
@@ -128,7 +130,7 @@ export function buildChatTools(
     export_chat: exportChat,
     persona_control: personaControl,
     remember: createRemember(scope),
-    recall: createRecall(scope),
+    recall: createRecall(scope, options.includeConversationHistory !== false),
     list_memories: createListMemories(scope),
     forget: createForget(),
     consolidate_memory: createConsolidate(),

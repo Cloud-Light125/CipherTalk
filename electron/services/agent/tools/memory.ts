@@ -180,7 +180,7 @@ export function createRemember(scope: AgentScope) {
   })
 }
 
-export function createRecall(scope: AgentScope) {
+export function createRecall(scope: AgentScope, includeConversationHistory = true) {
   return tool({
     description:
       '检索你记过的长期记忆（用户画像/偏好/长期事实）。回答涉及用户个人情况、偏好、长期关系时先查一下。',
@@ -192,7 +192,11 @@ export function createRecall(scope: AgentScope) {
     execute: async ({ query, about, limit }) => {
       try {
         const sessionId = resolveAbout(about, scope)
-        const markdownContext = memoryDatabase.retrieveMarkdownContext(query, { ...(sessionId ? { sessionId } : {}), limit })
+        const markdownContext = memoryDatabase.retrieveMarkdownContext(query, {
+          ...(sessionId ? { sessionId } : {}),
+          limit,
+          includeConversations: includeConversationHistory,
+        })
         const candidateLimit = Math.min(50, Math.max(limit, limit * 3))
         const filter = { ...(sessionId ? { sessionId } : {}), sourceTypes: MEMORY_KINDS }
         const keywordHits = memoryDatabase.searchMemoryItemsByKeyword({ query, ...filter, limit: candidateLimit })
@@ -329,13 +333,18 @@ export async function buildMemoryContext(scope: AgentScope): Promise<string> {
 }
 
 /** 按本轮问题预召回相关记忆，降低模型忘记主动 recall 的概率。 */
-export async function preloadRelevantMemories(query: string, scope: AgentScope): Promise<string> {
+export async function preloadRelevantMemories(
+  query: string,
+  scope: AgentScope,
+  includeConversationHistory = true,
+): Promise<string> {
   const text = query.trim()
   if (text.length < 2) return ''
   try {
     const markdown = memoryDatabase.retrieveMarkdownContext(text, {
       ...(scope.kind === 'session' ? { sessionId: scope.sessionId } : {}),
       limit: PRELOAD_MEMORY_LIMIT,
+      includeConversations: includeConversationHistory,
     })
     const hits = memoryDatabase.searchMemoryItemsByKeyword({
       query: text,

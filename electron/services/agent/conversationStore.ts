@@ -18,6 +18,8 @@ export interface AgentConversationRecord {
   source: string
   /** 外部来源的稳定标识（如微信 from_user_id），用于按来源会话归档 */
   externalId: string | null
+  /** 显式清空后创建的会话不检索旧的原始 Agent 对话日志。 */
+  memoryContextIsolated: boolean
   createdAt: number
   updatedAt: number
 }
@@ -67,6 +69,7 @@ interface CreateConversationInput {
   modelId?: string
   source?: string
   externalId?: string | null
+  memoryContextIsolated?: boolean
   originClientId?: string | null
 }
 
@@ -188,6 +191,7 @@ export class AgentConversationStore {
         title TEXT NOT NULL,
         model_provider TEXT NOT NULL DEFAULT '',
         model_id TEXT NOT NULL DEFAULT '',
+        memory_context_isolated INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       );
@@ -217,6 +221,9 @@ export class AgentConversationStore {
     }
     if (!names.has('external_id')) {
       db.exec('ALTER TABLE agent_conversations ADD COLUMN external_id TEXT')
+    }
+    if (!names.has('memory_context_isolated')) {
+      db.exec('ALTER TABLE agent_conversations ADD COLUMN memory_context_isolated INTEGER NOT NULL DEFAULT 0')
     }
     db.exec('CREATE INDEX IF NOT EXISTS idx_agent_conv_source ON agent_conversations(account_id, source, external_id)')
 
@@ -276,6 +283,7 @@ export class AgentConversationStore {
       modelId: String(row.model_id || ''),
       source: String(row.source || 'app'),
       externalId: row.external_id ? String(row.external_id) : null,
+      memoryContextIsolated: Number(row.memory_context_isolated || 0) === 1,
       createdAt: Number(row.created_at || 0),
       updatedAt: Number(row.updated_at || 0),
     }
@@ -338,8 +346,9 @@ export class AgentConversationStore {
     const result = db.prepare(`
       INSERT INTO agent_conversations (
         account_id, scope_kind, session_id, display_name, title,
-        model_provider, model_id, source, external_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        model_provider, model_id, source, external_id, memory_context_isolated,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       accountId,
       scope.kind,
@@ -350,6 +359,7 @@ export class AgentConversationStore {
       String(input.modelId || ''),
       String(input.source || 'app'),
       input.externalId || null,
+      input.memoryContextIsolated === true ? 1 : 0,
       now,
       now,
     )

@@ -165,6 +165,8 @@ export interface AgentRunInput {
   codeWorkspace?: CodeWorkspaceRef | null
   /** DeepSeek 这类前缀 KV cache provider：本轮动态上下文已作为隐藏 system 历史消息插入。 */
   turnContextMode?: 'tail' | 'history'
+  /** 显式新建/清空的会话不检索旧的原始 Agent 对话日志。 */
+  memoryContextIsolated?: boolean
   /** 会话 Canvas 上下文（主进程校验归属后注入）；存在时挂载 canvas_* 工具。 */
   canvasContext?: AgentCanvasRunContext
 }

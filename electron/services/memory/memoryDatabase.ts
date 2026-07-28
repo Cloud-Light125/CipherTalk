@@ -1201,11 +1201,11 @@ export class MemoryDatabase {
     return parts.join('\n').slice(0, 30_000)
   }
 
-  retrieveMarkdownContext(query: string, opts: { sessionId?: string; limit?: number } = {}): MarkdownMemoryRetrieval {
+  retrieveMarkdownContext(query: string, opts: { sessionId?: string; limit?: number; includeConversations?: boolean } = {}): MarkdownMemoryRetrieval {
     const mode = classifyQuery(query)
     if (mode === 'fact') return this.retrieveFactContext(opts)
-    if (mode === 'recent') return this.retrieveRecentContext(opts.limit ?? 3)
-    return this.retrieveTopicContext(query, opts.limit ?? 8)
+    if (mode === 'recent') return this.retrieveRecentContext(opts.limit ?? 3, opts.includeConversations !== false)
+    return this.retrieveTopicContext(query, opts.limit ?? 8, opts.includeConversations !== false)
   }
 
   private retrieveFactContext(opts: { sessionId?: string }): MarkdownMemoryRetrieval {
@@ -1230,7 +1230,8 @@ export class MemoryDatabase {
     return { mode: 'fact', context, itemIds: items.map((item) => item.id), sourceFiles }
   }
 
-  private retrieveRecentContext(days: number): MarkdownMemoryRetrieval {
+  private retrieveRecentContext(days: number, includeConversations: boolean): MarkdownMemoryRetrieval {
+    if (!includeConversations) return { mode: 'recent', context: '', itemIds: [], sourceFiles: [] }
     const root = this.ensureBank()
     const files = this.listRecentFiles(join(root, 'conversations'), Math.max(1, Math.min(days, 7)))
     const context = files
@@ -1244,10 +1245,12 @@ export class MemoryDatabase {
     return { mode: 'recent', context, itemIds: [], sourceFiles: files }
   }
 
-  private retrieveTopicContext(query: string, limit: number): MarkdownMemoryRetrieval {
+  private retrieveTopicContext(query: string, limit: number, includeConversations: boolean): MarkdownMemoryRetrieval {
     const root = this.ensureBank()
     const spaces = [
-      { label: '对话', dir: join(root, 'conversations'), fileLimit: 365, charLimit: 80_000, textLimit: 1800 },
+      ...(includeConversations
+        ? [{ label: '对话', dir: join(root, 'conversations'), fileLimit: 365, charLimit: 80_000, textLimit: 1800 }]
+        : []),
       { label: '任务', dir: join(root, 'tasks'), fileLimit: 120, charLimit: 20_000, textLimit: 2200 },
       { label: '笔记', dir: join(root, 'notes'), fileLimit: 120, charLimit: 20_000, textLimit: 2200 },
       { label: '日记', dir: join(root, SELF_REFERENCE_DIR, 'diaries'), fileLimit: 60, charLimit: 20_000, textLimit: 2200 }

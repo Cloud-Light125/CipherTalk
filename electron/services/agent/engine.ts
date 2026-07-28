@@ -434,7 +434,10 @@ export async function runAgent(
       warmStartupMemory(input.scope, () => buildMemoryContext(input.scope))
     }
     perf('记忆上下文', historyManagedTurnContext ? '已由历史 system 注入' : (cachedMemoryContext === null ? '未命中缓存，后台补建' : '缓存命中'))
-    const relevantMemoryContext = historyManagedTurnContext ? '' : await preloadRelevantMemories(userText, input.scope)
+    const includeConversationHistory = input.memoryContextIsolated !== true
+    const relevantMemoryContext = historyManagedTurnContext
+      ? ''
+      : await preloadRelevantMemories(userText, input.scope, includeConversationHistory)
     perf('相关记忆预取', historyManagedTurnContext ? '已由历史 system 注入' : `${relevantMemoryContext.length} 字符`)
     const toolsDisabled = input.toolMode === 'disabled'
     // 计划模式只制定计划，不允许联网；正常模式仅挂载厂商原生搜索。
@@ -452,6 +455,7 @@ export async function runAgent(
           : buildTools(input.scope, input.providerConfig, input.mcpTools, imageGenOn, codeWorkspace, {
             allowWechatReplyMedia: input.allowWechatReplyMedia === true,
             uploadedMediaContext: input.uploadedMediaContext,
+            includeConversationHistory,
             canvasContext: input.canvasContext,
             emitChunk: onChunk,
           })
