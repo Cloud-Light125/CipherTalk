@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react'
 import { Button, SearchField, Tabs } from '@heroui/react'
 import { ArrowsRotateLeft, CircleDashed, FaceRobot, PersonPlus, Persons } from '@gravity-ui/icons'
-import { List } from 'react-window'
-import type { RowComponentProps } from 'react-window'
 import type { PersonaRecordInfo } from '../types/electron'
 import type { ChatSession } from '../types/models'
 import { cn } from '../lib/utils'
@@ -26,23 +24,8 @@ type PersonaContactMeta = {
   isGroup?: boolean
 }
 
-type PersonaSidebarRow =
-  | { kind: 'contact'; item: PersonaContactItem }
-  | { kind: 'loader' }
-
-type PersonaSidebarRowData = {
-  rows: PersonaSidebarRow[]
-  selectedSessionId: string
-  mode: ListMode
-  contactsHasMore: boolean
-  loadingContactsMore: boolean
-  onSelect: (sessionId: string) => void
-  onLoadMore: () => void
-}
-
 const CONTACT_PAGE_SIZE = 120
 const PERSONA_ROW_HEIGHT = 64
-const PERSONA_LOADER_ROW_HEIGHT = 56
 
 function getSessionName(session: ChatSession): string {
   return session.displayName?.trim() || session.username
@@ -88,47 +71,18 @@ function PersonaAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string }
   )
 }
 
-function PersonaSidebarRow(props: RowComponentProps<PersonaSidebarRowData>) {
-  const {
-    index,
-    style,
-    rows,
-    selectedSessionId,
-    mode,
-    contactsHasMore,
-    loadingContactsMore,
-    onSelect,
-    onLoadMore,
-  } = props
-  const row = rows[index]
-
-  useEffect(() => {
-    if (row?.kind === 'loader' && contactsHasMore && !loadingContactsMore) onLoadMore()
-  }, [contactsHasMore, loadingContactsMore, onLoadMore, row])
-
-  if (!row) return null
-
-  if (row.kind === 'loader') {
-    return (
-      <div style={style} className="flex items-center justify-center px-3 text-xs text-muted">
-        {loadingContactsMore ? (
-          <span className="inline-flex items-center gap-2">
-            <CircleDashed className="size-3.5 animate-spin" />
-            正在加载更多...
-          </span>
-        ) : contactsHasMore ? (
-          <Button size="sm" variant="tertiary" onPress={onLoadMore}>加载更多</Button>
-        ) : mode === 'all' ? (
-          <span>已加载全部联系人</span>
-        ) : null}
-      </div>
-    )
-  }
-
-  const item = row.item
+function PersonaContactRow({
+  item,
+  selectedSessionId,
+  onSelect,
+}: {
+  item: PersonaContactItem
+  selectedSessionId: string
+  onSelect: (sessionId: string) => void
+}) {
   const active = item.sessionId === selectedSessionId
   return (
-    <div style={style} className="px-2">
+    <div className="h-16 px-2">
       <button
         type="button"
         className={cn(
@@ -172,6 +126,7 @@ export default function PersonasPage() {
   const contactsOffsetRef = useRef(0)
   const loadingContactsMoreRef = useRef(false)
   const contactsRequestSeqRef = useRef(0)
+  const contactListRef = useRef<HTMLDivElement>(null)
 
   const personaBySessionId = useMemo(() => {
     const map = new Map<string, PersonaRecordInfo>()
@@ -191,6 +146,7 @@ export default function PersonasPage() {
 
   const listItems = useMemo<PersonaContactItem[]>(() => {
     if (mode === 'cloned') {
+      const normalizedKeyword = keyword.trim().toLocaleLowerCase()
       return sortedPersonas.map((persona) => ({
         sessionId: persona.sessionId,
         displayName: contactBySessionId.get(persona.sessionId)?.displayName?.trim()
@@ -200,7 +156,8 @@ export default function PersonasPage() {
         avatarUrl: contactBySessionId.get(persona.sessionId)?.avatarUrl || personaContactMeta[persona.sessionId]?.avatarUrl,
         isGroup: persona.sessionId.endsWith('@chatroom'),
         persona,
-      }))
+      })).filter((item) => !normalizedKeyword || [item.displayName, item.sessionId]
+        .some((value) => value.toLocaleLowerCase().includes(normalizedKeyword)))
     }
 
     const items: PersonaContactItem[] = contacts.filter(isSingleChatSession).map((contact) => ({
@@ -211,7 +168,7 @@ export default function PersonasPage() {
     }))
 
     return items
-  }, [contactBySessionId, contacts, mode, personaBySessionId, personaContactMeta, sortedPersonas])
+  }, [contactBySessionId, contacts, keyword, mode, personaBySessionId, personaContactMeta, sortedPersonas])
 
   const loadPersonas = useCallback(async () => {
     setLoadingPersonas(true)
@@ -240,7 +197,9 @@ export default function PersonasPage() {
 
     if (reset) {
       contactsOffsetRef.current = 0
+      loadingContactsMoreRef.current = false
       setLoadingContacts(true)
+      setLoadingContactsMore(false)
       setContactsHasMore(false)
     } else {
       loadingContactsMoreRef.current = true
@@ -256,16 +215,24 @@ export default function PersonasPage() {
         return
       }
       const nextSessions = result.sessions || []
-      setContacts((prev) => reset ? nextSessions : [...prev, ...nextSessions])
-      contactsOffsetRef.current = offset + nextSessions.length
-      setContactsHasMore(nextSessions.length >= CONTACT_PAGE_SIZE)
+      setContacts((prev) => {
+        if (reset) return nextSessions
+        const knownSessionIds = new Set(prev.map((session) => session.username))
+        return [...prev, ...nextSessions.filter((session) => !knownSessionIds.has(session.username))]
+      })
+      const hasMore = result.hasMore ?? nextSessions.length >= CONTACT_PAGE_SIZE
+      contactsOffsetRef.current = offset + (hasMore ? CONTACT_PAGE_SIZE : nextSessions.length)
+      setContactsHasMore(hasMore)
     } catch (e) {
       if (contactsRequestSeqRef.current !== requestSeq) return
       setError(e instanceof Error ? e.message : String(e))
       if (reset) setContacts([])
     } finally {
       if (contactsRequestSeqRef.current !== requestSeq) {
-        if (!reset) loadingContactsMoreRef.current = false
+        if (!reset) {
+          loadingContactsMoreRef.current = false
+          setLoadingContactsMore(false)
+        }
         return
       }
       if (reset) {
@@ -326,16 +293,27 @@ export default function PersonasPage() {
   }, [contactBySessionId, personas])
 
   useEffect(() => {
+    if (mode !== 'all') return
     const timer = window.setTimeout(() => {
       void loadContacts(keyword, true)
     }, 220)
     return () => window.clearTimeout(timer)
-  }, [keyword, loadContacts])
+  }, [keyword, loadContacts, mode])
 
   const loadMoreContacts = useCallback(() => {
     if (mode !== 'all' || loadingContacts || loadingContactsMore || !contactsHasMore) return
     void loadContacts(keyword, false)
   }, [contactsHasMore, keyword, loadContacts, loadingContacts, loadingContactsMore, mode])
+
+  const handleContactListScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget
+    const remaining = element.scrollHeight - element.scrollTop - element.clientHeight
+    if (remaining <= PERSONA_ROW_HEIGHT * 2) loadMoreContacts()
+  }, [loadMoreContacts])
+
+  useEffect(() => {
+    contactListRef.current?.scrollTo({ top: 0 })
+  }, [keyword, mode])
 
   useEffect(() => {
     if (selectedSessionId && !listItems.some((item) => item.sessionId === selectedSessionId)) {
@@ -343,17 +321,11 @@ export default function PersonasPage() {
     }
   }, [listItems, selectedSessionId])
 
-  const sidebarRows = useMemo<PersonaSidebarRow[]>(() => {
-    const rows: PersonaSidebarRow[] = listItems.map((item) => ({ kind: 'contact', item }))
-    if (mode === 'all' && (contactsHasMore || loadingContactsMore)) rows.push({ kind: 'loader' })
-    return rows
-  }, [contactsHasMore, listItems, loadingContactsMore, mode])
-
   const loading = loadingContacts || loadingPersonas
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-(--bg-primary)">
-      <aside className="flex w-80 shrink-0 flex-col border-r border-border/70 bg-surface">
+      <aside className="flex min-h-0 w-80 shrink-0 flex-col overflow-hidden border-r border-border/70 bg-surface">
         <div className="shrink-0 border-b border-border/60 px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -403,7 +375,11 @@ export default function PersonasPage() {
           </Tabs>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden py-2">
+        <div
+          ref={contactListRef}
+          className="ct-agent-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain py-2"
+          onScroll={handleContactListScroll}
+        >
           {loading && listItems.length === 0 ? (
             <div className="flex h-40 items-center justify-center gap-2 text-sm text-muted">
               <CircleDashed className="size-4 animate-spin" />
@@ -417,23 +393,28 @@ export default function PersonasPage() {
               <span>{mode === 'cloned' ? '还没有数字分身' : '没有匹配的联系人'}</span>
             </div>
           ) : (
-            <List
-              style={{ height: '100%', width: '100%' }}
-              rowCount={sidebarRows.length}
-              rowHeight={(index: number) => (
-                sidebarRows[index]?.kind === 'loader' ? PERSONA_LOADER_ROW_HEIGHT : PERSONA_ROW_HEIGHT
+            <>
+              {listItems.map((item) => (
+                <PersonaContactRow
+                  key={item.sessionId}
+                  item={item}
+                  selectedSessionId={selectedSessionId}
+                  onSelect={setSelectedSessionId}
+                />
+              ))}
+              {mode === 'all' && (contactsHasMore || loadingContactsMore) && (
+                <div className="flex h-14 items-center justify-center px-3 text-xs text-muted">
+                  {loadingContactsMore ? (
+                    <span className="inline-flex items-center gap-2">
+                      <CircleDashed className="size-3.5 animate-spin" />
+                      正在加载更多...
+                    </span>
+                  ) : (
+                    <Button size="sm" variant="tertiary" onPress={loadMoreContacts}>加载更多</Button>
+                  )}
+                </div>
               )}
-              rowProps={{
-                rows: sidebarRows,
-                selectedSessionId,
-                mode,
-                contactsHasMore,
-                loadingContactsMore,
-                onSelect: setSelectedSessionId,
-                onLoadMore: loadMoreContacts,
-              }}
-              rowComponent={PersonaSidebarRow}
-            />
+            </>
           )}
         </div>
       </aside>
