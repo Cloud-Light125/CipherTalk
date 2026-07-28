@@ -66,6 +66,7 @@ export async function extractProfileChunk(input: PersonaProfileChunkInput, signa
   const result = await generateValidated(
     {
       model: createLanguageModel(input.providerConfig),
+      providerKind: input.providerConfig.providerKind,
       instructions:
         `你是人物侧写师。下面是「${otherName}」和「${subjectName}」的一段微信聊天记录（一行一轮，连发用「／」分隔）。` +
         `从中提取关于「${subjectName}」这个人的深层信息：生活事实、${role === 'self' ? `本人与「${otherName}」` : '你们'}的关系、${role === 'self' ? '本人' : 'TA'}在不同情境下的典型反应、立场与边界、共同经历。` +
@@ -92,6 +93,7 @@ export async function mergeProfileParts(input: PersonaProfileMergeInput, signal?
   const result = await generateValidated(
     {
       model: createLanguageModel(input.providerConfig),
+      providerKind: input.providerConfig.providerKind,
       instructions:
         `下面是从「${otherName}」和「${subjectName}」不同时间段的聊天里分别提取的多份部分画像（按时间正序，越靠后越新）。` +
         '请合并成一份：去重、矛盾时以更新的为准（如换了工作以新工作为准）、同类信息压缩合并；' +
@@ -135,6 +137,7 @@ export async function revisePersona(input: PersonaReviseInput, signal?: AbortSig
   const result = await generateValidated(
     {
       model: createLanguageModel(input.providerConfig),
+      providerKind: input.providerConfig.providerKind,
       instructions:
         `你负责更新「${input.friendName}」的人物画像。给你 TA 的旧画像（说话风格卡 + 深层画像）和这之后新增的真实聊天记录。` +
         '请输出修订后的完整画像：风格没变就保留原描述，变了就更新；新事实/新近况/新梗补进深层画像，过时的（如已结束的状态）修正；' +
@@ -177,6 +180,7 @@ export async function reflectConversation(input: PersonaReflectInput, signal?: A
   const result = await generateValidated(
     {
       model: createLanguageModel(input.providerConfig),
+      providerKind: input.providerConfig.providerKind,
       instructions:
         `下面是「我」和一个模仿「${input.friendName}」的 AI 分身的对话记录。请做两件事：` +
         `\n1. corrections：找出「我」对分身扮演效果的纠正、不满或指示（如"他才不会这么说""你太客气了""他喊我老张不是张哥"），` +

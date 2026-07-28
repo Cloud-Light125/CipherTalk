@@ -4,9 +4,9 @@
  *
  * 不用 generateObject：openai-compatible 系供应商（deepseek/智谱/ollama 等）常把 JSON
  * 包进 ```json 围栏或带前后缀文字，SDK 严格解析会报 "No object generated"。
- * 改为 generateText + 宽松抽取 JSON + zod 校验，失败自动重试一次。
+ * 改为文本生成 + 宽松抽取 JSON + zod 校验，失败自动重试一次。
  */
-import { generateText } from 'ai'
+import { generateText, streamText } from 'ai'
 import { z } from 'zod'
 import { createLanguageModel } from '../provider'
 import type { PersonaExtractInput, PersonaExtractResult } from './personaTypes'
@@ -43,15 +43,22 @@ function extractJson(text: string): unknown {
   return JSON.parse(t)
 }
 
-/** generateText + 宽松解析 + zod 校验；解析失败重试一次，再失败抛带原始输出片段的错误。 */
+/** 文本生成 + 宽松解析 + zod 校验；解析失败重试一次，再失败抛带原始输出片段的错误。 */
 export async function generateValidated<T>(
-  opts: { model: ReturnType<typeof createLanguageModel>; instructions: string; prompt: string; temperature: number; signal?: AbortSignal },
+  opts: {
+    model: ReturnType<typeof createLanguageModel>
+    providerKind: PersonaExtractInput['providerConfig']['providerKind']
+    instructions: string
+    prompt: string
+    temperature: number
+    signal?: AbortSignal
+  },
   schema: z.ZodType<T>,
   label: string,
 ): Promise<T> {
   let lastRaw = ''
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const result = await generateText({
+    const request = {
       model: opts.model,
       instructions: opts.instructions,
       prompt: attempt === 0
@@ -60,10 +67,14 @@ export async function generateValidated<T>(
       temperature: opts.temperature,
       abortSignal: opts.signal,
       telemetry: { functionId: `persona-${label}` },
-    })
-    lastRaw = result.text
+    }
+    if (opts.providerKind === 'codex-subscription') {
+      lastRaw = await streamText(request).text
+    } else {
+      lastRaw = (await generateText(request)).text
+    }
     try {
-      return schema.parse(extractJson(result.text))
+      return schema.parse(extractJson(lastRaw))
     } catch {
       /* 重试一次 */
     }
@@ -125,6 +136,7 @@ export async function extractPersona(input: PersonaExtractInput, signal?: AbortS
     generateValidated(
       {
         model,
+        providerKind: input.providerConfig.providerKind,
         instructions:
           '你是一名语言风格侧写师。根据聊天记录总结目标人物的说话风格与性格，' +
           '只依据记录本身，不要臆造；描述要具体可执行（能直接指导模仿其说话），避免空泛形容词。' +
@@ -139,6 +151,7 @@ export async function extractPersona(input: PersonaExtractInput, signal?: AbortS
     generateValidated(
       {
         model,
+        providerKind: input.providerConfig.providerKind,
         instructions:
           '你是对话样本挖掘器。从聊天记录中挑选最能体现目标人物说话风格的真实问答对：' +
           `「${otherName}」说了什么、「${subjectName}」怎么回的。必须原样摘抄原文（可去掉无关上下文），不许改写、不许编造。` +

@@ -2,9 +2,9 @@
  * 克隆好友聊天引擎 —— 跑在 AI utilityProcess 子进程。
  * 与 AI 助手（engine.ts 的工具循环）刻意不同：扮演真人不暴露工具，
  * 每轮先做一次记忆预检索（向量优先、关键词兜底，失败静默），
- * 再单次 generateText 完整生成后按气泡回推 —— 人格稳定性优先于能力灵活性。
+ * 再单次完整生成后按气泡回推 —— 人格稳定性优先于能力灵活性。
  */
-import { generateText, type FinishReason, type ModelMessage, type UIMessageChunk } from 'ai'
+import { generateText, streamText, type FinishReason, type ModelMessage, type UIMessageChunk } from 'ai'
 import { createLanguageModel } from '../provider'
 import { buildReasoningOption } from '../cache'
 import { reportAgentProgress, withAgentProgress } from '../progress'
@@ -455,7 +455,7 @@ export async function runPersonaChat(
     const voiceForwardRequested = voiceEnabled && wantsVoiceForwardReply(userText)
 
     reportAgentProgress({ stage: 'run_started', title: '正在组织语言' })
-    const result = await generateText({
+    const request = {
       model: createLanguageModel(input.providerConfig),
       instructions: buildPersonaSystemPrompt(input.persona, memories, similarPairs, voiceEnabled, voiceForwardRequested, outputMode),
       messages: maskStickerHistory(input.messages, input.persona.stickers || []),
@@ -463,7 +463,17 @@ export async function runPersonaChat(
       reasoning: buildReasoningOption(input.providerConfig),
       abortSignal: signal,
       telemetry: { functionId: 'persona-chat' },
-    })
+    }
+    const result = input.providerConfig.providerKind === 'codex-subscription'
+      ? await (async () => {
+          const streamed = streamText(request)
+          return {
+            text: await streamed.text,
+            finishReason: await streamed.finishReason,
+            usage: await streamed.usage,
+          }
+        })()
+      : await generateText(request)
 
     const replyText = resolveStickerMarkers(
       fallbackSplitLongReply(result.text, Math.max(input.persona.stats.avgFriendMsgChars, 8)),

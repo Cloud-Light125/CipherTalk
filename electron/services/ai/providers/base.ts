@@ -557,7 +557,7 @@ export abstract class BaseAIProvider implements AIProvider {
 
     for (let attempt = 0; ; attempt++) {
       try {
-        const response = await generateText({
+        const response = await this.generateCompleteText({
           model: modelProvider,
           messages: normalized,
           allowSystemInMessages: true,
@@ -593,7 +593,7 @@ export abstract class BaseAIProvider implements AIProvider {
 
     for (let attempt = 0; ; attempt++) {
       try {
-        const response = await generateText({
+        const response = await this.generateCompleteText({
           model: modelProvider,
           messages: normalized,
           allowSystemInMessages: true,
@@ -802,7 +802,7 @@ export abstract class BaseAIProvider implements AIProvider {
     try {
       const requestedModel = this.getRequestedModel({ model })
       const modelProvider = this.getModelProvider(requestedModel)
-      await generateText({
+      await this.generateCompleteText({
         model: modelProvider,
         messages: [{ role: 'user', content: 'Hello' }],
         maxOutputTokens: 16,
@@ -861,6 +861,19 @@ export abstract class BaseAIProvider implements AIProvider {
         error: errorMsg,
         needsProxy
       }
+    }
+  }
+
+  private async generateCompleteText(options: Parameters<typeof generateText>[0]) {
+    if (this.providerKind !== 'codex-subscription') return generateText(options)
+
+    const result = streamText(options)
+    return {
+      text: await result.text,
+      reasoningText: await result.reasoningText,
+      toolCalls: await result.toolCalls,
+      finishReason: await result.finishReason,
+      usage: await result.usage,
     }
   }
 }
