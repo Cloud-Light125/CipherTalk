@@ -40,6 +40,7 @@ import { useChatStore } from './stores/chatStore'
 import { useUpdateStatusStore } from './stores/updateStatusStore'
 import { useActivationStore } from './stores/activationStore'
 import * as configService from './services/config'
+import { testAndOpenWcdb } from './services/wcdbConnection'
 import { initTldList } from './utils/linkify'
 import LockScreen from './pages/LockScreen'
 import { useAuthStore } from './stores/authStore'
@@ -465,7 +466,7 @@ function App() {
 
           // 启动屏未连接，执行自动连接
           console.log('检测到已保存的配置，正在自动连接...')
-          const result = await window.electronAPI.wcdb.testConnection(dbPath, decryptKey, wxid, true) // 标记为自动连接
+          const result = await testAndOpenWcdb(window.electronAPI.wcdb, dbPath, decryptKey, wxid, true)
 
           if (result.success) {
             console.log('自动连接成功')

@@ -3,6 +3,7 @@ import path from 'path'
 import { BaseAIProvider, type ProviderKind } from './base'
 import { getAppPath, getUserDataPath, isElectronPackaged } from '../../runtimePaths'
 import { getCodexSubscriptionAuthPath, CODEX_SUBSCRIPTION_DUMMY_API_KEY } from '../codexSubscriptionAuth'
+import { GPT_56_CONTEXT_WINDOW } from '../codexModelsPayload'
 
 export type AIProviderProtocol = ProviderKind
 
@@ -115,7 +116,7 @@ export const CODEX_SUBSCRIPTION_PROVIDER_ID = 'openai-codex'
 
 /** Codex 订阅模型的能力都一样，只有名字和上下文长度不同（上下文由 /wham/models 给出） */
 export function buildCodexSubscriptionModelDetail(id: string, name?: string, contextWindow?: number): AIModelInfo {
-  const context = contextWindow || 272_000
+  const context = /^gpt-5\.6(?:-|$)/.test(id) ? GPT_56_CONTEXT_WINDOW : (contextWindow || 272_000)
   return {
     id,
     name: name || id,
@@ -129,6 +130,7 @@ export function buildCodexSubscriptionModelDetail(id: string, name?: string, con
 
 // 未登录时下拉框的占位；登录后一律以 /wham/models 拉到的为准
 const CODEX_SUBSCRIPTION_MODEL_DETAILS: AIModelInfo[] = [
+  buildCodexSubscriptionModelDetail('gpt-5.6-sol', 'GPT-5.6 Sol'),
   buildCodexSubscriptionModelDetail('gpt-5.6-terra', 'GPT-5.6 Terra'),
   buildCodexSubscriptionModelDetail('gpt-5.6-luna', 'GPT-5.6 Luna'),
   buildCodexSubscriptionModelDetail('gpt-5.5', 'GPT-5.5'),

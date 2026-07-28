@@ -1,6 +1,7 @@
 import { basename, delimiter, dirname, join } from 'path'
 import { existsSync, readdirSync, statSync } from 'fs'
 import { decodeMessageContent, getRowField, coerceRowNumber } from './chat/rowDecoders'
+import { formatWcdbOpenFailure } from './wcdbOpenFailure'
 
 // 消息表 local_type 列在不同微信版本下的可能列名
 const MSG_TYPE_COLUMNS = [
@@ -333,9 +334,14 @@ export class WcdbCore {
       const openResult = this.tryOpenWithCandidates(sessionDbPaths, hexKey)
       if (!openResult.success || !openResult.handle || !openResult.matchedPath) {
         const logs = await this.printLogs()
+        console.error('[wcdbCore] 数据库验证失败', {
+          dbStoragePath,
+          attempts: openResult.errors,
+          nativeLogs: logs,
+        })
         return {
           success: false,
-          error: `数据库打开失败 | db_storage=${dbStoragePath} | tried=${sessionDbPaths.join(', ')}${openResult.errors.length ? ` | details=${openResult.errors.join(' ; ')}` : ''}${logs ? ` | logs=${logs}` : ''}`
+          error: formatWcdbOpenFailure(logs, openResult.errors),
         }
       }
 
