@@ -92,6 +92,7 @@ export interface CodexSubscriptionModel {
   isDefault: boolean
   hidden: boolean
   defaultReasoningEffort?: string
+  contextWindow?: number
 }
 
 export interface CodexAccount {

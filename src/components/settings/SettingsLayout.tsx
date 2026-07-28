@@ -6,6 +6,7 @@ import type { UpdateDownloadProgressPayload } from '../../types/electron'
 import type { AccountProfile } from '../../types/account'
 import { dialog } from '../../services/ipc'
 import * as configService from '../../services/config'
+import { testAndOpenWcdb } from '../../services/wcdbConnection'
 import AboutTab from './tabs/AboutTab'
 import ActivationTab from './tabs/ActivationTab'
 import AppearanceTab from './tabs/AppearanceTab'
@@ -1243,8 +1244,25 @@ function SettingsLayout() {
       // 保存日记功能开关
       await configService.setDiaryEnabled(storeConfig.diaryEnabled)
 
-     // 如果数据库配置完整，尝试设置已连接状态（不进行耗时测试，仅标记）
-      if (storeConfig.decryptKey && storeConfig.dbPath && storeConfig.wxid && storeConfig.decryptKey.length === 64 && isAccountVerified) {
+      // 当前活动账号的数据库配置变化后，必须完成正式开库再更新连接状态。
+      const activeAccount = await configService.getActiveAccount()
+      if (
+        savedAccount?.id === activeAccount?.id &&
+        storeConfig.decryptKey &&
+        storeConfig.dbPath &&
+        storeConfig.wxid &&
+        storeConfig.decryptKey.length === 64 &&
+        isAccountVerified
+      ) {
+        const connection = await testAndOpenWcdb(
+          window.electronAPI.wcdb,
+          storeConfig.dbPath,
+          storeConfig.decryptKey,
+          storeConfig.wxid
+        )
+        if (!connection.success) {
+          throw new Error(connection.error || 'WCDB 连接失败')
+        }
         setDbConnected(true, storeConfig.dbPath)
       }
 

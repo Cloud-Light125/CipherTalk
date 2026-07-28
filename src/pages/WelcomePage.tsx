@@ -22,7 +22,9 @@ import { ArrowLeft, ArrowRight, ArrowsRotateLeft, BookOpen, CircleCheck, Eye, Ey
 import { useAppStore } from '../stores/appStore'
 import { dialog } from '../services/ipc'
 import * as configService from '../services/config'
+import { testAndOpenWcdb } from '../services/wcdbConnection'
 import { useAuthStore } from '../stores/authStore'
+import { resolveWelcomeConfig } from './welcomeConfig'
 import './WelcomePage.css'
 
 const GUIDE_URL = 'https://ilovebinglu.notion.site/ciphertalk'
@@ -107,37 +109,26 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     }
 
     // 从缓存加载配置
-    const loadCachedConfig = () => {
+    const loadCachedConfig = async () => {
       if (isAddAccountMode) return
       try {
         const cached = localStorage.getItem('welcomeConfig')
-        if (cached) {
-          const config = JSON.parse(cached)
-          if (config.dbPath) {
-            setDbPath(config.dbPath)
-            setHasCache(true)
-          }
-          if (config.cachePath) {
-            setCachePath(config.cachePath)
-          }
-          if (config.wxid) {
-            setWxid(config.wxid)
-          }
-          if (config.decryptKey) {
-            setDecryptKey(config.decryptKey)
-          }
-          if (config.imageXorKey) {
-            setImageXorKey(config.imageXorKey)
-          }
-          if (config.imageAesKey) {
-            setImageAesKey(config.imageAesKey)
-          }
+        const activeAccount = await configService.getActiveAccount().catch(() => null)
+        const config = resolveWelcomeConfig(activeAccount, cached ? JSON.parse(cached) : null)
+        if (config.dbPath) {
+          setDbPath(config.dbPath)
+          setHasCache(true)
         }
+        if (config.cachePath) setCachePath(config.cachePath)
+        if (config.wxid) setWxid(config.wxid)
+        if (config.decryptKey) setDecryptKey(config.decryptKey)
+        if (config.imageXorKey) setImageXorKey(config.imageXorKey)
+        if (config.imageAesKey) setImageAesKey(config.imageAesKey)
       } catch (e) {
         console.error('加载缓存配置失败:', e)
       }
     }
-    loadCachedConfig()
+    void loadCachedConfig()
 
     // 自动检测最佳缓存路径（如果缓存中没有）
     const initCachePath = async () => {
@@ -604,7 +595,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
 
       setDecryptStatus('正在测试数据库连接...')
 
-      const result = await window.electronAPI.wcdb.testConnection(dbPath, decryptKey, wxid)
+      const result = await testAndOpenWcdb(window.electronAPI.wcdb, dbPath, decryptKey, wxid)
       if (!result.success) {
         setError(result.error || 'WCDB 连接失败')
         setDecryptStatus('')
@@ -612,7 +603,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
         return
       }
 
-      setDecryptStatus('连接成功，配置保存完成...')
+      setDecryptStatus('数据库已连接，配置保存完成...')
 
       setCountdown(3)
       for (let i = 3; i > 0; i--) {
