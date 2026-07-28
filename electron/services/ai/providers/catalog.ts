@@ -113,11 +113,25 @@ const RELAYONE_PROVIDER_DEFINITION: AIProviderMetadata = {
 
 export const CODEX_SUBSCRIPTION_PROVIDER_ID = 'openai-codex'
 
+/** Codex 订阅模型的能力都一样，只有名字和上下文长度不同（上下文由 /wham/models 给出） */
+export function buildCodexSubscriptionModelDetail(id: string, name?: string, contextWindow?: number): AIModelInfo {
+  const context = contextWindow || 272_000
+  return {
+    id,
+    name: name || id,
+    providerId: CODEX_SUBSCRIPTION_PROVIDER_ID,
+    family: 'gpt',
+    modalities: { input: ['text', 'image', 'pdf'], output: ['text'] },
+    capabilities: { attachment: true, reasoning: true, toolCall: true, structuredOutput: true, temperature: false, openWeights: false },
+    limits: { context, input: context, output: 128_000 },
+  }
+}
+
+// 未登录时下拉框的占位；登录后一律以 /wham/models 拉到的为准
 const CODEX_SUBSCRIPTION_MODEL_DETAILS: AIModelInfo[] = [
-  { id: 'gpt-5.5', name: 'GPT-5.5', providerId: CODEX_SUBSCRIPTION_PROVIDER_ID, family: 'gpt', modalities: { input: ['text', 'image', 'pdf'], output: ['text'] }, capabilities: { attachment: true, reasoning: true, toolCall: true, structuredOutput: true, temperature: false, openWeights: false }, limits: { context: 400_000, input: 272_000, output: 128_000 } },
-  { id: 'gpt-5.4', name: 'GPT-5.4', providerId: CODEX_SUBSCRIPTION_PROVIDER_ID, family: 'gpt', modalities: { input: ['text', 'image', 'pdf'], output: ['text'] }, capabilities: { attachment: true, reasoning: true, toolCall: true, structuredOutput: true, temperature: false, openWeights: false }, limits: { context: 1_050_000, input: 922_000, output: 128_000 } },
-  { id: 'gpt-5.4-mini', name: 'GPT-5.4 mini', providerId: CODEX_SUBSCRIPTION_PROVIDER_ID, family: 'gpt-mini', modalities: { input: ['text', 'image'], output: ['text'] }, capabilities: { attachment: true, reasoning: true, toolCall: true, structuredOutput: true, temperature: false, openWeights: false }, limits: { context: 400_000, input: 272_000, output: 128_000 } },
-  { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', providerId: CODEX_SUBSCRIPTION_PROVIDER_ID, family: 'gpt-codex-spark', modalities: { input: ['text', 'image', 'pdf'], output: ['text'] }, capabilities: { attachment: true, reasoning: true, toolCall: true, structuredOutput: true, temperature: false, openWeights: false }, limits: { context: 128_000, input: 100_000, output: 32_000 } },
+  buildCodexSubscriptionModelDetail('gpt-5.6-terra', 'GPT-5.6 Terra'),
+  buildCodexSubscriptionModelDetail('gpt-5.6-luna', 'GPT-5.6 Luna'),
+  buildCodexSubscriptionModelDetail('gpt-5.5', 'GPT-5.5'),
 ]
 
 const CODEX_SUBSCRIPTION_PROVIDER_DEFINITION: AIProviderMetadata = {

@@ -2156,13 +2156,12 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     try {
       if (options.provider === 'openai-codex') {
         const { codexSubscriptionService } = await import('../../services/ai/codexSubscriptionService')
-        const { getProviderDefinition } = await import('../../services/ai/providers/catalog')
+        const { buildCodexSubscriptionModelDetail } = await import('../../services/ai/providers/catalog')
         const items = await codexSubscriptionService.listModels()
-        const details = getProviderDefinition('openai-codex')?.modelDetails || []
         return {
           success: true,
           models: items.map((item) => item.id),
-          modelDetails: details,
+          modelDetails: items.map((item) => buildCodexSubscriptionModelDetail(item.id, item.displayName, item.contextWindow)),
         }
       }
       const { aiService } = await import('../../services/ai/aiService')

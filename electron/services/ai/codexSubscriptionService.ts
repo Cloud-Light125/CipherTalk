@@ -20,6 +20,9 @@ import {
   upsertCodexAccount,
 } from './codexSubscriptionAuth'
 import { createProxyFetch, getResolvedProxyUrl } from './proxyFetch'
+import { parseModelsPayload, type CodexSubscriptionModel } from './codexModelsPayload'
+
+export type { CodexSubscriptionModel }
 
 export type CodexSubscriptionStatus = {
   available: boolean
@@ -36,15 +39,6 @@ export type CodexAccount = {
   planType?: string
   active: boolean
   addedAt: number
-}
-
-export type CodexSubscriptionModel = {
-  id: string
-  displayName: string
-  description: string
-  isDefault: boolean
-  hidden: boolean
-  defaultReasoningEffort?: string
 }
 
 export type CodexSubscriptionUsageWindow = {
@@ -77,12 +71,17 @@ const LOGIN_TIMEOUT_MS = 5 * 60_000
 const OAUTH_PORT = 1455
 const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage'
 const USAGE_CACHE_MS = 30_000
+const MODELS_URL = 'https://chatgpt.com/backend-api/wham/models'
+const MODELS_CACHE_MS = 60_000
+// client_version 是必填 query 参数（不带直接 400），并且服务端按它做灰度：
+// 报低版本只会返回老模型（实测 0.98.0 只剩 gpt-5.4-mini），所以报一个足够高的版本拿全量。
+const MODELS_CLIENT_VERSION = '999.0.0'
 
+// 服务端 /wham/models 拉不到时的兜底（OpenAI 换代后这里会过期，正常路径始终以服务端为准）
 export const CODEX_SUBSCRIPTION_MODELS: CodexSubscriptionModel[] = [
-  { id: 'gpt-5.5', displayName: 'GPT-5.5', description: '最新通用 Codex 模型', isDefault: true, hidden: false, defaultReasoningEffort: 'medium' },
-  { id: 'gpt-5.4', displayName: 'GPT-5.4', description: '通用推理与工具调用模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium' },
-  { id: 'gpt-5.4-mini', displayName: 'GPT-5.4 mini', description: '更快的轻量模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium' },
-  { id: 'gpt-5.3-codex-spark', displayName: 'GPT-5.3 Codex Spark', description: '低延迟 Codex 模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium' },
+  { id: 'gpt-5.6-terra', displayName: 'GPT-5.6 Terra', description: '日常使用的均衡编码模型', isDefault: true, hidden: false, defaultReasoningEffort: 'medium' },
+  { id: 'gpt-5.6-luna', displayName: 'GPT-5.6 Luna', description: '更快的轻量模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium' },
+  { id: 'gpt-5.5', displayName: 'GPT-5.5', description: '通用推理与工具调用模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium' },
 ]
 
 type PendingLogin = {
@@ -229,6 +228,13 @@ class CodexSubscriptionService {
   private pendingLogin: PendingLogin | null = null
   private statusListeners = new Set<(status: CodexSubscriptionStatus) => void>()
   private usageCache: CodexSubscriptionUsage | null = null
+  private modelsCache: { models: CodexSubscriptionModel[]; fetchedAt: number } | null = null
+
+  /** 账号变动（登录/切换/退出）后额度和模型列表都得重新拉 */
+  private resetCaches(): void {
+    this.usageCache = null
+    this.modelsCache = null
+  }
 
   onStatusChanged(listener: (status: CodexSubscriptionStatus) => void): () => void {
     this.statusListeners.add(listener)
@@ -301,7 +307,7 @@ class CodexSubscriptionService {
     this.closeServer()
     const activeId = getActiveCodexAccountId()
     if (activeId) await removeCodexAccount(activeId)
-    this.usageCache = null
+    this.resetCaches()
     this.emitStatus(await this.getStatus())
   }
 
@@ -309,7 +315,7 @@ class CodexSubscriptionService {
   async importFromCodexCli(): Promise<void> {
     this.cancelPendingLogin()
     await upsertCodexAccount(await readCodexCliCredentials())
-    this.usageCache = null
+    this.resetCaches()
     this.emitStatus(await this.getStatus())
   }
 
@@ -327,13 +333,13 @@ class CodexSubscriptionService {
 
   async setActiveAccount(id: string): Promise<void> {
     await setActiveCodexAccount(id)
-    this.usageCache = null
+    this.resetCaches()
     this.emitStatus(await this.getStatus())
   }
 
   async removeAccount(id: string): Promise<void> {
     await removeCodexAccount(id)
-    this.usageCache = null
+    this.resetCaches()
     this.emitStatus(await this.getStatus())
   }
 
@@ -431,10 +437,57 @@ class CodexSubscriptionService {
     return usage
   }
 
-  async listModels(): Promise<CodexSubscriptionModel[]> {
+  async listModels(forceRefresh = false): Promise<CodexSubscriptionModel[]> {
     const status = await this.getStatus(true)
     if (!status.authenticated) throw new Error(status.error || '请先登录 ChatGPT 账号')
-    return CODEX_SUBSCRIPTION_MODELS.map((model) => ({ ...model }))
+    if (!forceRefresh && this.modelsCache && Date.now() - this.modelsCache.fetchedAt < MODELS_CACHE_MS) {
+      return this.modelsCache.models.map((model) => ({ ...model }))
+    }
+
+    try {
+      const models = await this.fetchRemoteModels()
+      if (models.length === 0) throw new Error('服务端返回的模型列表为空')
+      this.modelsCache = { models, fetchedAt: Date.now() }
+      console.info('[codex-subscription:models] 拉取成功', { count: models.length, ids: models.map((model) => model.id) })
+      return models.map((model) => ({ ...model }))
+    } catch (error) {
+      // 拉不到就用内置兜底，别让模型下拉框直接空掉
+      console.warn('[codex-subscription:models] 拉取失败，使用内置列表:', error instanceof Error ? error.message : String(error))
+      return CODEX_SUBSCRIPTION_MODELS.map((model) => ({ ...model }))
+    }
+  }
+
+  private async fetchRemoteModels(): Promise<CodexSubscriptionModel[]> {
+    const proxyFetch = createProxyFetch(getResolvedProxyUrl())
+    let credentials = await getValidCodexSubscriptionCredentials({
+      authFilePath: getCodexSubscriptionAuthPath(),
+      baseFetch: proxyFetch,
+    })
+    const modelsFetch = proxyFetch ?? globalThis.fetch
+    const requestModels = (accessToken: string, accountId?: string) => {
+      const headers = new Headers({
+        Authorization: `Bearer ${accessToken}`,
+        originator: 'ciphertalk',
+        'User-Agent': `CipherTalk/${process.platform}-${process.arch}`,
+      })
+      if (accountId) headers.set('ChatGPT-Account-Id', accountId)
+      return modelsFetch(`${MODELS_URL}?client_version=${MODELS_CLIENT_VERSION}`, { method: 'GET', headers })
+    }
+
+    let response = await requestModels(credentials.accessToken, credentials.accountId)
+    if (response.status === 401) {
+      credentials = await getValidCodexSubscriptionCredentials({
+        authFilePath: getCodexSubscriptionAuthPath(),
+        baseFetch: proxyFetch,
+        forceRefresh: true,
+      })
+      response = await requestModels(credentials.accessToken, credentials.accountId)
+    }
+    if (!response.ok) {
+      const detail = (await response.text().catch(() => '')).trim()
+      throw new Error(`获取模型列表失败 (${response.status})${detail ? `: ${detail.slice(0, 200)}` : ''}`)
+    }
+    return parseModelsPayload(await response.json())
   }
 
   shutdown(): void {
@@ -501,7 +554,7 @@ class CodexSubscriptionService {
       const credentials = credentialsFromTokens(tokens)
       if (!credentials.refreshToken) throw new Error('OpenAI OAuth 响应缺少 refresh_token')
       await upsertCodexAccount(credentials)
-      this.usageCache = null
+      this.resetCaches()
       response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       response.end(callbackHtml(true, '授权信息已保存到密语，可以关闭这个页面。'))
       this.closeServer()
