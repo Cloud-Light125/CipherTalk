@@ -73,6 +73,11 @@ function strictRemovePadding(data: Buffer): Buffer {
 
 export function decryptDatV3(inputPath: string, xorKey: number): Buffer {
   const data = readFileSync(inputPath)
+  // 旧版微信偶发把明文 JPEG/PNG 直接落成 .dat（无 V4 头）。此时再 XOR 会毁掉文件头，
+  // 表现为「图片不完整」且 headHex 像 8cab8c93…（即 ffd8ffe0 XOR 0x73）。
+  if (detectImageExtension(data)) {
+    return data
+  }
   const out = Buffer.alloc(data.length)
   for (let i = 0; i < data.length; i += 1) {
     out[i] = data[i] ^ xorKey

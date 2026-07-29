@@ -3244,6 +3244,14 @@ export class ImageDecryptService {
       const { spawn } = require('child_process')
       const chunks: Buffer[] = []
       const errChunks: Buffer[] = []
+      let settled = false
+
+      const finish = (result: Buffer | null) => {
+        if (settled) return
+        settled = true
+        clearTimeout(killTimer)
+        resolve(result)
+      }
 
       const args = [
         '-hide_banner',
@@ -3269,37 +3277,53 @@ export class ImageDecryptService {
         console.error('[ImageDecrypt] ffmpeg 转换超时，强制结束进程')
         if (hash) this.blacklistWxgfHash(hash)
         try { proc.kill() } catch { /* 已退出 */ }
-        resolve(null)
+        finish(null)
       }, 15000)
 
       proc.stdout.on('data', (chunk: Buffer) => chunks.push(chunk))
       proc.stderr.on('data', (chunk: Buffer) => errChunks.push(chunk))
 
+      // ffmpeg 提前退出（坏输入 / 坏二进制 / dyld 失败）时，stdin write 会异步抛 EPIPE。
+      // 未监听会变成 Unhandled 'error' event，拖垮整个导出 utility process。
+      proc.stdin.on('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') return
+        console.error('[ImageDecrypt] ffmpeg stdin error', err)
+      })
+
       proc.on('close', (code: number) => {
-        clearTimeout(killTimer)
         if (code === 0 && chunks.length > 0) {
-          const result = Buffer.concat(chunks)
-          resolve(result)
+          finish(Buffer.concat(chunks))
         } else {
           const errMsg = Buffer.concat(errChunks).toString()
           console.error(`[ImageDecrypt] ffmpeg 转换失败 code=${code} err=${errMsg}`)
-          resolve(null)
+          finish(null)
         }
       })
 
       proc.on('error', (err: any) => {
-        clearTimeout(killTimer)
         console.error(`[ImageDecrypt] ffmpeg 启动失败: ${ffmpeg}`, err)
-        resolve(null)
+        finish(null)
       })
 
-      // 写入数据并关闭
+      // 写入数据并关闭（write 回调里 end，避免 pipe 已断时同步抛错）
       try {
-        proc.stdin.write(hevcData)
-        proc.stdin.end()
+        proc.stdin.write(hevcData, (writeErr: Error | null | undefined) => {
+          if (writeErr) {
+            const code = (writeErr as NodeJS.ErrnoException).code
+            if (code !== 'EPIPE' && code !== 'ERR_STREAM_DESTROYED') {
+              console.error('[ImageDecrypt] 写入 ffmpeg stdin 失败', writeErr)
+            }
+            return
+          }
+          try {
+            proc.stdin.end()
+          } catch {
+            /* ignore */
+          }
+        })
       } catch (e) {
         console.error('[ImageDecrypt] 写入 ffmpeg stdin 失败', e)
-        resolve(null)
+        finish(null)
       }
     })
   }
