@@ -13,6 +13,7 @@ import { wcdbService } from './wcdbService'
 import { findMessageDbPaths, findDbByName, getDbStoragePath } from './dbStoragePaths'
 import { snsService, isVideoUrl, type SnsPost, type SnsShareInfo } from './snsService'
 import { parseQuoteMessage } from './chat/contentParsers'
+import { localPathFromFileUrl } from './fileUrlPath'
 
 // ChatLab 0.0.2 格式类型定义
 export interface ChatLabHeader {
@@ -2866,11 +2867,8 @@ class ExportService {
                   if (__dtImg > 1000) expLog(`慢图片 ${imageMd5 || imageDatName}: ${__dtImg}ms (success=${cacheResult.success})`)
 
                   if (cacheResult.success && cacheResult.localPath) {
-                    // localPath 是 file:///path?v=xxx 格式，转为本地路径
-                    let filePath = cacheResult.localPath
-                      .replace(/\?v=\d+$/, '')
-                      .replace(/^file:\/\/\//i, '')
-                    filePath = decodeURIComponent(filePath)
+                    // localPath 是 file:///path?v=xxx；必须用 fileURLToPath，勿 strip file:///（会丢掉 macOS 路径前导 /）
+                    const filePath = localPathFromFileUrl(cacheResult.localPath)
 
                     if (fs.existsSync(filePath)) {
                       const ext = path.extname(filePath) || '.jpg'
@@ -2903,7 +2901,7 @@ class ExportService {
                   const __dtVid = Date.now() - __tVid
                   if (__dtVid > 1000) expLog(`慢视频 ${videoMd5}: ${__dtVid}ms (exists=${videoInfo.exists})`)
                   if (videoInfo.exists && videoInfo.videoUrl) {
-                    const videoPath = videoInfo.videoUrl.replace(/^file:\/\/\//i, '').replace(/\//g, path.sep)
+                    const videoPath = localPathFromFileUrl(videoInfo.videoUrl)
                     if (fs.existsSync(videoPath)) {
                       const fileName = `${createTime}_${videoMd5}.mp4`
                       const df = this.dateFolder(createTime)
