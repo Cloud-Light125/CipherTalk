@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button, Card } from '@heroui/react'
-import { ArrowDownToLine, ArrowUp, ArrowsRotateLeft, Calendar, ChevronLeft, ChevronRight, CircleDashed, Copy, FileArrowDown, Funnel, HeartFill, Link, Magnifier, MusicNote, Person, Play, SquareArticle, TriangleExclamation, Xmark } from '@gravity-ui/icons'
+import { ArrowDownToLine, ArrowUp, ArrowsRotateLeft, Calendar, ChevronLeft, ChevronRight, CircleDashed, Copy, FileArrowDown, Funnel, HeartFill, Link, Magnifier, MusicNote, Person, Play, PlayFill, SquareArticle, TriangleExclamation, Xmark } from '@gravity-ui/icons'
 import { ImagePreview } from '../components/ImagePreview'
 import { LivePhotoIcon } from '../components/LivePhotoIcon'
 import { parseWechatEmoji, parseWechatEmojiHtml } from '../utils/wechatEmoji'
@@ -558,7 +558,7 @@ const MediaItem = ({ media, isSingle, allMedia, onPreview }: { media: any; isSin
 
       {isVisible && isVideo && !isDecrypting && (
         <div className="video-play-icon">
-          <Play width={24} height={24} fill="white" stroke="white" />
+          <PlayFill width={24} height={24} />
         </div>
       )}
 

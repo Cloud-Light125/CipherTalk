@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { CircleDashed, Play, Video } from '@gravity-ui/icons'
+import { CircleDashed, PlayFill, Video } from '@gravity-ui/icons'
 import type { ChatSession, Message } from '../../../../types/models'
 import { lastIncrementalUpdateTime, videoInfoCache } from './mediaState'
 import type { CachedVideoInfo } from './mediaState'
@@ -204,7 +204,7 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
         </div>
       )}
       <div className="video-play-button">
-        <Play width={36} height={36} fill="currentColor" />
+        <PlayFill width={24} height={24} />
       </div>
       {message.videoDuration && message.videoDuration > 0 && (
         <span className="video-duration-tag">
