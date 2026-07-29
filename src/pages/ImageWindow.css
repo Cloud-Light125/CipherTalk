@@ -35,30 +35,10 @@
     -webkit-app-region: drag;
 }
 
-/* ponytail: 原生 titleBarOverlay 只能填纯色，做不了玻璃，
-   所以在它底下垫一块药丸；宽度用 WCO 的 env() 精确对齐控件区，
-   别用 --window-controls-right-safe（那是内容安全区，比按钮宽） */
-.image-window-container .title-bar::after {
-    content: '';
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    width: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, calc(100vw - 138px)) - 6px);
-    height: calc(env(titlebar-area-height, 40px) - 6px);
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(0, 0, 0, 0.26);
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-    pointer-events: none;
-}
+/* 窗口按钮见 components/GlassWindowControls */
 
-/* macOS 红绿灯在左侧 */
-:root[data-window-platform="darwin"] .image-window-container .title-bar::after {
-    right: auto;
-    left: 6px;
-    width: calc(var(--window-controls-left-safe, 84px) - 12px);
+.image-window-container .title-bar .window-controls button svg {
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55));
 }
 
 .image-window-container .bottom-toolbar-shell {

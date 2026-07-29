@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Tooltip } from '@heroui/react'
 import { ArrowRotateLeft, ArrowRotateRight, ChevronLeft, ChevronRight, MagnifierMinus, MagnifierPlus } from '@gravity-ui/icons'
 import { LivePhotoIcon } from '../components/LivePhotoIcon'
+import { GlassWindowControls } from '../components/GlassWindowControls'
 import type { ImageListItem } from '../types/electron'
 import { createLiquidGlassMap, type GlassFilterMap } from '../utils/liquidGlass'
 import './ImageWindow.css'
@@ -646,6 +647,7 @@ export default function ImageWindow() {
                 draggable region 按 DOM 顺序累积，前置会被后面的 no-drag 挖掉 */}
             <div className="title-bar">
                 <div className="window-drag-area" aria-hidden="true"></div>
+                <GlassWindowControls />
             </div>
         </div>
     )

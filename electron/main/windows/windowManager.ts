@@ -1264,16 +1264,16 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
           nodeIntegration: false,
           webSecurity: false
         },
+        // ponytail: 不配 titleBarOverlay —— 原生按钮的 hover 高亮色不可定制，
+        // Win/Linux 由 ImageWindow 自绘玻璃按钮；mac 仍保留原生红绿灯
         titleBarStyle: 'hidden',
-        titleBarOverlay: {
-          color: '#00000000',
-          symbolColor: '#ffffff',
-          height: 40
-        },
         show: false,
         backgroundColor: '#000000',
         autoHideMenuBar: true
       })
+
+      // mac 也用 GlassWindowControls 的玻璃按钮（摆左上角），藏掉原生红绿灯
+      hideMacWindowControls(win)
 
       win.once('ready-to-show', () => win.show())
       const queryParams = getImageViewerQueryParams(ctx, imagePath, liveVideoPath, options)
