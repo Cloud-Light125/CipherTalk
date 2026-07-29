@@ -110,6 +110,11 @@ function App() {
   const [memoryMigrating, setMemoryMigrating] = useState(false)
   const [memoryMigrationError, setMemoryMigrationError] = useState('')
   const [memoryMigrationDismissed, setMemoryMigrationDismissed] = useState(false)
+  // CT-Agent 首次进入后就常驻挂载：切到别的页面只是隐藏，useChat 的流和落库定时器都不会被卸载打断
+  const [agentMounted, setAgentMounted] = useState(false)
+  useEffect(() => {
+    if (location.pathname === '/agent') setAgentMounted(true)
+  }, [location.pathname])
 
   useEffect(() => {
     const off = window.electronAPI.window.onNavigate((route) => {
@@ -866,7 +871,7 @@ function App() {
               <Route path="/data-management" element={<DataManagementPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/mcp" element={<McpPage />} />
-              <Route path="/agent" element={<AgentPage />} />
+              {/* /agent 不走 Routes，见下方常驻挂载的 AgentPage */}
               <Route path="/personas" element={<PersonasPage />} />
               <Route path="/diary" element={<DiaryPage />} />
               <Route path="/pets" element={<PetsPage />} />
@@ -875,6 +880,11 @@ function App() {
               <Route path="/chat-history/:sessionId/:messageId" element={<ChatHistoryPage />} />
               <Route path="/plugin/:pluginId/:viewId" element={<PluginViewPage />} />
             </Routes>
+            {agentMounted && (
+              <div className={isAgentPage ? 'h-full' : 'hidden'}>
+                <AgentPage />
+              </div>
+            )}
           </RouteGuard>
         </main>
       </div>

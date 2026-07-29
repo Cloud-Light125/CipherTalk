@@ -28,6 +28,7 @@
     "build:release-body": "node scripts/generate-release-body.js",
     "build:release-announcement": "node scripts/prepare-release-announcement.js",
     "build:models-snapshot": "node scripts/fetch-models-dev-snapshot.cjs",
+    "build:models-logos": "node scripts/fetch-models-dev-logos.cjs",
     "notify:telegram": "node scripts/send-telegram-release.js",
     "mcp": "node scripts/mcp-runner.js",
     "mcp:probe": "node scripts/mcp-probe.js",

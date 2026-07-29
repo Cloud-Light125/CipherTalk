@@ -121,6 +121,9 @@ jobs:
       - name: Refresh models.dev snapshot
         run: npm run build:models-snapshot
 
+      - name: Refresh models.dev logo snapshot
+        run: npm run build:models-logos
+
       - name: Build app
         run: npm run build:win
 
@@ -188,6 +191,9 @@ jobs:
 
       - name: Refresh models.dev snapshot
         run: npm run build:models-snapshot
+
+      - name: Refresh models.dev logo snapshot
+        run: npm run build:models-logos
 
       - name: Build mac app
         run: npm run build:mac
@@ -401,6 +407,21 @@ jobs:
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
     steps:
+      # checkout 会清空工作区，必须排在 download-artifact 之前
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+
+      # models.dev 在国内被墙（DNS 污染 + SNI 阻断），没代理的客户端拉不到模型目录，
+      # 这里镜像一份到 R2（miyuapp.aiqji.com 国内可达）。抓取失败就沿用仓库里的快照。
+      - name: Refresh models.dev snapshot
+        run: npm run build:models-snapshot
+        continue-on-error: true
+
       - name: Download release metadata
         uses: actions/download-artifact@v4
         with:
@@ -486,6 +507,7 @@ jobs:
           aws s3 cp "release/latest.yml" "$bucket/latest.yml" --endpoint-url $endpoint
           aws s3 cp "release/latest-mac.yml" "$bucket/latest-mac.yml" --endpoint-url $endpoint
           aws s3 cp "release/force-update.json" "$bucket/force-update.json" --endpoint-url $endpoint
+          aws s3 cp "electron/assets/models-dev.json" "$bucket/models-dev.json" --endpoint-url $endpoint --content-type "application/json"
 
   notify-telegram-success:
     runs-on: windows-latest
