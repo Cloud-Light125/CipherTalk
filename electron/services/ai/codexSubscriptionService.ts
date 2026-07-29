@@ -20,11 +20,7 @@ import {
   upsertCodexAccount,
 } from './codexSubscriptionAuth'
 import { createProxyFetch, getResolvedProxyUrl } from './proxyFetch'
-import {
-  GPT_56_CONTEXT_WINDOW,
-  parseModelsPayload,
-  type CodexSubscriptionModel,
-} from './codexModelsPayload'
+import { parseModelsPayload, type CodexSubscriptionModel } from './codexModelsPayload'
 
 export type { CodexSubscriptionModel }
 
@@ -83,9 +79,8 @@ const MODELS_CLIENT_VERSION = '999.0.0'
 
 // 服务端 /wham/models 拉不到时的兜底（OpenAI 换代后这里会过期，正常路径始终以服务端为准）
 export const CODEX_SUBSCRIPTION_MODELS: CodexSubscriptionModel[] = [
-  { id: 'gpt-5.6-sol', displayName: 'GPT-5.6 Sol', description: '前沿智能编码模型', isDefault: true, hidden: false, defaultReasoningEffort: 'low', contextWindow: GPT_56_CONTEXT_WINDOW },
-  { id: 'gpt-5.6-terra', displayName: 'GPT-5.6 Terra', description: '日常使用的均衡编码模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium', contextWindow: GPT_56_CONTEXT_WINDOW },
-  { id: 'gpt-5.6-luna', displayName: 'GPT-5.6 Luna', description: '更快的轻量模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium', contextWindow: GPT_56_CONTEXT_WINDOW },
+  { id: 'gpt-5.6-terra', displayName: 'GPT-5.6 Terra', description: '日常使用的均衡编码模型', isDefault: true, hidden: false, defaultReasoningEffort: 'medium' },
+  { id: 'gpt-5.6-luna', displayName: 'GPT-5.6 Luna', description: '更快的轻量模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium' },
   { id: 'gpt-5.5', displayName: 'GPT-5.5', description: '通用推理与工具调用模型', isDefault: false, hidden: false, defaultReasoningEffort: 'medium' },
 ]
 
