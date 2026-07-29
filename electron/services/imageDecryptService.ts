@@ -20,6 +20,8 @@ import {
   looksLikeNativeImagePayload as looksLikeNativeImagePayloadCore
 } from './datDecryptCore'
 import { imageDecryptWorkerPool } from './imageDecryptWorkerPool'
+import { attachClosedPipeStdinGuard, writeAndEndStdin } from './closedPipeStdin'
+import { stripTrailingNulBytes, verifyImageComplete as verifyImageCompleteCore } from './imageComplete'
 
 const execFileAsync = promisify(execFile)
 
@@ -729,6 +731,9 @@ export class ImageDecryptService {
 
       const finalExt = ext || '.jpg'
       finalExtForLog = finalExt
+
+      // 旧明文 .dat 常带尾部 0x00 填充；裁掉后再做完整性校验与落盘
+      decrypted = stripTrailingNulBytes(decrypted)
 
       // 图片完整性校验：检测解密后的数据是否有完整的结束标记
       const isImageComplete = this.verifyImageComplete(decrypted, finalExt)
@@ -2125,11 +2130,15 @@ export class ImageDecryptService {
       }
 
       if (ext.endsWith('.png')) {
-        // PNG: 末尾应有 IEND chunk
-        const buf = Buffer.alloc(12)
-        fs.readSync(fd, buf, 0, 12, fileSize - 12)
+        // PNG: 末尾应有 IEND；允许尾部 0x00 填充
+        const tailSize = Math.min(fileSize, 64)
+        const buf = Buffer.alloc(tailSize)
+        fs.readSync(fd, buf, 0, tailSize, fileSize - tailSize)
         fs.closeSync(fd)
-        return buf[4] === 0x49 && buf[5] === 0x45 && buf[6] === 0x4E && buf[7] === 0x44
+        const trimmed = stripTrailingNulBytes(buf)
+        if (trimmed.length < 12) return false
+        const tail = trimmed.subarray(trimmed.length - 12)
+        return tail[4] === 0x49 && tail[5] === 0x45 && tail[6] === 0x4E && tail[7] === 0x44
       }
 
       if (ext.endsWith('.gif')) {
@@ -3283,10 +3292,9 @@ export class ImageDecryptService {
       proc.stdout.on('data', (chunk: Buffer) => chunks.push(chunk))
       proc.stderr.on('data', (chunk: Buffer) => errChunks.push(chunk))
 
-      // ffmpeg 提前退出（坏输入 / 坏二进制 / dyld 失败）时，stdin write 会异步抛 EPIPE。
+      // ffmpeg 提前退出（坏输入 / 坏二进制 / dyld 失败）时，stdin write 会异步抛 EPIPE/EOF。
       // 未监听会变成 Unhandled 'error' event，拖垮整个导出 utility process。
-      proc.stdin.on('error', (err: NodeJS.ErrnoException) => {
-        if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') return
+      attachClosedPipeStdinGuard(proc.stdin, (err) => {
         console.error('[ImageDecrypt] ffmpeg stdin error', err)
       })
 
@@ -3306,25 +3314,10 @@ export class ImageDecryptService {
       })
 
       // 写入数据并关闭（write 回调里 end，避免 pipe 已断时同步抛错）
-      try {
-        proc.stdin.write(hevcData, (writeErr: Error | null | undefined) => {
-          if (writeErr) {
-            const code = (writeErr as NodeJS.ErrnoException).code
-            if (code !== 'EPIPE' && code !== 'ERR_STREAM_DESTROYED') {
-              console.error('[ImageDecrypt] 写入 ffmpeg stdin 失败', writeErr)
-            }
-            return
-          }
-          try {
-            proc.stdin.end()
-          } catch {
-            /* ignore */
-          }
-        })
-      } catch (e) {
-        console.error('[ImageDecrypt] 写入 ffmpeg stdin 失败', e)
+      writeAndEndStdin(proc.stdin, hevcData, (err) => {
+        console.error('[ImageDecrypt] 写入 ffmpeg stdin 失败', err)
         finish(null)
-      }
+      })
     })
   }
 
@@ -3340,46 +3333,7 @@ export class ImageDecryptService {
    * 不完整的图片不应该被缓存，下次重新解密可能拿到完整数据
    */
   private verifyImageComplete(data: Buffer, ext: string): boolean {
-    if (!data || data.length < 100) return false
-
-    const lowerExt = ext.toLowerCase()
-
-    if (lowerExt === '.jpg' || lowerExt === '.jpeg') {
-      // JPEG: 检查是否存在 EOI marker (0xFF 0xD9)
-      // 从末尾往前搜索（有些 JPEG 在 EOI 后有少量附加数据）
-      const searchLen = Math.min(data.length, 64)
-      for (let i = data.length - 2; i >= data.length - searchLen; i--) {
-        if (data[i] === 0xFF && data[i + 1] === 0xD9) {
-          return true
-        }
-      }
-      // Motion Photo 情况：JPEG 后面紧跟 MP4，EOI 在中间位置
-      const quarterStart = Math.floor(data.length * 3 / 4)
-      for (let i = quarterStart; i < data.length - 1; i++) {
-        if (data[i] === 0xFF && data[i + 1] === 0xD9) {
-          return true
-        }
-      }
-      return false
-    }
-
-    if (lowerExt === '.png') {
-      // PNG: 末尾应有 IEND chunk (... 49 45 4E 44 AE 42 60 82)
-      if (data.length < 12) return false
-      const tail = data.subarray(data.length - 12)
-      if (tail[4] === 0x49 && tail[5] === 0x45 && tail[6] === 0x4E && tail[7] === 0x44) {
-        return true
-      }
-      return false
-    }
-
-    if (lowerExt === '.gif') {
-      // GIF: 末尾应有 trailer byte (0x3B)
-      return data[data.length - 1] === 0x3B
-    }
-
-    // WebP 和其他格式暂不做细粒度校验，仅检查最低大小
-    return data.length > 100
+    return verifyImageCompleteCore(data, ext)
   }
 
   private bufferToDataUrl(buffer: Buffer, ext: string): string | null {
