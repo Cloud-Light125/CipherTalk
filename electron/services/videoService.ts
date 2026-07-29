@@ -348,6 +348,26 @@ class VideoService {
     return hardlinkDbPath
   }
 
+  /** 视频 hardlink 表名随微信版本变化（v3/v4/...），动态发现而不是写死 */
+  private videoTableCache: string | null | undefined
+
+  private async resolveVideoHardlinkTable(): Promise<string | undefined> {
+    if (this.videoTableCache !== undefined) return this.videoTableCache || undefined
+
+    try {
+      const row = await dbAdapter.get<{ name?: string }>(
+        'hardlink',
+        '',
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'video_hardlink_info%' ORDER BY name DESC LIMIT 1"
+      )
+      this.videoTableCache = (row?.name as string) || null
+    } catch {
+      this.videoTableCache = null
+    }
+
+    return this.videoTableCache || undefined
+  }
+
   private async queryVideoFileNames(md5Candidates: string[]): Promise<{
     fileKeys: string[]
     hardlinkDbPath?: string
@@ -355,6 +375,12 @@ class VideoService {
   }> {
     const hardlinkDbPath = this.resolveHardlinkDbPath()
     if (!hardlinkDbPath || md5Candidates.length === 0) {
+      return { fileKeys: [], hardlinkDbPath }
+    }
+
+    const videoTable = await this.resolveVideoHardlinkTable()
+    if (!videoTable) {
+      this.warnVideoLookup('hardlink-table-missing', { hardlinkDbPath })
       return { fileKeys: [], hardlinkDbPath }
     }
 
@@ -366,7 +392,7 @@ class VideoService {
         const row = await dbAdapter.get<{ file_name?: string; md5?: string }>(
           'hardlink',
           '',
-          'SELECT file_name, md5 FROM video_hardlink_info_v4 WHERE md5 = ? LIMIT 1',
+          `SELECT file_name, md5 FROM ${videoTable} WHERE lower(md5) = lower(?) LIMIT 1`,
           [md5]
         )
         const normalizedFileKey = this.normalizeVideoFileKey(row?.file_name)
@@ -508,10 +534,25 @@ class VideoService {
 
       for (const yearMonth of yearMonthDirs) {
         const dirPath = join(videoBaseDir, yearMonth)
+        let dirEntries: string[] | undefined
 
         for (const fileKey of fileKeys) {
-          const videoPath = join(dirPath, `${fileKey}.mp4`)
-          const assetKey = fileKey.replace(/_raw$/, '')
+          let videoPath = join(dirPath, `${fileKey}.mp4`)
+
+          // ponytail: 精确文件名没命中就按前缀扫一次目录（微信会给同一 key 加 _raw/_hd 之类后缀、或换扩展名）
+          if (!existsSync(videoPath)) {
+            if (!dirEntries) dirEntries = readdirSync(dirPath)
+            const hit = dirEntries.find(
+              name => name.toLowerCase().startsWith(fileKey) && /\.(mp4|mov|mkv)$/i.test(name)
+            )
+            if (!hit) continue
+            videoPath = join(dirPath, hit)
+          }
+
+          const assetKey = videoPath
+            .replace(/^.*[\\/]/, '')
+            .replace(/\.[^.]+$/, '')
+            .replace(/_raw$/, '')
           const coverPath = join(dirPath, `${assetKey}.jpg`)
           const thumbPath = join(dirPath, `${assetKey}_thumb.jpg`)
 
