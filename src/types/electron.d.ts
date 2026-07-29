@@ -648,6 +648,7 @@ export interface ElectronAPI {
     focusMainWindow: (route?: string) => Promise<boolean>
     openMomentsWindow: (filterUsername?: string) => Promise<boolean>
     openPersonaChatWindow: (sessionId: string) => Promise<boolean>
+    openChatSummaryWindow: (sessionId: string, displayName: string, range: string) => Promise<boolean>
     openPosterStyleWindow: () => Promise<boolean>
     onMomentsFilterUser: (callback: (username: string) => void) => () => void
     onNavigate: (callback: (route: string) => void) => () => void

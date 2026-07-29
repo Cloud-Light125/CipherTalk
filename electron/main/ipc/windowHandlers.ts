@@ -238,6 +238,15 @@ export function registerWindowHandlers(ctx: MainProcessContext): void {
     return true
   })
 
+  ipcMain.handle('window:openChatSummaryWindow', async (_event, sessionId: string, displayName: string, range: string) => {
+    ctx.getWindowManager().openChatSummaryWindow(
+      String(sessionId || '').trim(),
+      String(displayName || '').trim(),
+      String(range || '').trim()
+    )
+    return true
+  })
+
   ipcMain.handle('window:openPosterStyleWindow', async () => {
     ctx.getWindowManager().openPosterStyleWindow()
     return true

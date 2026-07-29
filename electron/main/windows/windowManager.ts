@@ -280,6 +280,7 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
   let welcomeWindow: BrowserWindow | null = null
   let chatHistoryWindow: BrowserWindow | null = null
   let personaChatWindow: BrowserWindow | null = null
+  let chatSummaryWindow: BrowserWindow | null = null
   let posterStyleWindow: BrowserWindow | null = null
   let petWindow: BrowserWindow | null = null
   let replyTileWindow: BrowserWindow | null = null
@@ -1087,6 +1088,50 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
         personaChatWindow = null
       })
       return personaChatWindow
+    },
+
+    openChatSummaryWindow(sessionId: string, displayName: string, range: string) {
+      const hash = `/chat-summary?sessionId=${encodeURIComponent(sessionId)}&displayName=${encodeURIComponent(displayName)}&range=${encodeURIComponent(range)}`
+      const isDark = nativeTheme.shouldUseDarkColors
+      if (!chatSummaryWindow || chatSummaryWindow.isDestroyed()) {
+        chatSummaryWindow = new BrowserWindow({
+          width: 520,
+          height: 720,
+          minWidth: 420,
+          minHeight: 480,
+          ...getWindowIconOptions(ctx),
+          webPreferences: {
+            preload: join(__dirname, 'preload.js'),
+            devTools: ctx.allowDevTools,
+            contextIsolation: true,
+            nodeIntegration: false,
+            webSecurity: false
+          },
+          titleBarStyle: 'hidden',
+          show: false,
+          backgroundColor: isDark ? '#1A1A1A' : '#F0F0F0',
+          autoHideMenuBar: true
+        })
+        hideMacWindowControls(chatSummaryWindow)
+        chatSummaryWindow.once('ready-to-show', () => chatSummaryWindow?.show())
+        chatSummaryWindow.on('closed', () => {
+          chatSummaryWindow = null
+        })
+        if (process.env.VITE_DEV_SERVER_URL) setupDevToolsShortcut(chatSummaryWindow, () => chatSummaryWindow)
+      } else {
+        if (chatSummaryWindow.isMinimized()) chatSummaryWindow.restore()
+        chatSummaryWindow.focus()
+      }
+
+      if (process.env.VITE_DEV_SERVER_URL) {
+        chatSummaryWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}?${getThemeQueryParams(ctx)}#${hash}`)
+      } else {
+        chatSummaryWindow.loadFile(join(__dirname, '../dist/index.html'), {
+          hash,
+          query: getThemeQuery(ctx)
+        })
+      }
+      return chatSummaryWindow
     },
 
     openPosterStyleWindow() {

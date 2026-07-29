@@ -60,6 +60,7 @@ export interface WindowManager {
   openSkillPreviewWindow(skillName: string): BrowserWindow
   openChatHistoryWindow(sessionId: string, messageId: number): BrowserWindow
   openPersonaChatWindow(sessionId: string): BrowserWindow
+  openChatSummaryWindow(sessionId: string, displayName: string, range: string): BrowserWindow
   openPosterStyleWindow(): BrowserWindow
   completeWelcome(): boolean
   isChatWindowOpen(): boolean

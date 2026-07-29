@@ -360,27 +360,13 @@ export function ChatHeader({
     : []
   const sessionDisplayName = contactNickName || currentSession.username
 
-  // AI摘要：{提示词+@目标} 经 localStorage 递给主窗口 AI 助手页（AgentPage 侧消费：新建对话+@+自动发送），再唤起主窗口
+  // AI摘要：独立窗口（/chat-summary）里用专用提示词跑，不跳 AI 助手页
   const handleAiSummary = (rangeText: string) => {
-    const target = isGroupChat(currentSession.username)
-      ? `群聊「${sessionDisplayName}」`
-      : `我和「${sessionDisplayName}」`
-    const prompt = `请总结${target}${rangeText}的聊天记录。
-
-要求：
-1. 按主题归纳主要讨论内容和关键结论。
-2. 标出重要事项、待办、承诺和情绪变化。
-3. 引用关键原话或聊天片段作为依据，不要凭空推断。
-4. 如果该时间段没有聊天记录，请直接说明。`
-    localStorage.setItem('agent:pendingAutoRun', JSON.stringify({
-      text: prompt,
-      mention: {
-        username: currentSession.username,
-        displayName: sessionDisplayName,
-        avatarUrl: currentSession.avatarUrl,
-      },
-    }))
-    void window.electronAPI.window.focusMainWindow('/agent')
+    void window.electronAPI.window.openChatSummaryWindow(
+      currentSession.username,
+      sessionDisplayName,
+      rangeText
+    )
   }
   // 仅私聊可开消息提醒（排除群聊/公众号）
   const isPrivateSession = !isGroupChat(currentSession.username)
@@ -586,7 +572,7 @@ export function ChatHeader({
               </Dropdown.Popover>
             </Dropdown>
           </Tooltip.Trigger>
-          <Tooltip.Content placement="bottom">AI 摘要（在 AI 助手中生成）</Tooltip.Content>
+          <Tooltip.Content placement="bottom">AI 摘要（独立窗口生成）</Tooltip.Content>
         </Tooltip>
 
         {isPrivateSession && (

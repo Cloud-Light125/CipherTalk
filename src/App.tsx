@@ -21,6 +21,7 @@ import ExportPage from './pages/export/ExportPage'
 import ActivationPage from './pages/ActivationPage'
 import ImageWindow from './pages/ImageWindow'
 import VideoWindow from './pages/VideoWindow'
+import ChatSummaryWindow from './pages/ChatSummaryWindow'
 import BrowserWindowPage from './pages/BrowserWindowPage'
 import SkillPreviewWindow from './pages/SkillPreviewWindow'
 import PosterStyleWindow from './pages/PosterStyleWindow'
@@ -445,7 +446,7 @@ function App() {
   // 启动时自动检查配置并连接数据库
   useEffect(() => {
     // 独立窗口不需要自动连接主数据库
-    if (isChatWindow || isMomentsWindow || isAgreementWindow || isWelcomeWindow || isPosterStyleWindow || location.pathname === '/image-viewer-window' || location.pathname === '/pet-window' || location.pathname === '/reply-tile-window') return
+    if (isChatWindow || isMomentsWindow || isAgreementWindow || isWelcomeWindow || isPosterStyleWindow || location.pathname === '/image-viewer-window' || location.pathname === '/pet-window' || location.pathname === '/reply-tile-window' || location.pathname === '/chat-summary') return
 
     const autoConnect = async () => {
       try {
@@ -566,6 +567,11 @@ function App() {
   // 独立视频播放窗口
   if (location.pathname === '/video-player-window') {
     return <VideoWindow />
+  }
+
+  // 独立 AI 摘要窗口
+  if (location.pathname === '/chat-summary') {
+    return <ChatSummaryWindow />
   }
 
   // 桌面悬浮桌宠窗口
