@@ -517,10 +517,6 @@ export default function ImageWindow() {
                 )}
             </svg>
 
-            <div className="title-bar">
-                <div className="window-drag-area" aria-hidden="true"></div>
-            </div>
-
             <div className="bottom-toolbar-shell">
                 <div
                     className="bottom-toolbar"
@@ -642,6 +638,12 @@ export default function ImageWindow() {
                         )}
                     </>
                 )}
+            </div>
+
+            {/* ponytail: 必须排在 .image-viewport(全屏 no-drag) 之后，
+                draggable region 按 DOM 顺序累积，前置会被后面的 no-drag 挖掉 */}
+            <div className="title-bar">
+                <div className="window-drag-area" aria-hidden="true"></div>
             </div>
         </div>
     )
