@@ -553,7 +553,9 @@ export default function ImageWindow() {
                         </Tooltip.Trigger>
                         <Tooltip.Content placement="top">缩小（-）</Tooltip.Content>
                     </Tooltip>
-                    <span className="scale-text">{Math.round(displayScale * 100)}%</span>
+                    {/* ponytail: 以「适配窗口」为 100% 基准，打开永远是 100%；
+                        displayScale(相对原图像素)每张图都不同，用户看着像 bug */}
+                    <span className="scale-text">{Math.round(scale * 100)}%</span>
                     <Tooltip delay={0} closeDelay={60}>
                         <Tooltip.Trigger>
                             <button onClick={handleZoomIn} aria-label="放大">
