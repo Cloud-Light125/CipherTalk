@@ -21,6 +21,8 @@ import PluginChatToolbar from '../../../features/plugins/PluginChatToolbar'
 
 // 磁贴窗口支持 Windows/macOS；Linux 暂不显示该开关。
 const SUPPORTS_REPLY_TILE = /win|mac/.test(navigator.platform.toLowerCase())
+// 全自动依赖键盘注入：Windows 走 user32，macOS 走 CGEvent（需辅助功能授权）
+const SUPPORTS_AUTO_SEND = /win|mac/.test(navigator.platform.toLowerCase())
 
 type Progress = {
   current: number
@@ -644,7 +646,7 @@ export function ChatHeader({
                     </Switch>
                   </span>
                 </Dropdown.Item>
-                {SUPPORTS_REPLY_TILE && (
+                {SUPPORTS_AUTO_SEND && (
                   <Dropdown.Item id="autoSend" textValue="全自动回复">
                     <MagicWand className="size-4 shrink-0 text-muted" />
                     <Label>全自动回复</Label>

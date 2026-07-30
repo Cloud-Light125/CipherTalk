@@ -48,7 +48,8 @@ const HALT_REASON: Record<string, string> = {
   'no-window': '找不到微信窗口',
   'focus-failed': '微信窗口没能激活',
   busy: '输入通道一直被占用',
-  unsupported: '仅 Windows 可用',
+  'no-permission': '未授予辅助功能权限，去「系统设置 → 隐私与安全性 → 辅助功能」勾选密语',
+  unsupported: '当前系统不支持自动发送',
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))

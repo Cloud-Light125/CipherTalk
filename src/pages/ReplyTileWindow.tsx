@@ -12,8 +12,9 @@ import './reply-tile.css'
 const FILL_FAIL_HINT: Record<string, string> = {
   'no-window': '没找到微信窗口',
   'focus-failed': '微信没能激活',
-  unsupported: '仅 Windows 可用',
+  unsupported: '当前系统不支持',
   busy: '上一条还在填入',
+  'no-permission': '需在系统设置里授予辅助功能权限',
 }
 
 type TileState = 'pending' | 'loading' | 'error' | 'ready' | 'gone'

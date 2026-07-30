@@ -1,3 +1,4 @@
+import { execFile } from 'child_process'
 import { clipboard, screen } from 'electron'
 import { wxKeyService } from './wxKeyService'
 
@@ -49,6 +50,15 @@ const MAC_WINDOW_LIST_OPTIONS = 0x0001 | 0x0010
 const MAC_NORMAL_WINDOW_LAYER = 0
 const K_CF_STRING_ENCODING_UTF8 = 0x08000100
 const K_CF_NUMBER_DOUBLE_TYPE = 13
+const MAC_WECHAT_BUNDLE_ID = 'com.tencent.xinWeChat'
+/** kCGHIDEventTap：注入到 HID 层，等价于真实键盘。 */
+const K_CG_HID_EVENT_TAP = 0
+/** kCGEventFlagMaskCommand */
+const K_CG_FLAG_COMMAND = 0x100000
+/** mac 虚拟键码与 Windows VK 完全不同：kVK_ANSI_F / kVK_ANSI_V / kVK_Return */
+const K_VK_F = 0x03
+const K_VK_V = 0x09
+const K_VK_RETURN = 0x24
 
 let loaded = false
 let unavailable = false
@@ -72,6 +82,103 @@ let CFDictionaryGetValue: any, CFStringCreateWithCString: any, CFStringGetCStrin
 let CFNumberGetValue: any, CFBooleanGetValue: any, CFRelease: any
 let macKeys: Record<string, any> | null = null
 let macNumberBuf: any = null
+
+let macInputLoaded = false
+let macInputUnavailable = false
+let CGEventCreateKeyboardEvent: any, CGEventPost: any, CGEventSetFlags: any
+let AXIsProcessTrusted: any
+
+/**
+ * macOS 键盘注入所需的额外符号。CGEvent* 在已加载的 CoreGraphics 里，
+ * AXIsProcessTrusted 用来提前判断有没有「辅助功能」授权——没授权时 CGEventPost
+ * 会被系统静默丢弃（函数照样返回成功），不先查就只能表现为「消息没发出去」。
+ */
+function ensureMacInputLoaded(): boolean {
+  if (macInputLoaded) return !macInputUnavailable
+  macInputLoaded = true
+  try {
+    if (!ensureMacLoaded()) throw new Error('CoreGraphics unavailable')
+    const coreGraphics = macKoffi.load('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
+    const appServices = macKoffi.load('/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices')
+    CGEventCreateKeyboardEvent = coreGraphics.func('void* CGEventCreateKeyboardEvent(void* source, uint16 virtualKey, bool keyDown)')
+    CGEventPost = coreGraphics.func('void CGEventPost(uint32 tap, void* event)')
+    CGEventSetFlags = coreGraphics.func('void CGEventSetFlags(void* event, uint64 flags)')
+    AXIsProcessTrusted = appServices.func('bool AXIsProcessTrusted()')
+    return true
+  } catch {
+    macInputUnavailable = true
+    return false
+  }
+}
+
+/** 按一次键；withCommand 时带 Cmd 修饰。用 flags 而不是单独发 Cmd 键事件，更不易残留修饰状态。 */
+function macTap(keyCode: number, withCommand = false): void {
+  for (const down of [true, false]) {
+    const event = CGEventCreateKeyboardEvent(null, keyCode, down)
+    if (!event) continue
+    try {
+      if (withCommand) CGEventSetFlags(event, BigInt(K_CG_FLAG_COMMAND))
+      CGEventPost(K_CG_HID_EVENT_TAP, event)
+    } finally {
+      try { CFRelease(event) } catch { /* ignore */ }
+    }
+  }
+}
+
+/**
+ * 把微信拉到前台。用 osascript 而不是辅助功能 API：activate 不需要额外授权，
+ * 失败时再按应用名试一次（bundle id 在不同微信版本上不完全一致）。
+ */
+function activateWeChatMac(): Promise<boolean> {
+  const scripts = [
+    `tell application id "${MAC_WECHAT_BUNDLE_ID}" to activate`,
+    'tell application "WeChat" to activate',
+  ]
+  return new Promise((resolve) => {
+    const run = (index: number): void => {
+      if (index >= scripts.length) return resolve(false)
+      execFile('osascript', ['-e', scripts[index]], (error) => {
+        if (!error) return resolve(true)
+        run(index + 1)
+      })
+    }
+    run(0)
+  })
+}
+
+function isWeChatForegroundMac(): boolean {
+  try {
+    return probeMacWeChatWindow().foregroundActive
+  } catch {
+    return false
+  }
+}
+
+async function fillWeChatInputMac(text: string, searchName?: string): Promise<WeChatSendResult> {
+  if (!ensureMacInputLoaded()) return UNSUPPORTED
+  if (!AXIsProcessTrusted()) return { ok: false, reason: 'no-permission' }
+  if (!probeMacWeChatWindow().found) return { ok: false, reason: 'no-window' }
+  if (!await activateWeChatMac()) return { ok: false, reason: 'focus-failed' }
+  await sleep(250)
+  if (!isWeChatForegroundMac()) return { ok: false, reason: 'focus-failed' }
+
+  if (searchName) {
+    clipboard.writeText(searchName)
+    macTap(K_VK_F, true)
+    await sleep(220)
+    macTap(K_VK_V, true)
+    // ponytail: 这两个延迟照搬 Windows 值，未在 mac 真机验证过；跳转不稳先调大它们
+    await sleep(650)
+    macTap(K_VK_RETURN)
+    await sleep(450)
+    if (!isWeChatForegroundMac()) return { ok: false, reason: 'focus-failed' }
+  }
+
+  clipboard.writeText(text)
+  await sleep(80)
+  macTap(K_VK_V, true)
+  return { ok: true }
+}
 
 let cachedPid: number | null = null
 let lastPidProbe = 0
@@ -436,7 +543,10 @@ function nativeWindowHandleToBigInt(handle: Buffer): bigint {
  * 程序读不出当前停在谁的聊天上。所以 Ctrl+F 跳转后无法验证是否进对了人，发送必须拆成两步：
  * fill 只填充不回车，commit 才发送，中间留给用户肉眼核对。
  */
-export type WeChatSendResult = { ok: boolean; reason?: 'unsupported' | 'no-window' | 'focus-failed' | 'busy' }
+export type WeChatSendResult = {
+  ok: boolean
+  reason?: 'unsupported' | 'no-window' | 'focus-failed' | 'busy' | 'no-permission'
+}
 
 const UNSUPPORTED: WeChatSendResult = { ok: false, reason: 'unsupported' }
 
@@ -502,10 +612,12 @@ function resolveMainWindow(): { hwnd: any; hwndAddr: bigint } | null {
 let filling = false
 
 export async function fillWeChatInput(text: string, searchName?: string): Promise<WeChatSendResult> {
-  if (process.platform !== 'win32' || !ensureLoaded()) return UNSUPPORTED
   if (filling) return { ok: false, reason: 'busy' }
   filling = true
   try {
+    if (process.platform === 'darwin') return await fillWeChatInputMac(text, searchName)
+    if (process.platform !== 'win32' || !ensureLoaded()) return UNSUPPORTED
+
     const main = resolveMainWindow()
     if (!main) return { ok: false, reason: 'no-window' }
     if (!forceForeground(main.hwnd, main.hwndAddr)) return { ok: false, reason: 'focus-failed' }
@@ -532,8 +644,15 @@ export async function fillWeChatInput(text: string, searchName?: string): Promis
   }
 }
 
-/** 只按一个回车。前台已经不是微信主窗口就放弃，避免回车落到别的窗口上。 */
+/** 只按一个回车。前台已经不是微信就放弃，避免回车落到别的窗口上。 */
 export function commitWeChatInput(): WeChatSendResult {
+  if (process.platform === 'darwin') {
+    if (!ensureMacInputLoaded()) return UNSUPPORTED
+    if (!AXIsProcessTrusted()) return { ok: false, reason: 'no-permission' }
+    if (!isWeChatForegroundMac()) return { ok: false, reason: 'focus-failed' }
+    macTap(K_VK_RETURN)
+    return { ok: true }
+  }
   if (process.platform !== 'win32' || !ensureLoaded()) return UNSUPPORTED
   if (!isForeground(cachedMainHwndAddr)) return { ok: false, reason: 'focus-failed' }
   tap(VK_RETURN)
