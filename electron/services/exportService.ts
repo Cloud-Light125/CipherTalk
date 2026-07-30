@@ -869,6 +869,10 @@ class ExportService {
           }
       }
 
+      if (allMessages.length === 0) {
+        return { success: false, error: '没有消息可导出' }
+      }
+
       // 按时间排序
       allMessages.sort((a, b) => a.createTime - b.createTime)
 
@@ -1595,6 +1599,10 @@ class ExportService {
           }
       }
 
+      if (allMessages.length === 0) {
+        return { success: false, error: '没有消息可导出' }
+      }
+
       // 按时间排序
       allMessages.sort((a, b) => a.createTime - b.createTime)
 
@@ -2215,6 +2223,10 @@ class ExportService {
           }
       }
 
+      if (allMessages.length === 0) {
+        return { success: false, error: '没有消息可导出' }
+      }
+
       // 按时间排序
       allMessages.sort((a, b) => a.createTime - b.createTime)
 
@@ -2383,6 +2395,7 @@ class ExportService {
   ): Promise<{ success: boolean; successCount: number; failCount: number; error?: string; outputPaths?: string[] }> {
     let successCount = 0
     let failCount = 0
+    const failErrors: string[] = []
     const outputPathSet = new Set<string>()
 
     expWatchdogStart()
@@ -2491,6 +2504,7 @@ class ExportService {
           outputPathSet.add(outputPath)
         } else {
           failCount++
+          if (result.error) failErrors.push(result.error)
           console.error(`导出 ${sessionId} 失败:`, result.error)
         }
 
@@ -2514,7 +2528,10 @@ class ExportService {
         detail: '导出完成'
       })
 
-      return { success: true, successCount, failCount, outputPaths: Array.from(outputPathSet) }
+      const aggregatedError = failErrors.length > 0
+        ? [...new Set(failErrors)].join('；')
+        : undefined
+      return { success: successCount > 0, successCount, failCount, error: aggregatedError, outputPaths: Array.from(outputPathSet) }
     } catch (e) {
       return { success: false, successCount, failCount, error: String(e), outputPaths: Array.from(outputPathSet) }
     } finally {
