@@ -468,16 +468,14 @@ const MediaItem = ({ media, isSingle, allMedia, onPreview }: { media: any; isSin
 
     try {
       if (isVideo) {
-        // 视频：使用视频播放器窗口
+        // 视频：使用视频播放器窗口（需保留 file://，查看器直接当 <video src> 用）
         if (videoPath) {
-          const localPath = videoPath.replace(/^file:\/\//, '')
-          await window.electronAPI.window.openVideoPlayerWindow(localPath)
+          await window.electronAPI.window.openVideoPlayerWindow(videoPath)
         }
       } else {
-        // 图片：使用图片查看器窗口
+        // 图片：使用图片查看器窗口（需保留 file:// / data:，查看器直接当 <img src> 用）
         if (thumbSrc) {
-          const localPath = thumbSrc.replace(/^file:\/\//, '')
-          const liveVideoLocalPath = isLive && liveVideoPath ? liveVideoPath.replace(/^file:\/\//, '') : undefined
+          const liveVideoSrc = isLive && liveVideoPath ? liveVideoPath : undefined
 
           // 从缓存构建同一条动态的图片列表
           let imageList: Array<{ imagePath: string; liveVideoPath?: string }> | undefined
@@ -489,15 +487,15 @@ const MediaItem = ({ media, isSingle, allMedia, onPreview }: { media: any; isSin
               const cached = mediaPathCache.get(key)
               if (cached) {
                 list.push({
-                  imagePath: cached.imagePath.replace(/^file:\/\//, ''),
-                  liveVideoPath: cached.liveVideoPath?.replace(/^file:\/\//, '')
+                  imagePath: cached.imagePath,
+                  liveVideoPath: cached.liveVideoPath
                 })
               }
             }
             if (list.length > 1) imageList = list
           }
 
-          await window.electronAPI.window.openImageViewerWindow(localPath, liveVideoLocalPath, imageList)
+          await window.electronAPI.window.openImageViewerWindow(thumbSrc, liveVideoSrc, imageList)
         }
       }
     } catch (error) {
