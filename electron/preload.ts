@@ -580,6 +580,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
       continue: (sessionId: string) => ipcRenderer.send('reply-tile:continue', sessionId),
       skip: (sessionId: string) => ipcRenderer.send('reply-tile:skip', sessionId),
       retry: (payload: { sessionId: string; batchId: string; suggestionIndex: number }) => ipcRenderer.send('reply-tile:retry', payload),
+      fill: (payload: { text: string; searchName?: string }) =>
+        ipcRenderer.invoke('reply-tile:fill', payload) as Promise<{ ok: boolean; reason?: string }>,
+      commit: () => ipcRenderer.invoke('reply-tile:commit') as Promise<{ ok: boolean; reason?: string }>,
+      autoCancel: () => ipcRenderer.send('reply-tile:auto-cancel'),
+      autoClear: () => ipcRenderer.send('reply-tile:auto-clear'),
+      autoResume: () => ipcRenderer.send('reply-tile:auto-resume'),
+      onAutoStatus: (callback: (status: unknown) => void) => {
+        const listener = (_e: unknown, status: unknown) => callback(status)
+        ipcRenderer.on('reply-tile:auto-status', listener)
+        return () => ipcRenderer.removeListener('reply-tile:auto-status', listener)
+      },
       onUpdate: (callback: (entry: { sessionId: string; sessionName: string; avatarUrl?: string; state: 'pending' | 'loading' | 'error' | 'ready' | 'gone'; suggestions?: string[]; batches?: Array<{ id: string; targetKey: string; quote: string; suggestions: string[] }>; pendingContinue?: boolean; error?: string }) => void) => {
         const listener = (_: unknown, entry: any) => callback(entry)
         ipcRenderer.on('reply-tile:update', listener)

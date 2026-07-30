@@ -1,4 +1,4 @@
-import { screen } from 'electron'
+import { clipboard, screen } from 'electron'
 import { wxKeyService } from './wxKeyService'
 
 /**
@@ -38,6 +38,13 @@ const SWP_NOSIZE = 0x0001
 const SWP_NOMOVE = 0x0002
 const SWP_NOACTIVATE = 0x0010
 const SWP_NOOWNERZORDER = 0x0200
+const SW_RESTORE = 9
+const KEYEVENTF_KEYUP = 0x0002
+const VK_CONTROL = 0x11
+const VK_MENU = 0x12
+const VK_RETURN = 0x0D
+const VK_F = 0x46
+const VK_V = 0x56
 const MAC_WINDOW_LIST_OPTIONS = 0x0001 | 0x0010
 const MAC_NORMAL_WINDOW_LAYER = 0
 const K_CF_STRING_ENCODING_UTF8 = 0x08000100
@@ -51,6 +58,8 @@ let IsWindowVisible: any, IsIconic: any, GetWindowTextLengthW: any, GetWindowTex
 let GetWindowRect: any, GetForegroundWindow: any, DwmGetWindowAttribute: any
 let GetForegroundWindowHandle: any, SetWindowPos: any
 let SetWinEventHook: any, UnhookWinEvent: any, WinEventProc: any
+let SetForegroundWindow: any, ShowWindow: any, AttachThreadInput: any
+let GetCurrentThreadId: any, keybdEvent: any
 let pidBuf: any = null
 let rectBuf: any = null
 let titleBuf: Buffer | null = null
@@ -90,6 +99,11 @@ function ensureLoaded(): boolean {
     UnhookWinEvent = user32.func('bool UnhookWinEvent(void* hWinEventHook)')
     WinEventProc = koffi.proto('void __stdcall WinEventProc(void* hWinEventHook, uint32 event, void* hwnd, int32 idObject, int32 idChild, uint32 idEventThread, uint32 dwmsEventTime)')
     DwmGetWindowAttribute = dwmapi.func('int32 DwmGetWindowAttribute(void* hwnd, uint32 attr, void* rect, uint32 cb)')
+    SetForegroundWindow = user32.func('bool SetForegroundWindow(void* hwnd)')
+    ShowWindow = user32.func('bool ShowWindow(void* hwnd, int32 nCmdShow)')
+    AttachThreadInput = user32.func('bool AttachThreadInput(uint32 idAttach, uint32 idAttachTo, bool fAttach)')
+    keybdEvent = user32.func('void keybd_event(uint8 bVk, uint8 bScan, uint32 dwFlags, uintptr dwExtraInfo)')
+    GetCurrentThreadId = koffi.load('kernel32.dll').func('uint32 GetCurrentThreadId()')
     pidBuf = koffi.alloc('uint32', 1)
     rectBuf = koffi.alloc('int32', 4)
     titleBuf = Buffer.alloc(512 * 2)
@@ -413,6 +427,117 @@ function nativeWindowHandleToBigInt(handle: Buffer): bigint {
   if (handle.length >= 8) return handle.readBigUInt64LE(0)
   if (handle.length >= 4) return BigInt(handle.readUInt32LE(0))
   return 0n
+}
+
+/**
+ * 把回复建议送进微信输入框（Windows）。走剪贴板 + Ctrl+V，不逐字模拟——SendKeys 逐字会丢字。
+ *
+ * 微信 4.1 主窗口是 Qt 外壳 + 自绘内容（MMUIRenderSubWindowHW），UIA 树里没有会话名，
+ * 程序读不出当前停在谁的聊天上。所以 Ctrl+F 跳转后无法验证是否进对了人，发送必须拆成两步：
+ * fill 只填充不回车，commit 才发送，中间留给用户肉眼核对。
+ */
+export type WeChatSendResult = { ok: boolean; reason?: 'unsupported' | 'no-window' | 'focus-failed' | 'busy' }
+
+const UNSUPPORTED: WeChatSendResult = { ok: false, reason: 'unsupported' }
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function tap(vk: number, withCtrl = false): void {
+  if (withCtrl) keybdEvent(VK_CONTROL, 0, 0, 0)
+  keybdEvent(vk, 0, 0, 0)
+  keybdEvent(vk, 0, KEYEVENTF_KEYUP, 0)
+  if (withCtrl) keybdEvent(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0)
+}
+
+function isForeground(hwndAddr: bigint): boolean {
+  return Boolean(hwndAddr) && hwndAddress(GetForegroundWindow()) === hwndAddr
+}
+
+/**
+ * SetForegroundWindow 受前台锁定限制，直接调用常被系统静默忽略：
+ * 只有「本身是前台进程」或「刚收到过输入事件」的进程才有资格设置前台窗口。
+ * 自动发送时我们通常两条都不满足（用户正在用别的软件），所以要逐级兜底。
+ */
+function forceForeground(hwnd: any, hwndAddr: bigint): boolean {
+  if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE)
+  SetForegroundWindow(hwnd)
+  if (isForeground(hwndAddr)) return true
+
+  // 自己制造一次输入事件来换取设置前台的资格。单独敲 ALT 在有菜单栏的程序里会激活菜单，
+  // 但微信是 Qt 自绘、没有传统菜单栏，按下即释放不会有副作用。
+  tap(VK_MENU)
+  SetForegroundWindow(hwnd)
+  if (isForeground(hwndAddr)) return true
+
+  const targetThread = GetWindowThreadProcessId(hwnd, null)
+  const ourThread = GetCurrentThreadId()
+  if (!targetThread || targetThread === ourThread) return false
+  AttachThreadInput(ourThread, targetThread, true)
+  try {
+    SetForegroundWindow(hwnd)
+  } finally {
+    AttachThreadInput(ourThread, targetThread, false)
+  }
+  return isForeground(hwndAddr)
+}
+
+function resolveMainWindow(): { hwnd: any; hwndAddr: bigint } | null {
+  const pid = cachedPid || wxKeyService.getWeChatPid()
+  if (!pid) return null
+  cachedPid = pid
+  const main = findMainWindow(pid)
+  if (!main) return null
+  cachedMainHwndAddr = main.hwndAddr
+  return { hwnd: main.hwnd, hwndAddr: main.hwndAddr }
+}
+
+/**
+ * 聚焦微信 →（可选）Ctrl+F 搜索名字进会话 → 粘贴正文。不按回车。
+ *
+ * 按键注入是全局共享资源：带跳转的一次填充要 1.4 秒，期间若再进来一次，
+ * 两组 Ctrl+F/Ctrl+V/Enter 会交错打进微信（正文粘进搜索框之类）。串行化是必须的，不是优化。
+ */
+let filling = false
+
+export async function fillWeChatInput(text: string, searchName?: string): Promise<WeChatSendResult> {
+  if (process.platform !== 'win32' || !ensureLoaded()) return UNSUPPORTED
+  if (filling) return { ok: false, reason: 'busy' }
+  filling = true
+  try {
+    const main = resolveMainWindow()
+    if (!main) return { ok: false, reason: 'no-window' }
+    if (!forceForeground(main.hwnd, main.hwndAddr)) return { ok: false, reason: 'focus-failed' }
+    await sleep(120)
+
+    if (searchName) {
+      clipboard.writeText(searchName)
+      tap(VK_F, true)
+      await sleep(180)
+      tap(VK_V, true)
+      // ponytail: 固定延迟等搜索结果，微信不给完成信号；慢机器上跳转不稳就调大这两个值
+      await sleep(650)
+      tap(VK_RETURN)
+      await sleep(450)
+      if (!isForeground(main.hwndAddr)) return { ok: false, reason: 'focus-failed' }
+    }
+
+    clipboard.writeText(text)
+    await sleep(60)
+    tap(VK_V, true)
+    return { ok: true }
+  } finally {
+    filling = false
+  }
+}
+
+/** 只按一个回车。前台已经不是微信主窗口就放弃，避免回车落到别的窗口上。 */
+export function commitWeChatInput(): WeChatSendResult {
+  if (process.platform !== 'win32' || !ensureLoaded()) return UNSUPPORTED
+  if (!isForeground(cachedMainHwndAddr)) return { ok: false, reason: 'focus-failed' }
+  tap(VK_RETURN)
+  return { ok: true }
 }
 
 export function placeNativeWindowBehindForeground(nativeWindowHandle: Buffer): boolean {

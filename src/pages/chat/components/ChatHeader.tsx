@@ -227,8 +227,11 @@ export function ChatHeader({
   }, [currentSession.username])
 
   const patchReplySettings = useCallback((patch: Partial<ReplySuggestSettings>) => {
-    // 打开自动建议时联动打开「参与磁贴」（可随后单独关闭）
-    const effective = patch.enabled === true ? { ...patch, tile: true } : patch
+    // 打开自动建议时联动打开「参与磁贴」（可随后单独关闭）；
+    // 全自动依赖前两层——建议不生成、不推磁贴，自动发送就无从触发，所以一次全开，别让人猜
+    const effective = patch.autoSend === true
+      ? { ...patch, enabled: true, tile: true }
+      : patch.enabled === true ? { ...patch, tile: true } : patch
     setReplySettings((prev) => ({ ...prev, ...effective }))
     void updateReplySuggestSettings(currentSession.username, effective).then(() => {
       // 配置写入后再重算参与列表，避免主进程读到旧配置。
@@ -641,6 +644,26 @@ export function ChatHeader({
                     </Switch>
                   </span>
                 </Dropdown.Item>
+                {SUPPORTS_REPLY_TILE && (
+                  <Dropdown.Item id="autoSend" textValue="全自动回复">
+                    <MagicWand className="size-4 shrink-0 text-muted" />
+                    <Label>全自动回复</Label>
+                    <span
+                      className="ml-auto inline-flex pointer-events-auto"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Switch
+                        aria-label="全自动回复"
+                        isSelected={replySettings.autoSend}
+                        onChange={(v) => patchReplySettings({ autoSend: v })}
+                      >
+                        <Switch.Control>
+                          <Switch.Thumb />
+                        </Switch.Control>
+                      </Switch>
+                    </span>
+                  </Dropdown.Item>
+                )}
                 <Dropdown.Item id="deep" textValue="深度模式">
                   <Layers className="size-4 shrink-0 text-muted" />
                   <Label>深度模式</Label>

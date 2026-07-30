@@ -25,6 +25,13 @@ import type {
 } from './relayOne'
 import type { AgentReasoningEffort } from '../features/aiagent/transport/ipcChatTransport'
 
+/** 全自动回复队列的状态推送，与 electron/services/autoReplyService.ts 的 AutoSendStatus 对应。 */
+export type ReplyTileAutoStatus =
+  | { phase: 'idle' }
+  | { phase: 'counting'; sessionId: string; sessionName: string; secondsLeft: number; queued: number }
+  | { phase: 'sending'; sessionId: string; sessionName: string; segIndex: number; segTotal: number; queued: number }
+  | { phase: 'halted'; sessionId: string; sessionName: string; error: string }
+
 export interface EmbeddingConfig {
   enabled: boolean
   provider: string
@@ -680,6 +687,12 @@ export interface ElectronAPI {
       continue: (sessionId: string) => void
       skip: (sessionId: string) => void
       retry: (payload: { sessionId: string; batchId: string; suggestionIndex: number }) => void
+      fill: (payload: { text: string; searchName?: string }) => Promise<{ ok: boolean; reason?: string }>
+      commit: () => Promise<{ ok: boolean; reason?: string }>
+      autoCancel: () => void
+      autoClear: () => void
+      autoResume: () => void
+      onAutoStatus: (callback: (status: ReplyTileAutoStatus) => void) => () => void
       onUpdate: (callback: (entry: { sessionId: string; sessionName: string; avatarUrl?: string; state: 'pending' | 'loading' | 'error' | 'ready' | 'gone'; suggestions?: string[]; batches?: Array<{ id: string; targetKey: string; quote: string; suggestions: string[] }>; pendingContinue?: boolean; error?: string }) => void) => () => void
       onContinue: (callback: (sessionId: string) => void) => () => void
       onSkip: (callback: (sessionId: string) => void) => () => void
