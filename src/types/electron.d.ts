@@ -980,7 +980,7 @@ export interface ElectronAPI {
     killWeChat: () => Promise<boolean>
     launchWeChat: () => Promise<boolean>
     waitForWindow: (maxWaitSeconds?: number) => Promise<boolean>
-    startGetKey: (customWechatPath?: string, dbPath?: string) => Promise<{ success: boolean; key?: string; error?: string; needManualPath?: boolean; needAdmin?: boolean; validatedWxid?: string; account?: { dbKey: string | null; wxid: string; name: string; number: string; phone: string; seed: number } | null }>
+    startGetKey: (customWechatPath?: string, dbPath?: string, options?: { allowRestart?: boolean; forceRestart?: boolean }) => Promise<{ success: boolean; key?: string; error?: string; needManualPath?: boolean; needAdmin?: boolean; needRestart?: boolean; validatedWxid?: string; account?: { dbKey: string | null; wxid: string; name: string; number: string; phone: string; seed: number } | null }>
     cancel: () => Promise<boolean>
     detectCurrentAccount: (dbPath?: string, maxTimeDiffMinutes?: number) => Promise<{ wxid: string; dbPath: string } | null>
     onStatus: (callback: (data: { status: string; level: number }) => void) => () => void

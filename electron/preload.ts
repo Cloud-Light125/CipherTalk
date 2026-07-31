@@ -650,7 +650,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     killWeChat: () => ipcRenderer.invoke('wxkey:killWeChat'),
     launchWeChat: () => ipcRenderer.invoke('wxkey:launchWeChat'),
     waitForWindow: (maxWaitSeconds?: number) => ipcRenderer.invoke('wxkey:waitForWindow', maxWaitSeconds),
-    startGetKey: (customWechatPath?: string, dbPath?: string) => ipcRenderer.invoke('wxkey:startGetKey', customWechatPath, dbPath),
+    startGetKey: (customWechatPath?: string, dbPath?: string, options?: { allowRestart?: boolean; forceRestart?: boolean }) =>
+      ipcRenderer.invoke('wxkey:startGetKey', customWechatPath, dbPath, options),
     cancel: () => ipcRenderer.invoke('wxkey:cancel'),
     detectCurrentAccount: (dbPath?: string, maxTimeDiffMinutes?: number) => ipcRenderer.invoke('wxkey:detectCurrentAccount', dbPath, maxTimeDiffMinutes),
     onStatus: (callback: (data: { status: string; level: number }) => void) => {
