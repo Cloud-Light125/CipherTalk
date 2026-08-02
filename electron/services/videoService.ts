@@ -1,6 +1,7 @@
 import { dirname, join } from 'path'
 import { existsSync, readdirSync, statSync, readFileSync, mkdirSync, createWriteStream } from 'fs'
 import { writeFile } from 'fs/promises'
+import { createHash } from 'crypto'
 import { ConfigService } from './config'
 import { getDefaultCachePath as getPlatformDefaultCachePath } from './platformService'
 import { dbAdapter } from './dbAdapter'
@@ -8,6 +9,7 @@ import { Isaac64 } from './isaac64'
 import https from 'https'
 import http from 'http'
 import { getDocumentsPath, getExePath } from './runtimePaths'
+import { findDbByName } from './dbStoragePaths'
 
 export interface VideoInfo {
   videoUrl?: string       // 视频文件路径（用�?readFile�?
@@ -185,11 +187,113 @@ class VideoService {
     this.addMd5Candidate(candidates, this.extractVideoMsgAttribute(content, 'newmd5'))
     this.addMd5Candidate(candidates, this.extractVideoMsgAttribute(content, 'md5'))
     this.addMd5Candidate(candidates, this.extractVideoMsgAttribute(content, 'rawmd5'))
+    this.addMd5Candidate(candidates, this.extractVideoMsgAttribute(content, 'originsourcemd5'))
     this.addMd5Candidate(candidates, this.extractVideoXmlValue(content, 'newmd5'))
     this.addMd5Candidate(candidates, this.extractVideoXmlValue(content, 'md5'))
     this.addMd5Candidate(candidates, this.extractVideoXmlValue(content, 'rawmd5'))
 
     return candidates
+  }
+
+  /**
+   * 从视频消息 XML 中提取文件大小（length 属性，单位字节）
+   */
+  private extractVideoLength(content?: string): number | undefined {
+    if (!content) return undefined
+    const match = /<videomsg[^>]*\slength\s*=\s*['"](\d+)['"]/i.exec(content)
+    return match ? parseInt(match[1], 10) : undefined
+  }
+
+  /**
+   * Fallback：当 hardlink.db 没有记录时，按文件大小 + MD5 扫描视频目录。
+   * 先用文件大小过滤候选文件（O(1) stat），再对大小匹配的文件计算 MD5 精确验证。
+   * 当没有 MD5 时，只用文件大小匹配：唯一匹配直接返回，多个匹配则无法确定。
+   */
+  private findVideoBySizeAndMd5(
+    videoBaseDir: string,
+    expectedSize: number,
+    expectedMd5?: string
+  ): string | undefined {
+    if (!expectedSize) return undefined
+    if (!existsSync(videoBaseDir)) return undefined
+
+    let yearMonthDirs: string[]
+    try {
+      yearMonthDirs = readdirSync(videoBaseDir)
+        .filter(dir => {
+          const dirPath = join(videoBaseDir, dir)
+          try { return statSync(dirPath).isDirectory() } catch { return false }
+        })
+        .sort((a, b) => b.localeCompare(a)) // 从最新的目录开始
+    } catch {
+      return undefined
+    }
+
+    const sizeMatchedFiles: string[] = []
+
+    for (const yearMonth of yearMonthDirs) {
+      const dirPath = join(videoBaseDir, yearMonth)
+      let entries: string[]
+      try { entries = readdirSync(dirPath) } catch { continue }
+
+      for (const entry of entries) {
+        if (!/\.(mp4|mov|mkv|avi|flv|wmv|webm|m4v|3gp)$/i.test(entry)) continue
+        const filePath = join(dirPath, entry)
+        try {
+          const stat = statSync(filePath)
+          if (stat.size === expectedSize) {
+            sizeMatchedFiles.push(filePath)
+          }
+        } catch { continue }
+      }
+    }
+
+    if (sizeMatchedFiles.length === 0) {
+      this.logVideoLookup('size-scan-no-match', { expectedSize, scannedDirs: yearMonthDirs.length })
+      return undefined
+    }
+
+    this.logVideoLookup('size-scan-candidates', {
+      expectedSize,
+      candidateCount: sizeMatchedFiles.length,
+      candidates: sizeMatchedFiles,
+      hasMd5: Boolean(expectedMd5)
+    })
+
+    // 没有 MD5 时，只用文件大小匹配
+    if (!expectedMd5) {
+      if (sizeMatchedFiles.length === 1) {
+        // 唯一匹配，直接返回
+        this.logVideoLookup('size-scan-unique-hit', { filePath: sizeMatchedFiles[0] })
+        return sizeMatchedFiles[0]
+      }
+      // 多个匹配，无法确定
+      this.logVideoLookup('size-scan-multiple-no-md5', {
+        expectedSize,
+        candidateCount: sizeMatchedFiles.length
+      })
+      return undefined
+    }
+
+    // 有 MD5，对大小匹配的文件计算 MD5 精确验证
+    for (const filePath of sizeMatchedFiles) {
+      try {
+        const hash = createHash('md5')
+        const buffer = readFileSync(filePath)
+        hash.update(buffer)
+        const fileMd5 = hash.digest('hex')
+        if (fileMd5.toLowerCase() === expectedMd5.toLowerCase()) {
+          this.logVideoLookup('size-scan-md5-hit', { filePath, fileMd5, expectedMd5 })
+          return filePath
+        }
+      } catch { continue }
+    }
+
+    this.logVideoLookup('size-scan-md5-mismatch', {
+      expectedMd5,
+      checkedFiles: sizeMatchedFiles.length
+    })
+    return undefined
   }
 
   private formatMd5CandidateSummary(values: string[]): string {
@@ -368,45 +472,198 @@ class VideoService {
     return this.videoTableCache || undefined
   }
 
-  private async queryVideoFileNames(md5Candidates: string[]): Promise<{
+  private extractFileNameFromPath(path: string): string {
+    const normalized = path.replace(/[\\/]+$/, '')
+    const lastSeparator = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'))
+    const fileName = lastSeparator >= 0 ? normalized.slice(lastSeparator + 1) : normalized
+    return fileName.replace(/\.[^.]+$/, '')
+  }
+
+  private async queryVideoFileNames(md5Candidates: string[], rawContent?: string): Promise<{
     fileKeys: string[]
     hardlinkDbPath?: string
     hardlinkMatchedMd5?: string
   }> {
-    const hardlinkDbPath = this.resolveHardlinkDbPath()
-    if (!hardlinkDbPath || md5Candidates.length === 0) {
-      return { fileKeys: [], hardlinkDbPath }
-    }
-
-    const videoTable = await this.resolveVideoHardlinkTable()
-    if (!videoTable) {
-      this.warnVideoLookup('hardlink-table-missing', { hardlinkDbPath })
-      return { fileKeys: [], hardlinkDbPath }
-    }
+    const fileKeys: string[] = []
+    let hardlinkMatchedMd5: string | undefined
 
     try {
-      const fileKeys: string[] = []
-      let hardlinkMatchedMd5: string | undefined
+      const dbPath = this.getDbPath()
+      const wxid = this.getMyWxid()
+      if (!dbPath || !wxid) return { fileKeys }
+
+      const accountDir = this.resolveAccountDir(dbPath, wxid)
+      if (!accountDir) return { fileKeys }
+
+      // 微信 4.0 (xwechat) 的 hardlink.db 可能在多个位置
+      const candidateHardlinkPaths = [
+        join(accountDir, 'hardlink.db'),
+        join(accountDir, 'db_storage', 'hardlink.db'),
+        join(accountDir, 'db_storage', 'hardlink', 'hardlink.db'),
+        join(accountDir, 'msg', 'hardlink.db'),
+        join(accountDir, 'FileStorage', 'hardlink.db')
+      ]
+
+      let hardlinkDbPath: string | undefined
+      for (const candidate of candidateHardlinkPaths) {
+        if (existsSync(candidate)) {
+          hardlinkDbPath = candidate
+          break
+        }
+      }
+
+      // 如果标准位置都没找到，使用 findDbByName 递归搜索 db_storage 目录
+      if (!hardlinkDbPath) {
+        try {
+          const found = findDbByName('hardlink.db')
+          if (found) {
+            hardlinkDbPath = found
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // 如果仍然没找到，递归搜索 accountDir 下的子目录（最多 3 层）
+      if (!hardlinkDbPath) {
+        try {
+          const searchDirs = [
+            accountDir,
+            join(accountDir, 'db_storage'),
+            join(accountDir, 'db_storage', 'hardlink'),
+            join(accountDir, 'msg')
+          ]
+          for (const searchDir of searchDirs) {
+            if (!existsSync(searchDir)) continue
+            const entries = readdirSync(searchDir)
+            for (const entry of entries) {
+              const entryPath = join(searchDir, entry)
+              try {
+                if (statSync(entryPath).isFile() && entry.toLowerCase() === 'hardlink.db') {
+                  hardlinkDbPath = entryPath
+                  break
+                }
+              } catch {
+                continue
+              }
+            }
+            if (hardlinkDbPath) break
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!hardlinkDbPath) {
+        this.logVideoLookup('hardlink-db-not-found', {
+          accountDir,
+          searchedPaths: candidateHardlinkPaths
+        })
+        // 即使没找到文件，也尝试通过 dbAdapter 查询（native 可能自行解析路径）
+        // 如果 native 也不支持，则返回空
+      }
+
+      if (hardlinkDbPath) {
+        this.logVideoLookup('hardlink-db-found', { hardlinkDbPath })
+      }
+
+      const kind = 'hardlink'
+
+      // 优先使用找到的路径；没找到时传空串，让 native 自行解析
+      const queryPath = hardlinkDbPath || ''
+
+      let tables: { name: string }[]
+      try {
+        tables = await dbAdapter.all<{ name: string }>(
+            kind,
+            queryPath,
+            "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'video_hardlink_info%' ORDER BY name DESC"
+        )
+      } catch (queryErr) {
+        this.warnVideoLookup('hardlink-tables-query-error', {
+          queryPath,
+          error: String(queryErr)
+        })
+        return { fileKeys, hardlinkDbPath }
+      }
+
+      if (!tables || tables.length === 0) {
+        this.logVideoLookup('hardlink-no-video-tables', { hardlinkDbPath })
+        return { fileKeys, hardlinkDbPath }
+      }
+
+      const tableName = tables[0].name
+      this.logVideoLookup('hardlink-table-found', { hardlinkDbPath, tableName })
 
       for (const md5 of md5Candidates) {
-        const row = await dbAdapter.get<{ file_name?: string; md5?: string }>(
-          'hardlink',
-          '',
-          `SELECT file_name, md5 FROM ${videoTable} WHERE lower(md5) = lower(?) LIMIT 1`,
-          [md5]
+        const rows = await dbAdapter.all(
+            kind,
+            queryPath,
+            `SELECT md5, file_name FROM ${tableName} WHERE lower(md5) = lower(?) LIMIT 1`,
+            [md5]
         )
-        const normalizedFileKey = this.normalizeVideoFileKey(row?.file_name)
-        if (!normalizedFileKey) continue
 
-        if (!hardlinkMatchedMd5) {
-          hardlinkMatchedMd5 = this.normalizeMd5(row?.md5) || md5
+        this.logVideoLookup('hardlink-query-per-md5', {
+          md5,
+          rowCount: rows?.length || 0,
+          rows: rows as unknown[]
+        })
+
+        for (const row of rows as { md5: string; file_name: string }[]) {
+          if (!hardlinkMatchedMd5) {
+            hardlinkMatchedMd5 = this.normalizeMd5(row?.md5) || md5
+          }
+
+          const fileName = this.extractFileNameFromPath(row?.file_name || '')
+          const normalizedFileKey = this.normalizeVideoFileKey(fileName)
+          if (normalizedFileKey) {
+            this.addResolvedVideoFileKeyCandidates(fileKeys, normalizedFileKey)
+          }
+
+          this.addResolvedVideoFileKeyCandidates(fileKeys, this.normalizeVideoFileKey(row?.file_name))
         }
+      }
 
-        this.addResolvedVideoFileKeyCandidates(fileKeys, normalizedFileKey)
+      // Fallback：如果 md5 字段查询未命中，尝试用 file_size 字段查询
+      // （某些视频没有 md5 属性，但 hardlink.db 有 file_size 列，可用 XML 中的 length 属性匹配）
+      if (fileKeys.length === 0 && rawContent) {
+        const expectedSize = this.extractVideoLength(rawContent)
+        if (expectedSize) {
+          try {
+            const rows = await dbAdapter.all(
+              kind, queryPath,
+              `SELECT md5, file_name, file_size FROM ${tableName} WHERE file_size = ? LIMIT 5`,
+              [expectedSize]
+            )
+            this.logVideoLookup('hardlink-query-per-size', {
+              expectedSize,
+              rowCount: rows?.length || 0,
+              rows: rows as unknown[]
+            })
+            for (const row of rows as { md5: string; file_name: string }[]) {
+              if (!hardlinkMatchedMd5) {
+                hardlinkMatchedMd5 = this.normalizeMd5(row?.md5) || `size:${expectedSize}`
+              }
+              const fileName = this.extractFileNameFromPath(row?.file_name || '')
+              const normalizedFileKey = this.normalizeVideoFileKey(fileName)
+              if (normalizedFileKey) {
+                this.addResolvedVideoFileKeyCandidates(fileKeys, normalizedFileKey)
+              }
+              this.addResolvedVideoFileKeyCandidates(fileKeys, this.normalizeVideoFileKey(row?.file_name))
+            }
+          } catch (e) {
+            this.logVideoLookup('hardlink-size-query-error', {
+              expectedSize,
+              error: String(e).slice(0, 100)
+            })
+          }
+        }
       }
 
       this.logVideoLookup('hardlink-query', {
         hardlinkDbPath,
+        queryPath,
+        tableName,
         md5Candidates,
         fileKeys,
         hardlinkMatchedMd5
@@ -415,11 +672,10 @@ class VideoService {
       return { fileKeys, hardlinkDbPath, hardlinkMatchedMd5 }
     } catch (error) {
       this.warnVideoLookup('hardlink-query-error', {
-        hardlinkDbPath,
         md5Candidates,
         error: String(error)
       })
-      return { fileKeys: [], hardlinkDbPath }
+      return { fileKeys: [] }
     }
   }
 
@@ -451,6 +707,13 @@ class VideoService {
       candidateMd5s
     }
 
+    this.logVideoLookup('raw-content-analysis', {
+      requestedMd5,
+      rawPreview: rawContent ? rawContent.replace(/\s+/g, ' ').slice(0, 500) : undefined,
+      candidateMd5s,
+      expectedSize: this.extractVideoLength(rawContent)
+    })
+
     this.logVideoLookup('request', {
       requestedMd5,
       candidateMd5s,
@@ -461,10 +724,21 @@ class VideoService {
     })
 
     if (candidateMd5s.length === 0) {
-      diagnostics.reason = 'missing_input'
-      diagnostics.summary = this.buildLookupSummary('missing_input', diagnostics)
-      this.warnVideoLookup('missing-input', diagnostics)
-      return { exists: false, diagnostics }
+      // 没有 MD5 候选
+      if (!rawContent) {
+        // 也没有 rawContent，无法 fallback
+        diagnostics.reason = 'missing_input'
+        diagnostics.summary = this.buildLookupSummary('missing_input', diagnostics)
+        this.warnVideoLookup('missing-input', diagnostics)
+        return { exists: false, diagnostics }
+      }
+      // 有 rawContent 但没有 MD5（某些微信 4.0 视频消息不带 md5 属性），
+      // 继续执行，后续用文件大小 fallback
+      this.logVideoLookup('no-md5-has-rawcontent', {
+        requestedMd5,
+        hasRawContent: true,
+        rawPreview: this.previewRawContent(rawContent)
+      })
     }
 
     if (!dbPath || !wxid) {
@@ -494,7 +768,7 @@ class VideoService {
     const videoBaseDir = join(accountDir, 'msg', 'video')
     diagnostics.videoBaseDir = videoBaseDir
 
-    const hardlinkResult = await this.queryVideoFileNames(candidateMd5s)
+    const hardlinkResult = await this.queryVideoFileNames(candidateMd5s, rawContent)
     diagnostics.hardlinkDbPath = hardlinkResult.hardlinkDbPath
     diagnostics.hardlinkMatchedMd5 = hardlinkResult.hardlinkMatchedMd5
 
@@ -584,6 +858,37 @@ class VideoService {
         searchedFileKeys: diagnostics.searchedFileKeys,
         error: String(error)
       })
+    }
+
+    // Fallback：当 hardlink.db 没有记录、文件名匹配失败时，按文件大小 + MD5 扫描
+    if (!diagnostics.matchedMd5 && rawContent) {
+      const expectedSize = this.extractVideoLength(rawContent)
+      if (expectedSize) {
+        this.logVideoLookup('size-scan-start', { requestedMd5, expectedSize, videoBaseDir })
+        const hitPath = this.findVideoBySizeAndMd5(videoBaseDir, expectedSize, requestedMd5 || undefined)
+        if (hitPath) {
+          const assetKey = hitPath.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '').replace(/_raw$/, '')
+          const hitDir = dirname(hitPath)
+          const coverPath = join(hitDir, `${assetKey}.jpg`)
+          const thumbPath = join(hitDir, `${assetKey}_thumb.jpg`)
+          diagnostics.matchedMd5 = assetKey
+          this.logVideoLookup('local-file-hit', {
+            requestedMd5,
+            matchedMd5: assetKey,
+            method: 'size-md5-scan',
+            videoPath: hitPath,
+            coverExists: existsSync(coverPath),
+            thumbExists: existsSync(thumbPath)
+          })
+          return {
+            videoUrl: `file:///${hitPath.replace(/\\/g, '/')}`,
+            coverUrl: this.fileToDataUrl(coverPath, 'image/jpeg'),
+            thumbUrl: this.fileToDataUrl(thumbPath, 'image/jpeg'),
+            exists: true,
+            diagnostics
+          }
+        }
+      }
     }
 
     diagnostics.reason = 'local_file_missing'

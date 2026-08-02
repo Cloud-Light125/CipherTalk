@@ -2911,25 +2911,27 @@ class ExportService {
             if (options.exportVideos && localType === 43) {
               try {
                 const videoMd5 = videoService.parseVideoMd5(content)
-                if (videoMd5) {
-                  expStep(`视频查找 ${videoMd5} (localId=${row.local_id})`)
-                  const __tVid = Date.now()
-                  const videoInfo = await videoService.getVideoInfo(videoMd5, content)
-                  const __dtVid = Date.now() - __tVid
-                  if (__dtVid > 1000) expLog(`慢视频 ${videoMd5}: ${__dtVid}ms (exists=${videoInfo.exists})`)
-                  if (videoInfo.exists && videoInfo.videoUrl) {
-                    const videoPath = localPathFromFileUrl(videoInfo.videoUrl)
-                    if (fs.existsSync(videoPath)) {
-                      const fileName = `${createTime}_${videoMd5}.mp4`
-                      const df = this.dateFolder(createTime)
-                      const dayDir = path.join(videoOutDir, df)
-                      if (!fs.existsSync(dayDir)) fs.mkdirSync(dayDir, { recursive: true })
-                      const destPath = path.join(dayDir, fileName)
-                      if (!fs.existsSync(destPath)) {
-                        fs.copyFileSync(videoPath, destPath)
-                        videoCount++
-                        mediaPathMap.set(createTime, `videos/${df}/${fileName}`)
-                      }
+                // 无 MD5 视频也尝试导出：videoService.getVideoInfo 内部会用文件大小 fallback
+                const lookupKey = videoMd5 || ''
+                expStep(`视频查找 ${lookupKey || '(无MD5)'} (localId=${row.local_id})`)
+                const __tVid = Date.now()
+                const videoInfo = await videoService.getVideoInfo(lookupKey, content)
+                const __dtVid = Date.now() - __tVid
+                if (__dtVid > 1000) expLog(`慢视频 ${lookupKey || '(无MD5)'}: ${__dtVid}ms (exists=${videoInfo.exists})`)
+                if (videoInfo.exists && videoInfo.videoUrl) {
+                  const videoPath = localPathFromFileUrl(videoInfo.videoUrl)
+                  if (fs.existsSync(videoPath)) {
+                    // 文件名兜底：优先 MD5，其次命中 matchedMd5，最后用 localId
+                    const nameKey = videoMd5 || videoInfo.diagnostics?.matchedMd5 || `local_${row.local_id}`
+                    const fileName = `${createTime}_${nameKey}.mp4`
+                    const df = this.dateFolder(createTime)
+                    const dayDir = path.join(videoOutDir, df)
+                    if (!fs.existsSync(dayDir)) fs.mkdirSync(dayDir, { recursive: true })
+                    const destPath = path.join(dayDir, fileName)
+                    if (!fs.existsSync(destPath)) {
+                      fs.copyFileSync(videoPath, destPath)
+                      videoCount++
+                      mediaPathMap.set(createTime, `videos/${df}/${fileName}`)
                     }
                   }
                 }

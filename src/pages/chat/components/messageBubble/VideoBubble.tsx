@@ -21,7 +21,15 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
   const [isVisible, setIsVisible] = useState(false)
   const videoContainerRef = useRef<HTMLDivElement>(null)
 
-  const videoCacheKey = message.videoMd5 || `local:${message.localId}`
+  // 缓存 key：只有有效的 32 位 MD5 才用 videoMd5，否则用 localId
+  // 防止 "null"、空字符串等无效值导致不同视频共享缓存
+  const videoCacheKey = (message.videoMd5 && /^[a-f0-9]{32}$/i.test(message.videoMd5))
+    ? message.videoMd5
+    : `local:${message.localId}`
+
+  // 跟踪当前 videoInfo 对应的 videoCacheKey
+  // 当组件被虚拟滚动复用时，videoCacheKey 变化但 videoInfo 仍为旧值
+  const loadedCacheKeyRef = useRef<string | null>(null)
 
   // 视频懒加载
   useEffect(() => {
@@ -50,8 +58,11 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
 
   // 加载视频信息
   useEffect(() => {
-    if (!isVisible || videoInfo || videoLoading) return
+    if (!isVisible || videoLoading) return
     if (!message.videoMd5 && !message.rawContent) return
+
+    // 如果 videoInfo 对应当前 videoCacheKey，不需要重新加载
+    if (videoInfo && loadedCacheKeyRef.current === videoCacheKey) return
 
     const cached = videoInfoCache.get(videoCacheKey)
     if (cached) {
@@ -66,6 +77,7 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
         diagnostics: cached.diagnostics
       })
       if (!shouldRefetch) {
+        loadedCacheKeyRef.current = videoCacheKey
         setVideoInfo(cached)
         return
       }
@@ -92,6 +104,7 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
           cachedAt: Date.now()
         }
         videoInfoCache.set(videoCacheKey, info)
+        loadedCacheKeyRef.current = videoCacheKey
         setVideoInfo(info)
         console.log('[Video][Renderer] request-success', {
           localId: message.localId,
@@ -110,6 +123,7 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
       } else {
         const info: CachedVideoInfo = { exists: false, cachedAt: Date.now() }
         videoInfoCache.set(videoCacheKey, info)
+        loadedCacheKeyRef.current = videoCacheKey
         setVideoInfo(info)
         console.warn('[Video][Renderer] request-unsuccessful', {
           localId: message.localId,
@@ -121,6 +135,7 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
     }).catch((error) => {
       const info: CachedVideoInfo = { exists: false, cachedAt: Date.now() }
       videoInfoCache.set(videoCacheKey, info)
+      loadedCacheKeyRef.current = videoCacheKey
       setVideoInfo(info)
       console.error('[Video][Renderer] request-error', {
         localId: message.localId,
@@ -176,6 +191,7 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
             diagnostics: videoInfo?.diagnostics
           })
           videoInfoCache.delete(videoCacheKey)
+          loadedCacheKeyRef.current = null
           setVideoInfo(null)
           setVideoLoading(false)
         }}
