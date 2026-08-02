@@ -3,6 +3,7 @@ import { CircleDashed, PlayFill, Video } from '@gravity-ui/icons'
 import type { ChatSession, Message } from '../../../../types/models'
 import { lastIncrementalUpdateTime, videoInfoCache } from './mediaState'
 import type { CachedVideoInfo } from './mediaState'
+import { buildVideoCacheKey } from './videoCacheKey'
 
 interface VideoBubbleProps {
   message: Message
@@ -21,15 +22,23 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
   const [isVisible, setIsVisible] = useState(false)
   const videoContainerRef = useRef<HTMLDivElement>(null)
 
-  // 缓存 key：只有有效的 32 位 MD5 才用 videoMd5，否则用 localId
-  // 防止 "null"、空字符串等无效值导致不同视频共享缓存
-  const videoCacheKey = (message.videoMd5 && /^[a-f0-9]{32}$/i.test(message.videoMd5))
-    ? message.videoMd5
-    : `local:${message.localId}`
+  const videoCacheKey = buildVideoCacheKey({
+    sessionId: session.username,
+    localId: message.localId,
+    serverId: message.serverId,
+    createTime: message.createTime,
+    sortSeq: message.sortSeq,
+    videoMd5: message.videoMd5
+  })
 
   // 跟踪当前 videoInfo 对应的 videoCacheKey
   // 当组件被虚拟滚动复用时，videoCacheKey 变化但 videoInfo 仍为旧值
   const loadedCacheKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    loadedCacheKeyRef.current = null
+    setVideoInfo(null)
+  }, [videoCacheKey])
 
   // 视频懒加载
   useEffect(() => {
@@ -93,7 +102,9 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
       rawPreview: String(message.rawContent || '').replace(/\s+/g, ' ').slice(0, 220)
     })
 
+    let cancelled = false
     window.electronAPI.video.getVideoInfo(message.videoMd5 || '', message.rawContent).then((result) => {
+      if (cancelled) return
       if (result && result.success) {
         const info: CachedVideoInfo = {
           exists: result.exists,
@@ -133,6 +144,7 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
         })
       }
     }).catch((error) => {
+      if (cancelled) return
       const info: CachedVideoInfo = { exists: false, cachedAt: Date.now() }
       videoInfoCache.set(videoCacheKey, info)
       loadedCacheKeyRef.current = videoCacheKey
@@ -144,8 +156,10 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
         error: String(error)
       })
     }).finally(() => {
-      setVideoLoading(false)
+      if (!cancelled) setVideoLoading(false)
     })
+
+    return () => { cancelled = true }
   }, [isVisible, videoInfo, videoLoading, message.videoMd5, message.rawContent, message.localId, videoCacheKey, session.username])
 
   // 播放视频 - 打开独立窗口
