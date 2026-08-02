@@ -205,14 +205,21 @@ class VideoService {
   }
 
   /**
-   * Fallback：当 hardlink.db 没有记录时，按文件大小 + MD5 扫描视频目录。
-   * 先用文件大小过滤候选文件（O(1) stat），再对大小匹配的文件计算 MD5 精确验证。
-   * 当没有 MD5 时，只用文件大小匹配：唯一匹配直接返回，多个匹配则无法确定。
+   * hardlink.db 没有记录一般有两种情况：
+   *   1. 旧版本数据，比较早的历史数据（不存在 md5）。
+   *   2. 备份过来的数据，通过手机导出到电脑导过来的数据（存在 md5，但 md5 很可能和 mp4 文件的 md5 不一致）。
+   *
+   * 所以尝试如下逻辑：
+   *   1. 如果根据 md5 在 hardlink.db 有记录，则直接返回命中的文件（调用方已处理）。
+   *   2. 如果 md5 没有对应的记录或者没有 md5 码，按文件大小扫描视频目录，
+   *      先用文件大小过滤候选文件（O(1) stat）：
+   *        a. 如果命中了多个文件，通过 md5 码再去精确匹配，匹配不上则无法确定，不返回。
+   *        b. 如果命中了多个文件，没有 md5 码，则无法确定，不返回。
    */
   private findVideoBySizeAndMd5(
-    videoBaseDir: string,
-    expectedSize: number,
-    expectedMd5?: string
+      videoBaseDir: string,
+      expectedSize: number,
+      expectedMd5?: string
   ): string | undefined {
     if (!expectedSize) return undefined
     if (!existsSync(videoBaseDir)) return undefined
@@ -220,11 +227,11 @@ class VideoService {
     let yearMonthDirs: string[]
     try {
       yearMonthDirs = readdirSync(videoBaseDir)
-        .filter(dir => {
-          const dirPath = join(videoBaseDir, dir)
-          try { return statSync(dirPath).isDirectory() } catch { return false }
-        })
-        .sort((a, b) => b.localeCompare(a)) // 从最新的目录开始
+          .filter(dir => {
+            const dirPath = join(videoBaseDir, dir)
+            try { return statSync(dirPath).isDirectory() } catch { return false }
+          })
+          .sort((a, b) => b.localeCompare(a)) // 从最新的目录开始
     } catch {
       return undefined
     }
@@ -260,14 +267,14 @@ class VideoService {
       hasMd5: Boolean(expectedMd5)
     })
 
-    // 没有 MD5 时，只用文件大小匹配
+    // 唯一匹配：只有一个文件大小吻合，直接返回（无需进一步验证）
+    if (sizeMatchedFiles.length === 1) {
+      this.logVideoLookup('size-scan-unique-hit', { filePath: sizeMatchedFiles[0] })
+      return sizeMatchedFiles[0]
+    }
+
+    // 多个文件大小匹配 → 需要 MD5 来精确区分
     if (!expectedMd5) {
-      if (sizeMatchedFiles.length === 1) {
-        // 唯一匹配，直接返回
-        this.logVideoLookup('size-scan-unique-hit', { filePath: sizeMatchedFiles[0] })
-        return sizeMatchedFiles[0]
-      }
-      // 多个匹配，无法确定
       this.logVideoLookup('size-scan-multiple-no-md5', {
         expectedSize,
         candidateCount: sizeMatchedFiles.length
@@ -275,7 +282,7 @@ class VideoService {
       return undefined
     }
 
-    // 有 MD5，对大小匹配的文件计算 MD5 精确验证
+    // 有 MD5，对大小匹配的候选文件逐个计算 MD5 精确验证
     for (const filePath of sizeMatchedFiles) {
       try {
         const hash = createHash('md5')
