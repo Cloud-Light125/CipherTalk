@@ -43,6 +43,7 @@
     "test:agent-context-reset": "node --experimental-strip-types scripts/test-agent-context-reset.ts",
     "test:codex-models": "node --experimental-strip-types scripts/test-codex-models-payload.ts",
     "test:video-lookup": "node --experimental-strip-types scripts/test-video-lookup.ts",
+    "test:agent-conversation-schema": "node scripts/run-electron-node-test.cjs scripts/test-agent-conversation-schema.ts",
     "eval:retrieval": "node scripts/run-retrieval-evaluator.cjs",
     "preview": "vite preview",
     "electron:dev": "node scripts/clean-dist-electron.cjs && vite --mode electron",
