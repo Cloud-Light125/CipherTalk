@@ -1,4 +1,4 @@
-﻿import * as fs from 'fs'
+import * as fs from 'fs'
 import * as path from 'path'
 import * as https from 'https'
 import * as http from 'http'
@@ -996,15 +996,6 @@ class ExportService {
             }
 
             chatRecords.push(chatRecord)
-
-            // 添加成员信息
-            if (record.sourcename && !memberSet.has(record.sourcename)) {
-              memberSet.set(record.sourcename, {
-                platformId: record.sourcename,
-                accountName: record.sourcename,
-                ...(options.exportAvatars && record.sourceheadurl && { avatar: record.sourceheadurl })
-              })
-            }
           }
 
           message.chatRecords = chatRecords
@@ -2018,19 +2009,6 @@ class ExportService {
                 name: senderInfo.displayName,
                 avatar: options.exportAvatars ? senderInfo.avatarUrl : undefined
               })
-            }
-
-            // 收集聊天记录中的成员
-            if (chatRecordList) {
-              for (const record of chatRecordList) {
-                if (record.sourcename && !memberSet.has(record.sourcename)) {
-                  memberSet.set(record.sourcename, {
-                    id: record.sourcename,
-                    name: record.sourcename,
-                    avatar: options.exportAvatars ? record.sourceheadurl : undefined
-                  })
-                }
-              }
             }
           }
           expStep('HTML: 读取会话消息(下一页)')
