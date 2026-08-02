@@ -611,12 +611,13 @@ export function ChatHeader({
                 </Button>
                 <Dropdown.Popover className="min-w-56" placement="bottom end">
               <Dropdown.Menu
+                shouldCloseOnSelect={false}
                 onAction={(key) => {
                   // 自动建议/深度模式由各自的 Switch 独立切换，不走整行 onAction
                   if (key === 'cloneSelf') setCloneSelfOpen(true)
                 }}
               >
-                <Dropdown.Item id="cloneSelf" textValue="克隆我自己">
+                <Dropdown.Item id="cloneSelf" textValue="克隆我自己" shouldCloseOnSelect>
                   <FaceRobot className="size-4 shrink-0 text-muted" />
                   <Label>{myPersonaExists ? '重建我的自画像' : '克隆我自己'}</Label>
                   <span className={`ml-auto text-xs ${myPersonaExists ? 'text-success' : 'text-muted-foreground'}`}>
@@ -714,6 +715,7 @@ export function ChatHeader({
                   </Dropdown.Item>
                   <Dropdown.Popover className="min-w-36" placement="right top">
                     <Dropdown.Menu
+                      shouldCloseOnSelect={false}
                       selectedKeys={new Set([replySettings.style])}
                       selectionMode="single"
                       onAction={(key) => patchReplySettings({ style: String(key) as ReplySuggestStyle })}
@@ -735,6 +737,7 @@ export function ChatHeader({
                   </Dropdown.Item>
                   <Dropdown.Popover className="min-w-28" placement="right top">
                     <Dropdown.Menu
+                      shouldCloseOnSelect={false}
                       selectedKeys={new Set([String(replySettings.count)])}
                       selectionMode="single"
                       onAction={(key) => patchReplySettings({ count: Number(key) })}
