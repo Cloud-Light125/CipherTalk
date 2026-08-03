@@ -1,6 +1,6 @@
 {
   "name": "ciphertalk",
-  "version": "2026.731.1",
+  "version": "2026.803.0",
   "description": "密语 - 微信聊天记录查看工具",
   "author": "ILoveBingLu",
   "license": "CC-BY-NC-SA-4.0",
@@ -42,6 +42,8 @@
     "test:agent-stream-sanitizer": "node --experimental-strip-types scripts/test-openai-compatible-stream-sanitizer.ts",
     "test:agent-context-reset": "node --experimental-strip-types scripts/test-agent-context-reset.ts",
     "test:codex-models": "node --experimental-strip-types scripts/test-codex-models-payload.ts",
+    "test:video-lookup": "node --experimental-strip-types scripts/test-video-lookup.ts",
+    "test:agent-conversation-schema": "node scripts/run-electron-node-test.cjs scripts/test-agent-conversation-schema.ts",
     "eval:retrieval": "node scripts/run-retrieval-evaluator.cjs",
     "preview": "vite preview",
     "electron:dev": "node scripts/clean-dist-electron.cjs && vite --mode electron",

@@ -1,6 +1,6 @@
 import { dirname, join } from 'path'
-import { existsSync, readdirSync, statSync, readFileSync, mkdirSync, createWriteStream } from 'fs'
-import { writeFile } from 'fs/promises'
+import { existsSync, readdirSync, statSync, readFileSync, mkdirSync, createWriteStream, createReadStream } from 'fs'
+import { readdir as readdirAsync, stat as statAsync, writeFile } from 'fs/promises'
 import { createHash } from 'crypto'
 import { ConfigService } from './config'
 import { getDefaultCachePath as getPlatformDefaultCachePath } from './platformService'
@@ -10,6 +10,7 @@ import https from 'https'
 import http from 'http'
 import { getDocumentsPath, getExePath } from './runtimePaths'
 import { findDbByName } from './dbStoragePaths'
+import { selectUniqueVideoCandidate } from './videoLookupUtils'
 
 export interface VideoInfo {
   videoUrl?: string       // 视频文件路径（用�?readFile�?
@@ -61,17 +62,22 @@ export interface DownloadResult {
 
 class VideoService {
   private configService: ConfigService
+  private readonly videoSizeIndexCache = new Map<string, {
+    createdAt: number
+    promise: Promise<Map<number, string[]>>
+  }>()
+  private readonly videoSizeIndexTtlMs = 60_000
 
   constructor() {
     this.configService = new ConfigService()
   }
 
-  private logVideoLookup(stage: string, payload: Record<string, unknown> = {}): void {
+  private logVideoLookup(stage: string, payload: unknown = {}): void {
     void stage
     void payload
   }
 
-  private warnVideoLookup(stage: string, payload: Record<string, unknown> = {}): void {
+  private warnVideoLookup(stage: string, payload: unknown = {}): void {
     void stage
     void payload
   }
@@ -216,47 +222,85 @@ class VideoService {
    *        a. 如果命中了多个文件，通过 md5 码再去精确匹配，匹配不上则无法确定，不返回。
    *        b. 如果命中了多个文件，没有 md5 码，则无法确定，不返回。
    */
-  private findVideoBySizeAndMd5(
-      videoBaseDir: string,
-      expectedSize: number,
-      expectedMd5?: string
-  ): string | undefined {
-    if (!expectedSize) return undefined
-    if (!existsSync(videoBaseDir)) return undefined
-
-    let yearMonthDirs: string[]
+  private async buildVideoSizeIndex(videoBaseDir: string): Promise<Map<number, string[]>> {
+    const index = new Map<number, string[]>()
+    let yearMonthDirs
     try {
-      yearMonthDirs = readdirSync(videoBaseDir)
-          .filter(dir => {
-            const dirPath = join(videoBaseDir, dir)
-            try { return statSync(dirPath).isDirectory() } catch { return false }
-          })
-          .sort((a, b) => b.localeCompare(a)) // 从最新的目录开始
+      yearMonthDirs = (await readdirAsync(videoBaseDir, { withFileTypes: true }))
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .sort((a, b) => b.localeCompare(a))
     } catch {
-      return undefined
+      return index
     }
-
-    const sizeMatchedFiles: string[] = []
 
     for (const yearMonth of yearMonthDirs) {
       const dirPath = join(videoBaseDir, yearMonth)
-      let entries: string[]
-      try { entries = readdirSync(dirPath) } catch { continue }
-
-      for (const entry of entries) {
-        if (!/\.(mp4|mov|mkv|avi|flv|wmv|webm|m4v|3gp)$/i.test(entry)) continue
-        const filePath = join(dirPath, entry)
-        try {
-          const stat = statSync(filePath)
-          if (stat.size === expectedSize) {
-            sizeMatchedFiles.push(filePath)
-          }
-        } catch { continue }
+      let entries
+      try {
+        entries = await readdirAsync(dirPath, { withFileTypes: true })
+      } catch {
+        continue
       }
+
+      await Promise.all(entries
+        .filter(entry => entry.isFile() && /\.(mp4|mov|mkv|avi|flv|wmv|webm|m4v|3gp)$/i.test(entry.name))
+        .map(async entry => {
+          const filePath = join(dirPath, entry.name)
+          try {
+            const fileSize = (await statAsync(filePath)).size
+            const paths = index.get(fileSize) || []
+            paths.push(filePath)
+            index.set(fileSize, paths)
+          } catch {
+            // Ignore files removed while the index is being built.
+          }
+        }))
+    }
+
+    return index
+  }
+
+  private async getVideoSizeIndex(videoBaseDir: string, forceRefresh = false): Promise<Map<number, string[]>> {
+    const cached = this.videoSizeIndexCache.get(videoBaseDir)
+    if (!forceRefresh && cached && Date.now() - cached.createdAt < this.videoSizeIndexTtlMs) {
+      return cached.promise
+    }
+
+    const promise = this.buildVideoSizeIndex(videoBaseDir)
+    this.videoSizeIndexCache.set(videoBaseDir, { createdAt: Date.now(), promise })
+    try {
+      return await promise
+    } catch (error) {
+      this.videoSizeIndexCache.delete(videoBaseDir)
+      throw error
+    }
+  }
+
+  private async calculateFileMd5(filePath: string): Promise<string> {
+    const hash = createHash('md5')
+    for await (const chunk of createReadStream(filePath)) {
+      hash.update(chunk)
+    }
+    return hash.digest('hex')
+  }
+
+  private async findVideoBySizeAndMd5(
+    videoBaseDir: string,
+    expectedSize: number,
+    expectedMd5s: string[]
+  ): Promise<string | undefined> {
+    if (!expectedSize || !existsSync(videoBaseDir)) return undefined
+
+    let index = await this.getVideoSizeIndex(videoBaseDir)
+    let sizeMatchedFiles = index.get(expectedSize) || []
+    if (sizeMatchedFiles.length === 0) {
+      index = await this.getVideoSizeIndex(videoBaseDir, true)
+      sizeMatchedFiles = index.get(expectedSize) || []
     }
 
     if (sizeMatchedFiles.length === 0) {
-      this.logVideoLookup('size-scan-no-match', { expectedSize, scannedDirs: yearMonthDirs.length })
+      this.logVideoLookup('size-scan-no-match', { expectedSize })
       return undefined
     }
 
@@ -264,17 +308,16 @@ class VideoService {
       expectedSize,
       candidateCount: sizeMatchedFiles.length,
       candidates: sizeMatchedFiles,
-      hasMd5: Boolean(expectedMd5)
+      hasMd5: expectedMd5s.length > 0
     })
 
-    // 唯一匹配：只有一个文件大小吻合，直接返回（无需进一步验证）
     if (sizeMatchedFiles.length === 1) {
       this.logVideoLookup('size-scan-unique-hit', { filePath: sizeMatchedFiles[0] })
       return sizeMatchedFiles[0]
     }
 
-    // 多个文件大小匹配 → 需要 MD5 来精确区分
-    if (!expectedMd5) {
+    const expectedMd5Set = new Set(expectedMd5s.map(value => value.toLowerCase()))
+    if (expectedMd5Set.size === 0) {
       this.logVideoLookup('size-scan-multiple-no-md5', {
         expectedSize,
         candidateCount: sizeMatchedFiles.length
@@ -282,22 +325,20 @@ class VideoService {
       return undefined
     }
 
-    // 有 MD5，对大小匹配的候选文件逐个计算 MD5 精确验证
     for (const filePath of sizeMatchedFiles) {
       try {
-        const hash = createHash('md5')
-        const buffer = readFileSync(filePath)
-        hash.update(buffer)
-        const fileMd5 = hash.digest('hex')
-        if (fileMd5.toLowerCase() === expectedMd5.toLowerCase()) {
-          this.logVideoLookup('size-scan-md5-hit', { filePath, fileMd5, expectedMd5 })
+        const fileMd5 = await this.calculateFileMd5(filePath)
+        if (expectedMd5Set.has(fileMd5)) {
+          this.logVideoLookup('size-scan-md5-hit', { filePath, fileMd5 })
           return filePath
         }
-      } catch { continue }
+      } catch {
+        continue
+      }
     }
 
     this.logVideoLookup('size-scan-md5-mismatch', {
-      expectedMd5,
+      expectedMd5s,
       checkedFiles: sizeMatchedFiles.length
     })
     return undefined
@@ -637,9 +678,9 @@ class VideoService {
         const expectedSize = this.extractVideoLength(rawContent)
         if (expectedSize) {
           try {
-            const rows = await dbAdapter.all(
+            const rows = await dbAdapter.all<{ md5?: string; file_name?: string; file_size?: number }>(
               kind, queryPath,
-              `SELECT md5, file_name, file_size FROM ${tableName} WHERE file_size = ? LIMIT 5`,
+              `SELECT md5, file_name, file_size FROM ${tableName} WHERE file_size = ? LIMIT 2`,
               [expectedSize]
             )
             this.logVideoLookup('hardlink-query-per-size', {
@@ -647,16 +688,20 @@ class VideoService {
               rowCount: rows?.length || 0,
               rows: rows as unknown[]
             })
-            for (const row of rows as { md5: string; file_name: string }[]) {
-              if (!hardlinkMatchedMd5) {
-                hardlinkMatchedMd5 = this.normalizeMd5(row?.md5) || `size:${expectedSize}`
-              }
-              const fileName = this.extractFileNameFromPath(row?.file_name || '')
+            const row = selectUniqueVideoCandidate(rows)
+            if (row?.file_name) {
+              hardlinkMatchedMd5 = this.normalizeMd5(row.md5) || `size:${expectedSize}`
+              const fileName = this.extractFileNameFromPath(row.file_name)
               const normalizedFileKey = this.normalizeVideoFileKey(fileName)
               if (normalizedFileKey) {
                 this.addResolvedVideoFileKeyCandidates(fileKeys, normalizedFileKey)
               }
-              this.addResolvedVideoFileKeyCandidates(fileKeys, this.normalizeVideoFileKey(row?.file_name))
+              this.addResolvedVideoFileKeyCandidates(fileKeys, this.normalizeVideoFileKey(row.file_name))
+            } else if (rows.length > 1) {
+              this.logVideoLookup('hardlink-size-ambiguous', {
+                expectedSize,
+                candidateCount: rows.length
+              })
             }
           } catch (e) {
             this.logVideoLookup('hardlink-size-query-error', {
@@ -872,7 +917,7 @@ class VideoService {
       const expectedSize = this.extractVideoLength(rawContent)
       if (expectedSize) {
         this.logVideoLookup('size-scan-start', { requestedMd5, expectedSize, videoBaseDir })
-        const hitPath = this.findVideoBySizeAndMd5(videoBaseDir, expectedSize, requestedMd5 || undefined)
+        const hitPath = await this.findVideoBySizeAndMd5(videoBaseDir, expectedSize, candidateMd5s)
         if (hitPath) {
           const assetKey = hitPath.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '').replace(/_raw$/, '')
           const hitDir = dirname(hitPath)

@@ -4,6 +4,7 @@ import { join } from 'path'
 import type { UIMessage } from 'ai'
 import { ConfigService } from '../config'
 import type { AgentScope } from './types'
+import { ensureAgentConversationSchema } from './conversationSchema'
 
 const DB_NAME = 'agent_conversations.db'
 
@@ -181,62 +182,7 @@ export class AgentConversationStore {
   }
 
   private ensureSchema(db: Database.Database): void {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS agent_conversations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        account_id TEXT NOT NULL,
-        scope_kind TEXT NOT NULL,
-        session_id TEXT,
-        display_name TEXT,
-        title TEXT NOT NULL,
-        model_provider TEXT NOT NULL DEFAULT '',
-        model_id TEXT NOT NULL DEFAULT '',
-        memory_context_isolated INTEGER NOT NULL DEFAULT 0,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS agent_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        conversation_id INTEGER NOT NULL,
-        role TEXT NOT NULL,
-        ui_message_json TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        FOREIGN KEY(conversation_id) REFERENCES agent_conversations(id) ON DELETE CASCADE
-      );
-
-      DROP TABLE IF EXISTS agent_raw_responses;
-
-      CREATE INDEX IF NOT EXISTS idx_agent_conv_account_scope
-        ON agent_conversations(account_id, scope_kind, session_id, updated_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_agent_msg_conv
-        ON agent_messages(conversation_id, created_at ASC, id ASC);
-    `)
-
-    // 增量迁移：旧库补上来源标志列
-    const cols = db.prepare('PRAGMA table_info(agent_conversations)').all() as Array<{ name: string }>
-    const names = new Set(cols.map((c) => c.name))
-    if (!names.has('source')) {
-      db.exec("ALTER TABLE agent_conversations ADD COLUMN source TEXT NOT NULL DEFAULT 'app'")
-    }
-    if (!names.has('external_id')) {
-      db.exec('ALTER TABLE agent_conversations ADD COLUMN external_id TEXT')
-    }
-    if (!names.has('memory_context_isolated')) {
-      db.exec('ALTER TABLE agent_conversations ADD COLUMN memory_context_isolated INTEGER NOT NULL DEFAULT 0')
-    }
-    db.exec('CREATE INDEX IF NOT EXISTS idx_agent_conv_source ON agent_conversations(account_id, source, external_id)')
-
-    // 一次性迁移：旧的微信分身会话存成 global，按 external_id（from:sessionId）里的 sessionId 归入对应好友的 persona 历史
-    db.exec(`
-      UPDATE agent_conversations
-      SET scope_kind = 'persona',
-          session_id = substr(external_id, instr(external_id, ':') + 1)
-      WHERE source = 'wechat-persona'
-        AND scope_kind = 'global'
-        AND external_id LIKE '%:%'
-        AND session_id IS NULL
-    `)
+    ensureAgentConversationSchema(db)
   }
 
   private claimCompatibleAccountRows(db: Database.Database, identity: AccountIdentity): void {
