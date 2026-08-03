@@ -223,6 +223,13 @@
         ]
       },
       {
+        "from": "electron/services/ai/",
+        "to": "guides/",
+        "filter": [
+          "*使用指南.md"
+        ]
+      },
+      {
         "from": "public/icon.ico",
         "to": "icon.ico"
       },

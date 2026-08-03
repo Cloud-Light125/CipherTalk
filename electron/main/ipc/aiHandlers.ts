@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import { createHash } from 'crypto'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -18,6 +18,10 @@ const AGENT_PREP_PROGRESS_TITLE = '大模型准备中'
 const TOOL_APPROVAL_SIGNATURE_TTL_MS = 2 * 60 * 60 * 1000
 const TOOL_APPROVAL_SIGNATURE_CACHE_MAX = 500
 const INTERNAL_TURN_CONTEXT_KIND = 'agent-turn-context'
+const AI_GUIDE_NAMES = new Set([
+  'Ollama使用指南.md',
+  '自定义AI服务使用指南.md',
+])
 
 type ToolApprovalSignatureCacheItem = {
   toolCallId: string
@@ -2184,7 +2188,12 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
 
   ipcMain.handle('ai:readGuide', async (_, guideName: string) => {
     try {
-      const guidePath = join(__dirname, '../electron/services/ai', guideName)
+      if (!AI_GUIDE_NAMES.has(guideName)) {
+        return { success: false, error: '不支持的指南文件' }
+      }
+      const guidePath = app.isPackaged
+        ? join(process.resourcesPath, 'guides', guideName)
+        : join(app.getAppPath(), 'electron/services/ai', guideName)
       if (!existsSync(guidePath)) {
         return { success: false, error: '指南文件不存在' }
       }
