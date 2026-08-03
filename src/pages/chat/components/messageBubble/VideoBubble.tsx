@@ -156,11 +156,11 @@ function VideoBubble({ message, session, onContextMenu }: VideoBubbleProps) {
         error: String(error)
       })
     }).finally(() => {
-      if (!cancelled) setVideoLoading(false)
+      setVideoLoading(false)
     })
 
     return () => { cancelled = true }
-  }, [isVisible, videoInfo, videoLoading, message.videoMd5, message.rawContent, message.localId, videoCacheKey, session.username])
+  }, [isVisible, videoInfo, message.videoMd5, message.rawContent, message.localId, videoCacheKey, session.username])
 
   // 播放视频 - 打开独立窗口
   const handlePlayVideo = useCallback(async () => {
