@@ -20,7 +20,7 @@ import { mcpProxyService } from '../../services/mcp/proxyService'
 import { voiceTranscribeServiceWhisper } from '../../services/voiceTranscribeServiceWhisper'
 import { attachWindowStartupDiagnostics, markStartupMilestone, logStartupError } from '../startupDiagnostics'
 import type { ImageViewerOpenOptions, MainProcessContext, ReplyTileEntry, WindowManager } from '../context'
-import { placeNativeWindowBehindForeground, probeWeChatWindow, watchWeChatWindowEvents } from '../../services/wechatWindowTracker'
+import { anchorNativeWindowAboveWeChat, probeWeChatWindow, watchWeChatWindowEvents } from '../../services/wechatWindowTracker'
 
 type ReleaseAnnouncementPayload = {
   version: string
@@ -285,6 +285,7 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
   let petWindow: BrowserWindow | null = null
   let replyTileWindow: BrowserWindow | null = null
   let replyTileTimer: NodeJS.Timeout | null = null
+  let replyTileDragTimer: NodeJS.Timeout | null = null
   let replyTileEventWatchDisposer: (() => void) | null = null
   let replyTileEventWatchStartedAt = 0
   let replyTileRepositionQueued = false
@@ -374,6 +375,7 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
 
   const closeReplyTileInternal = (): void => {
     if (replyTileTimer) { clearInterval(replyTileTimer); replyTileTimer = null }
+    if (replyTileDragTimer) { clearInterval(replyTileDragTimer); replyTileDragTimer = null }
     if (replyTileEventWatchDisposer) { replyTileEventWatchDisposer(); replyTileEventWatchDisposer = null }
     replyTileEventWatchStartedAt = 0
     if (replyTileWindow && !replyTileWindow.isDestroyed()) replyTileWindow.close()
@@ -391,13 +393,6 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
     else replyTileWindow.setAlwaysOnTop(false)
   }
 
-  const rectsOverlap = (
-    a: { x: number; y: number; width: number; height: number },
-    b: { x: number; y: number; width: number; height: number }
-  ): boolean => {
-    return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
-  }
-
   // Reply tile follows the WeChat main window edge.
   // Do not hide it just because another app becomes foreground; hide only when WeChat is missing/minimized.
   const repositionReplyTile = (): void => {
@@ -405,12 +400,14 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
     const state = probeWeChatWindow()
     const show = state.found && !state.minimized && state.bounds
     if (!show) {
+      setReplyTileDragging(false) // 微信没了收不到 MOVESIZEEND，别让高频定时器空转
       if (replyTileWindow.isVisible()) replyTileWindow.hide()
       return
     }
     const tileFocused = replyTileWindow.isFocused()
-    const shouldFloat = state.foregroundActive || tileFocused
-    setReplyTileFloating(shouldFloat)
+    if (process.platform !== 'win32') {
+      setReplyTileFloating(state.foregroundActive || tileFocused)
+    }
     const wx = state.bounds!
     const wa = screen.getDisplayMatching(wx).workArea
     let x = wx.x + wx.width
@@ -425,8 +422,10 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
       replyTileLastBounds = key
     }
     if (!replyTileWindow.isVisible()) replyTileWindow.showInactive()
-    if (!shouldFloat && state.otherForegroundActive && state.foregroundBounds && rectsOverlap(bounds, state.foregroundBounds)) {
-      placeNativeWindowBehindForeground(replyTileWindow.getNativeWindowHandle())
+    // Windows：磁贴不置顶，锚定在微信正上方同一图层——微信被谁挡住磁贴就一起被挡住（#314）。
+    // 磁贴自己有焦点（用户正在点建议）时不压回去，失焦后下一轮重新锚定。
+    if (process.platform === 'win32' && !tileFocused) {
+      anchorNativeWindowAboveWeChat(replyTileWindow.getNativeWindowHandle())
     }
   }
 
@@ -439,13 +438,24 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
     })
   }
 
+  // 微信拖动/缩放期间高频跟随（33ms≈30fps）：部分机器拖动中收不到 LOCATIONCHANGE 事件
+  const setReplyTileDragging = (dragging: boolean): void => {
+    if (dragging) {
+      if (!replyTileDragTimer) replyTileDragTimer = setInterval(repositionReplyTile, 33)
+    } else if (replyTileDragTimer) {
+      clearInterval(replyTileDragTimer)
+      replyTileDragTimer = null
+    }
+  }
+
   const startReplyTileEventWatch = (): void => {
     if (replyTileEventWatchDisposer) return
-    replyTileEventWatchDisposer = watchWeChatWindowEvents(scheduleReplyTileReposition)
+    replyTileEventWatchDisposer = watchWeChatWindowEvents(scheduleReplyTileReposition, setReplyTileDragging)
     replyTileEventWatchStartedAt = replyTileEventWatchDisposer ? Date.now() : 0
   }
 
   const refreshReplyTileEventWatch = (): void => {
+    if (replyTileDragTimer) return // 拖动中别重建钩子，disposer 会打断高频跟随
     if (replyTileEventWatchDisposer && Date.now() - replyTileEventWatchStartedAt < 10000) return
     if (replyTileEventWatchDisposer) { replyTileEventWatchDisposer(); replyTileEventWatchDisposer = null }
     replyTileEventWatchStartedAt = 0
@@ -466,7 +476,8 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
       maximizable: false,
       minimizable: false,
       fullscreenable: false,
-      alwaysOnTop: true,
+      // Windows 不置顶：靠 anchorNativeWindowAboveWeChat 锚定在微信同图层（#314）
+      alwaysOnTop: process.platform !== 'win32',
       skipTaskbar: true,
       hasShadow: false,
       show: false,
@@ -488,9 +499,10 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
     replyTileWindow.on('focus', () => {
       if (replyTileWindow && !replyTileWindow.isDestroyed()) hideMacWindowControls(replyTileWindow)
     })
-    replyTileWindow.setAlwaysOnTop(true, 'screen-saver')
+    if (process.platform !== 'win32') replyTileWindow.setAlwaysOnTop(true, 'screen-saver')
     replyTileWindow.on('closed', () => {
       if (replyTileTimer) { clearInterval(replyTileTimer); replyTileTimer = null }
+      if (replyTileDragTimer) { clearInterval(replyTileDragTimer); replyTileDragTimer = null }
       if (replyTileEventWatchDisposer) { replyTileEventWatchDisposer(); replyTileEventWatchDisposer = null }
       replyTileEventWatchStartedAt = 0
       replyTileWindow = null
