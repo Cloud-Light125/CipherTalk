@@ -44,6 +44,8 @@ export interface WindowManager {
   createTray(): Tray | null
   destroyTray(): void
   focusMainWindow(route?: string): BrowserWindow
+  /** 注册应用菜单；macOS 上把 ⌘, 绑到设置页 */
+  setupApplicationMenu(): void
   setDockIcon(): void
   openChatWindow(): BrowserWindow
   openMomentsWindow(filterUsername?: string): BrowserWindow
