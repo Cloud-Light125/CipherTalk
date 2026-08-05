@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CircleDashed } from '@gravity-ui/icons'
 import { Button, Calendar, Popover } from '@heroui/react'
 import { CalendarDate, getLocalTimeZone, parseDate, today, type DateValue } from '@internationalized/date'
 
 interface DateJumpPickerProps {
+  /** 会话ID：用于查询哪些日期有消息（无消息的日期置灰不可选） */
+  sessionId?: string | null
   /** 当前选中日期，'YYYY-MM-DD' 或 '' */
   value: string
   /** 更新选中日期 */
@@ -30,12 +32,34 @@ const YEARS_PER_PAGE = 12
  * 日期跳转选择器：HeroUI Popover + Calendar。
  * 点标题逐级上钻（日 → 月 → 年），选中后逐级下钻回来，最终选日即跳转并收起弹层（禁选未来）。
  */
-export function DateJumpPicker({ value, onChange, onJump, disabled, loading }: DateJumpPickerProps) {
+export function DateJumpPicker({ sessionId, value, onChange, onJump, disabled, loading }: DateJumpPickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const maxValue = today(getLocalTimeZone())
   const [view, setView] = useState<'day' | 'month' | 'year'>('day')
   // 当前视野所在的年月（Calendar 受控 focusedValue，月/年视图也读它）
   const [focused, setFocused] = useState<DateValue>(toCalendarValue(value) ?? maxValue)
+  // 按月缓存有消息的日期集合，key 'YYYY-MM'；未加载到的月份不置灰（查询失败时兜底可选）
+  const [monthDates, setMonthDates] = useState<Record<string, Set<string>>>({})
+
+  // 切会话清缓存
+  useEffect(() => { setMonthDates({}) }, [sessionId])
+
+  // 日视图下懒加载当前月份的有消息日期
+  const monthKey = `${focused.year}-${String(focused.month).padStart(2, '0')}`
+  useEffect(() => {
+    if (!isOpen || view !== 'day' || !sessionId || monthDates[monthKey]) return
+    let cancelled = false
+    void window.electronAPI.chat.getDatesWithMessages(sessionId, focused.year, focused.month).then((res) => {
+      if (cancelled || !res.success) return
+      setMonthDates((prev) => ({ ...prev, [monthKey]: new Set(res.dates ?? []) }))
+    }).catch(() => { /* 查询失败保持全部可选 */ })
+    return () => { cancelled = true }
+  }, [isOpen, view, sessionId, monthKey, focused.year, focused.month, monthDates])
+
+  const isDateUnavailable = (date: DateValue) => {
+    const set = monthDates[`${date.year}-${String(date.month).padStart(2, '0')}`]
+    return set ? !set.has(date.toString()) : false
+  }
 
   const handleSelect = (date: DateValue) => {
     const str = date.toString() // CalendarDate → 'YYYY-MM-DD'
@@ -73,6 +97,7 @@ export function DateJumpPicker({ value, onChange, onJump, disabled, loading }: D
               focusedValue={focused}
               onFocusChange={setFocused}
               maxValue={maxValue}
+              isDateUnavailable={isDateUnavailable}
             >
               <Calendar.Header>
                 <Calendar.NavButton slot="previous" />

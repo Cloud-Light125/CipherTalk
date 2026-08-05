@@ -804,6 +804,7 @@ export function ChatHeader({
         )}
 
         <DateJumpPicker
+          sessionId={currentSessionId}
           value={selectedDate}
           onChange={onSelectedDateChange}
           onJump={onJumpToDate}
