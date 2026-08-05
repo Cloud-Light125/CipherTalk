@@ -400,7 +400,10 @@ function AgentMessageItemImpl({
 function propsAreEqual(prev: AgentMessageItemProps, next: AgentMessageItemProps): boolean {
   // AI SDK 7 会高频替换最后一条 assistant 消息；这里宁可让在途/刚结束的最后一条多渲染一次，
   // 也不能因为 memo 比较过紧把 text part 的可见更新挡住。
-  if (prev.isLastMessage || next.isLastMessage || prev.busy || next.busy || prev.status === 'streaming' || next.status === 'streaming') {
+  // 注意：busy/streaming 是全局状态，不能作为整条 return false 的条件——那样流式期间
+  // 每条历史消息都会跟着每 ~50ms 全量重渲染（对话越长越卡）。历史消息的渲染结果只通过
+  // "isLastMessage && busy/status" 这类合取依赖它们，busy/status 的翻转由下面的逐项比较兜住。
+  if (prev.isLastMessage || next.isLastMessage) {
     return false
   }
   if (prev.message !== next.message) return false
