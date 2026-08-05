@@ -1,6 +1,6 @@
-import { Aperture, ArrowDownToLine, ArrowsRotateLeft, Bell, BellSlash, Bulb, CircleCheck, CircleDashed, CircleInfo, Ellipsis, FaceRobot, FileText, Layers, LayoutSideContentRight, MagicWand, Microphone, Picture, Sparkles } from '@gravity-ui/icons'
+import { Aperture, ArrowDownToLine, ArrowsRotateLeft, Bell, BellSlash, Bulb, CircleCheck, CircleDashed, CircleInfo, Ellipsis, FaceRobot, FileText, Layers, LayoutSideContentRight, MagicWand, Microphone, Picture, Sparkles, TrashBin } from '@gravity-ui/icons'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Drawer, Dropdown, Label, Switch, Tooltip } from '@heroui/react'
+import { AlertDialog, Button, Drawer, Dropdown, Label, Switch, Tooltip } from '@heroui/react'
 import { CloneSelfModal } from './CloneSelfModal'
 import { DateJumpPicker } from './DateJumpPicker'
 import type { ChatSession } from '../../../types/models'
@@ -17,6 +17,7 @@ import {
   updateReplySuggestSettings,
 } from '../replySuggest'
 import { SessionAvatar } from './SessionSidebar'
+import { useTopToast } from '../hooks/useTopToast'
 import PluginChatToolbar from '../../../features/plugins/PluginChatToolbar'
 
 // 磁贴窗口支持 Windows/macOS；Linux 暂不显示该开关。
@@ -244,6 +245,8 @@ export function ChatHeader({
   // 自画像状态：是否已克隆"我"对此联系人的说话画像（self: 前缀键），用于菜单显示
   const [myPersonaExists, setMyPersonaExists] = useState(false)
   const [cloneSelfOpen, setCloneSelfOpen] = useState(false)
+  const [deleteSelfOpen, setDeleteSelfOpen] = useState(false)
+  const { showTopToast } = useTopToast()
   useEffect(() => {
     let cancelled = false
     void window.electronAPI.persona.get(`self:${currentSession.username}`).then((res) => {
@@ -615,6 +618,7 @@ export function ChatHeader({
                 onAction={(key) => {
                   // 自动建议/深度模式由各自的 Switch 独立切换，不走整行 onAction
                   if (key === 'cloneSelf') setCloneSelfOpen(true)
+                  if (key === 'deleteSelf') setDeleteSelfOpen(true)
                 }}
               >
                 <Dropdown.Item id="cloneSelf" textValue="克隆我自己" shouldCloseOnSelect>
@@ -629,6 +633,12 @@ export function ChatHeader({
                     ) : '未克隆'}
                   </span>
                 </Dropdown.Item>
+                {myPersonaExists ? (
+                  <Dropdown.Item id="deleteSelf" textValue="删除我的自画像" shouldCloseOnSelect>
+                    <TrashBin className="size-4 shrink-0 text-danger" />
+                    <Label>删除我的自画像</Label>
+                  </Dropdown.Item>
+                ) : null}
                 <Dropdown.Item id="toggle" textValue="自动建议">
                   <Bulb className="size-4 shrink-0 text-muted" />
                   <Label>自动建议</Label>
@@ -888,8 +898,49 @@ export function ChatHeader({
             }
           }}
           session={currentSession}
+          exists={myPersonaExists}
         />
       )}
+
+      {/* 删除自画像确认：画像/问答索引/导演笔记由主进程一并清掉 */}
+      <AlertDialog.Backdrop
+        isOpen={deleteSelfOpen}
+        onOpenChange={(open) => { if (!open) setDeleteSelfOpen(false) }}
+      >
+        <AlertDialog.Container>
+          <AlertDialog.Dialog className="sm:max-w-100">
+            <AlertDialog.CloseTrigger />
+            <AlertDialog.Header>
+              <AlertDialog.Icon status="danger" />
+              <AlertDialog.Heading>删除我对「{currentSession.displayName || currentSession.username}」的自画像？</AlertDialog.Heading>
+            </AlertDialog.Header>
+            <AlertDialog.Body>
+              <p className="text-sm text-muted">
+                画像、真实问答索引和导演笔记都会删除，「像我」风格的回复建议会退回默认语气。聊天记录不受影响，之后可以随时重新克隆。
+              </p>
+            </AlertDialog.Body>
+            <AlertDialog.Footer>
+              <Button slot="close" variant="tertiary">取消</Button>
+              <Button
+                slot="close"
+                variant="danger"
+                onPress={() => {
+                  void window.electronAPI.persona.delete(`self:${currentSession.username}`).then((res) => {
+                    if (res.success) {
+                      setMyPersonaExists(false)
+                      showTopToast('自画像已删除')
+                    } else {
+                      showTopToast(res.error || '删除失败', false)
+                    }
+                  })
+                }}
+              >
+                删除
+              </Button>
+            </AlertDialog.Footer>
+          </AlertDialog.Dialog>
+        </AlertDialog.Container>
+      </AlertDialog.Backdrop>
     </div>
   )
 }
