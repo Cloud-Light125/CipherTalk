@@ -132,11 +132,16 @@ function AgentMessageItemImpl({
     : []
   const orderedSegments = buildRenderSegments(message.parts)
   const chainSegmentCount = orderedSegments.reduce((count, segment) => count + (segment.kind === 'chain' ? 1 : 0), 0)
-  const lastChainSegmentIndex = orderedSegments.reduce(
-    (lastIndex, segment, index) => segment.kind === 'chain' ? index : lastIndex,
-    -1,
-  )
   const persistedSingleChainElapsedMs = chainSegmentCount === 1 ? persistedProcessingElapsedMs : undefined
+  // 折叠时机只认两件事：后方出现了非空正文 text，或后方还有新的过程块。
+  // source-url / source-document / data-canvas / data-compaction 等 part 只是工具事件、不含正文，
+  // 不能让它们把仍在进行的思考链提前收起。
+  let lastChainSegmentIndex = -1
+  let lastBodyTextSegmentIndex = -1
+  orderedSegments.forEach((segment, index) => {
+    if (segment.kind === 'chain') lastChainSegmentIndex = index
+    else if (segment.part.type === 'text' && segment.part.text.trim()) lastBodyTextSegmentIndex = index
+  })
   // 一条消息里同一画布可能有多次 data-canvas（多轮编辑），只保留最后一条引用行
   const lastCanvasRefIndexById = new Map<string, number>()
   message.parts.forEach((part, index) => {
@@ -212,7 +217,7 @@ function AgentMessageItemImpl({
           const reasoningActive = isReasoningStreaming && index === message.parts.length - 1
           return (
             <MessageResponse
-              className="text-foreground text-sm"
+              className="border-border/60 border-l-2 pl-3 text-[15px] leading-6 text-muted-foreground"
               isStreaming={reasoningActive}
               key={`chain-${index}`}
               showStreamingIndicator={false}
@@ -289,8 +294,12 @@ function AgentMessageItemImpl({
           {orderedSegments.map((segment, segmentIndex) => {
             const isLastSegment = segmentIndex === orderedSegments.length - 1
             if (segment.kind === 'chain') {
-              // 每个过程区块独立计时；新过程出现后，前一个区块立即冻结为“已处理”。
-              const segmentActive = chainActive && segmentIndex === lastChainSegmentIndex
+              // 过程块仅在它还是最后一个过程块、且正文尚未开始时保持展开；
+              // 一旦开始输出正文（或后续又起了新过程），立即收起为「已处理」。
+              // 不要用 busy 贯穿整轮：否则思考结束后、正文流式输出期间思考链仍展开，和正文样式混淆。
+              const segmentActive = chainActive
+                && segmentIndex === lastChainSegmentIndex
+                && lastBodyTextSegmentIndex < segmentIndex
               return (
                 <div className="space-y-2" key={`chain-${segment.items[0]?.index ?? 0}`}>
                   {renderChainSegment(segment.items, segmentActive)}
