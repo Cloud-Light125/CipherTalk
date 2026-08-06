@@ -33,6 +33,7 @@ import {
 } from '@/components/ai-elements/prompt-input'
 import { ImagePreview, type ImagePreviewOriginRect } from '@/components/ImagePreview'
 import AIProviderLogo from '@/components/ai/AIProviderLogo'
+import RelayOneBalanceChip from '@/components/ai/RelayOneBalanceChip'
 import { getAIProviders, type AIModelInfo, type AIProviderInfo } from '@/types/ai'
 import { Loader } from '@/components/ai-elements/loader'
 import { IpcChatTransport, type AgentModelConfig, type AgentProgressEvent, type AgentReasoningEffort, type AgentScope, type AgentToolProfile, type CodeWorkspaceRef } from '@/features/aiagent/transport/ipcChatTransport'
@@ -2498,6 +2499,7 @@ export default function AgentPage() {
         </div>
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
           <Toolbar aria-label="对话操作" className="gap-1.5 p-0">
+            {effectiveProviderId === 'relayone' && <RelayOneBalanceChip />}
             <CodeWorkspacePanelPopover
               activeTab={codeWorkspacePanelTab}
               isOpen={codeWorkspacePanelOpen}

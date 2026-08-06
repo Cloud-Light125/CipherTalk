@@ -42,6 +42,7 @@ interface RelayOneAccountPanelProps {
 
 type AuthTab = 'login' | 'register'
 const DEFAULT_GROUP_KEY = '__default__'
+const PRESET_AMOUNTS = [10, 20, 30, 40, 50]
 
 const EMPTY_STATUS: RelayOneStatus = {
   authenticated: false,
@@ -158,7 +159,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     if (results[4].status === 'fulfilled') {
       const checkout = results[4].value
       setCheckoutInfo(checkout)
-      setRechargeAmount((current) => current || (checkout.presetAmounts[0] ? String(checkout.presetAmounts[0]) : ''))
+      setRechargeAmount((current) => current || '20')
       setPaymentMethod((current) => current || checkout.paymentMethods.find((method) => method.enabled)?.id || '')
     }
 
@@ -349,7 +350,13 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
         <Label>充值金额</Label>
         <InputGroup variant="secondary" fullWidth><InputGroup.Prefix>{checkoutInfo?.currency || 'CNY'}</InputGroup.Prefix><InputGroup.Input type="number" min={checkoutInfo?.minimumAmount || 0.01} max={checkoutInfo?.maximumAmount} step="0.01" /></InputGroup>
       </TextField>
-      {checkoutInfo?.presetAmounts.length ? <div className="flex flex-wrap gap-2">{checkoutInfo.presetAmounts.map((amount) => <Button key={amount} type="button" variant="outline" size="sm" onPress={() => setRechargeAmount(String(amount))}>{formatMoney(amount, checkoutInfo.currency)}</Button>)}</div> : null}
+      <div className="grid grid-cols-5 gap-1.5">
+        {PRESET_AMOUNTS.map((amount) => (
+          <Button key={amount} type="button" variant={Number(rechargeAmount) === amount ? 'primary' : 'outline'} size="sm" className="w-full min-w-0 px-1" onPress={() => setRechargeAmount(String(amount))}>
+            ¥{amount}
+          </Button>
+        ))}
+      </div>
       {activePaymentMethods.length > 0 && (
         <Select selectedKey={paymentMethod || null} onSelectionChange={(key: Key | null) => setPaymentMethod(key == null ? '' : String(key))} placeholder="支付方式" variant="secondary" fullWidth>
           <Label>支付方式</Label>
