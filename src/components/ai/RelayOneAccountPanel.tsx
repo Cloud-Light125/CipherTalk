@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   Alert,
   Button,
+  Card,
   Chip,
   CloseButton,
   Description,
@@ -18,7 +19,7 @@ import {
   useOverlayState,
   type Key
 } from '@heroui/react'
-import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, Plus, TrashBin, Wallet } from '@gravity-ui/icons'
+import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, PersonNutHex, Plus, QrCode, TrashBin, Wallet } from '@gravity-ui/icons'
 import { relayOneService } from '../../services/relayOne'
 import type {
   RelayOneApiKey,
@@ -35,6 +36,8 @@ interface RelayOneAccountPanelProps {
   onProviderApplied: () => void | Promise<void>
   showMessage: (text: string, success: boolean) => void
   hasConfiguredApiKey: boolean
+  /** 账户/余额状态条挂载到接入参数卡片内的这个容器 */
+  statusHost: HTMLElement | null
 }
 
 type AuthTab = 'login' | 'register'
@@ -93,7 +96,7 @@ function GroupRateChip({ rate }: { rate: number | undefined }) {
   return <Chip size="sm" variant="soft" color="accent" className="shrink-0"><Chip.Label>{rate}x</Chip.Label></Chip>
 }
 
-export default function RelayOneAccountPanel({ onProviderApplied, showMessage, hasConfiguredApiKey }: RelayOneAccountPanelProps) {
+export default function RelayOneAccountPanel({ onProviderApplied, showMessage, hasConfiguredApiKey, statusHost }: RelayOneAccountPanelProps) {
   const [status, setStatus] = useState<RelayOneStatus>(EMPTY_STATUS)
   const [publicSettings, setPublicSettings] = useState<RelayOnePublicSettings | null>(null)
   const [user, setUser] = useState<RelayOneUser | null>(null)
@@ -333,8 +336,35 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   }
 
   if (loading) {
-    return <div className="flex min-h-12 items-center gap-2 border-y border-divider px-1 text-sm text-muted-foreground"><Spinner size="sm" />正在读取 RelayOne 账户...</div>
+    const loadingBar = <div className="flex min-h-12 items-center gap-2 border-y border-divider px-1 text-sm text-muted-foreground"><Spinner size="sm" />正在读取 RelayOne 账户...</div>
+    return statusHost ? createPortal(loadingBar, statusHost) : null
   }
+
+  const rechargeSection = (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2"><Wallet width={16} height={16} /><Typography.Heading level={4} className="text-sm">账户充值</Typography.Heading></div>
+      <TextField fullWidth value={rechargeAmount} onChange={setRechargeAmount}>
+        <Label>充值金额</Label>
+        <InputGroup variant="secondary" fullWidth><InputGroup.Prefix>{checkoutInfo?.currency || 'CNY'}</InputGroup.Prefix><InputGroup.Input type="number" min={checkoutInfo?.minimumAmount || 0.01} max={checkoutInfo?.maximumAmount} step="0.01" /></InputGroup>
+      </TextField>
+      {checkoutInfo?.presetAmounts.length ? <div className="flex flex-wrap gap-2">{checkoutInfo.presetAmounts.map((amount) => <Button key={amount} type="button" variant="outline" size="sm" onPress={() => setRechargeAmount(String(amount))}>{formatMoney(amount, checkoutInfo.currency)}</Button>)}</div> : null}
+      {activePaymentMethods.length > 0 && (
+        <Select selectedKey={paymentMethod || null} onSelectionChange={(key: Key | null) => setPaymentMethod(key == null ? '' : String(key))} placeholder="支付方式" variant="secondary" fullWidth>
+          <Label>支付方式</Label>
+          <Select.Trigger><Select.Value>{({ defaultChildren }) => activePaymentMethods.find((method) => method.id === paymentMethod)?.name || defaultChildren}</Select.Value><Select.Indicator /></Select.Trigger>
+          <Select.Popover><ListBox>{activePaymentMethods.map((method) => <ListBox.Item key={method.id} id={method.id} textValue={method.name}>{method.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+        </Select>
+      )}
+      {order && (
+        <Alert status={order.status === 'paid' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}>
+          <Alert.Indicator>{order.status === 'paid' ? <CircleCheck width={18} height={18} /> : <Wallet width={18} height={18} />}</Alert.Indicator>
+          <Alert.Content><Alert.Title>订单 {statusLabel(order.status)}</Alert.Title><Alert.Description>{formatMoney(order.amount, order.currency)}{order.status === 'pending' ? '，正在每 3 秒查询状态' : ''}</Alert.Description></Alert.Content>
+          {order.paymentUrl && order.status === 'pending' && <Button type="button" variant="outline" size="sm" onPress={() => void window.electronAPI.shell.openExternal(order.paymentUrl!)}><ArrowUpRight width={16} height={16} />打开支付页</Button>}
+          {order.status === 'pending' && <Button type="button" variant="danger-soft" size="sm" onPress={handleCancelOrder} isDisabled={Boolean(action)}>{action === 'cancel-order' && <Spinner size="sm" />}取消订单</Button>}
+        </Alert>
+      )}
+    </div>
+  )
 
   const accountContent = (
     <div className="space-y-5">
@@ -451,7 +481,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
             <div><div className="text-xs text-muted-foreground">余额</div><div className="mt-1 text-sm font-semibold text-success">{formatMoney(user?.balance, checkoutInfo?.currency || 'CNY')}</div></div>
           </section>
 
-          <section className="space-y-3 border-b border-divider pb-3">
+          <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div><Typography.Heading level={4} className="text-sm">API Key</Typography.Heading><Description>新建 Key 会直接应用到 CipherTalk 的 RelayOne 模型配置。</Description></div>
               <Chip size="sm" variant="soft" color="accent"><Chip.Label>{apiKeys.length} 个</Chip.Label></Chip>
@@ -539,34 +569,6 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
             </div>
           </section>
 
-          <section className="mt-0! space-y-3 pt-3">
-            <div className="flex items-center gap-2"><Wallet width={18} height={18} /><Typography.Heading level={4} className="text-sm">账户充值</Typography.Heading></div>
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
-              <TextField fullWidth value={rechargeAmount} onChange={setRechargeAmount}>
-                <Label>充值金额</Label>
-                <InputGroup variant="secondary" fullWidth><InputGroup.Prefix>{checkoutInfo?.currency || 'CNY'}</InputGroup.Prefix><InputGroup.Input type="number" min={checkoutInfo?.minimumAmount || 0.01} max={checkoutInfo?.maximumAmount} step="0.01" /></InputGroup>
-              </TextField>
-              {activePaymentMethods.length > 0 ? (
-                <Select selectedKey={paymentMethod || null} onSelectionChange={(key: Key | null) => setPaymentMethod(key == null ? '' : String(key))} placeholder="支付方式" variant="secondary" fullWidth>
-                  <Label>支付方式</Label>
-                  <Select.Trigger><Select.Value>{({ defaultChildren }) => activePaymentMethods.find((method) => method.id === paymentMethod)?.name || defaultChildren}</Select.Value><Select.Indicator /></Select.Trigger>
-                  <Select.Popover><ListBox>{activePaymentMethods.map((method) => <ListBox.Item key={method.id} id={method.id} textValue={method.name}>{method.name}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
-                </Select>
-              ) : <div />}
-              <Button type="button" variant="primary" size="sm" className="self-end" onPress={handleCreateOrder} isDisabled={Boolean(action) || !paymentMethod}>
-                {action === 'create-order' ? <Spinner size="sm" /> : <ArrowUpRight width={16} height={16} />}创建订单
-              </Button>
-            </div>
-            {checkoutInfo?.presetAmounts.length ? <div className="flex flex-wrap gap-2">{checkoutInfo.presetAmounts.map((amount) => <Button key={amount} type="button" variant="outline" size="sm" onPress={() => setRechargeAmount(String(amount))}>{formatMoney(amount, checkoutInfo.currency)}</Button>)}</div> : null}
-            {order && (
-              <Alert status={order.status === 'paid' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}>
-                <Alert.Indicator>{order.status === 'paid' ? <CircleCheck width={18} height={18} /> : <Wallet width={18} height={18} />}</Alert.Indicator>
-                <Alert.Content><Alert.Title>订单 {statusLabel(order.status)}</Alert.Title><Alert.Description>{order.id} · {formatMoney(order.amount, order.currency)}{order.status === 'pending' ? '，正在每 3 秒查询状态' : ''}</Alert.Description></Alert.Content>
-                {order.paymentUrl && order.status === 'pending' && <Button type="button" variant="outline" size="sm" onPress={() => void window.electronAPI.shell.openExternal(order.paymentUrl!)}><ArrowUpRight width={16} height={16} />打开支付页</Button>}
-                {order.status === 'pending' && <Button type="button" variant="danger-soft" size="sm" onPress={handleCancelOrder} isDisabled={Boolean(action)}>{action === 'cancel-order' && <Spinner size="sm" />}取消订单</Button>}
-              </Alert>
-            )}
-          </section>
         </div>
       )}
     </div>
@@ -611,37 +613,62 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     </Modal>
   )
 
+  const statusBar = (
+    <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-y border-divider py-2.5">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent-soft-foreground">
+        <Wallet width={17} height={17} />
+      </div>
+      <div className="min-w-32 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-sm font-medium text-foreground">RelayOne 账户</span>
+          <Chip size="sm" variant="soft" color={status.authenticated ? 'success' : 'default'}>
+            <Chip.Label>{status.authenticated ? '已登录' : '未登录'}</Chip.Label>
+          </Chip>
+        </div>
+        <div className={`mt-0.5 truncate text-xs ${error ? 'text-danger' : 'text-muted-foreground'}`}>
+          {error || (status.authenticated ? (user?.email || status.user?.email || 'RelayOne 用户') : '尚未登录')}
+        </div>
+      </div>
+      {status.authenticated && (
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-sm font-semibold text-success">{formatMoney(user?.balance, checkoutInfo?.currency || 'CNY')}</span>
+          <Chip size="sm" variant="soft" color={hasConfiguredApiKey ? 'accent' : 'warning'}>
+            <Chip.Label>{hasConfiguredApiKey ? 'Key 已应用' : '未应用 Key'}</Chip.Label>
+          </Chip>
+        </div>
+      )}
+      {!status.encryptionAvailable && <span className="shrink-0 text-xs text-warning">仅本次会话</span>}
+    </div>
+  )
+
   return (
     <>
-      <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-y border-divider py-2.5">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent-soft-foreground">
-          <Wallet width={17} height={17} />
-        </div>
-        <div className="min-w-32 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-sm font-medium text-foreground">RelayOne 账户</span>
-            <Chip size="sm" variant="soft" color={status.authenticated ? 'success' : 'default'}>
-              <Chip.Label>{status.authenticated ? '已登录' : '未登录'}</Chip.Label>
-            </Chip>
-          </div>
-          <div className={`mt-0.5 truncate text-xs ${error ? 'text-danger' : 'text-muted-foreground'}`}>
-            {error || (status.authenticated ? (user?.email || status.user?.email || 'RelayOne 用户') : '尚未登录')}
-          </div>
-        </div>
-        {status.authenticated && (
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-sm font-semibold text-success">{formatMoney(user?.balance, checkoutInfo?.currency || 'CNY')}</span>
-            <Chip size="sm" variant="soft" color={hasConfiguredApiKey ? 'accent' : 'warning'}>
-              <Chip.Label>{hasConfiguredApiKey ? 'Key 已应用' : '未应用 Key'}</Chip.Label>
-            </Chip>
-          </div>
-        )}
-        {!status.encryptionAvailable && <span className="shrink-0 text-xs text-warning">仅本次会话</span>}
-        <Button type="button" variant="primary" size="sm" className="shrink-0" onPress={() => setAccountModalOpen(true)}>
-          <Wallet width={16} height={16} />
-          {status.authenticated ? (hasConfiguredApiKey ? '账户管理' : '创建 Key') : '登录 / 注册'}
-        </Button>
-      </div>
+      {statusHost && createPortal(statusBar, statusHost)}
+      <Card>
+        <Card.Content>
+          {status.authenticated ? rechargeSection : (
+            <div className="text-sm text-muted-foreground">登录 RelayOne 账户后可直接充值并创建 API Key。</div>
+          )}
+        </Card.Content>
+
+        <Card.Footer className="gap-2 *:min-w-0 *:flex-1">
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className="bg-amber-700! text-white! hover:bg-amber-800!"
+            onPress={() => setAccountModalOpen(true)}
+          >
+            <PersonNutHex width={16} height={16} />
+            {status.authenticated ? (hasConfiguredApiKey ? '账户管理' : '创建 Key') : '登录 / 注册'}
+          </Button>
+          {status.authenticated && (
+            <Button type="button" variant="primary" size="sm" onPress={handleCreateOrder} isDisabled={Boolean(action) || !paymentMethod}>
+              {action === 'create-order' ? <Spinner size="sm" /> : <QrCode width={16} height={16} />}充值
+            </Button>
+          )}
+        </Card.Footer>
+      </Card>
       {createPortal(accountModal, document.body)}
     </>
   )

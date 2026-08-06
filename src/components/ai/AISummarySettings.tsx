@@ -348,6 +348,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
   const [ollamaGuideContent, setOllamaGuideContent] = useState('')
   const [customGuideContent, setCustomGuideContent] = useState('')
   const [settingsPagePortalHost, setSettingsPagePortalHost] = useState<HTMLElement | null>(null)
+  const [relayOneStatusHost, setRelayOneStatusHost] = useState<HTMLDivElement | null>(null)
   const savePresetModalState = useOverlayState({
     isOpen: showSavePresetDialog,
     onOpenChange: setShowSavePresetDialog
@@ -962,15 +963,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
 
             <Form onSubmit={handleSaveCurrentProvider}>
               <Card.Content>
-                {provider === 'relayone' && (
-                  <div className="mb-4">
-                    <RelayOneAccountPanel
-                      onProviderApplied={handleRelayOneProviderApplied}
-                      showMessage={showMessage}
-                      hasConfiguredApiKey={Boolean(apiKey.trim())}
-                    />
-                  </div>
-                )}
+                {provider === 'relayone' && <div className="mb-4" ref={setRelayOneStatusHost} />}
                 <Fieldset className="w-full">
                   <Fieldset.Group className="grid gap-4">
                     <Select
@@ -1003,59 +996,29 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                       </Select.Popover>
                     </Select>
 
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    {currentProvider?.allowCustomBaseURL && (
-                      <TextField fullWidth value={baseURL} onChange={setBaseURL}>
-                        <Label>服务地址</Label>
-                        <InputGroup variant="secondary" fullWidth>
-                          <InputGroup.Input placeholder={provider === 'ollama' ? 'http://localhost:11434/v1' : 'https://api.example.com/v1'} />
-                          <InputGroup.Suffix>
-                            <Tooltip delay={0}>
-                              <Button
-                                type="button"
-                                variant="tertiary"
-                                size="sm"
-                                isIconOnly
-                                onPress={provider === 'ollama' ? openOllamaGuide : openCustomGuide}
-                                aria-label="查看接入指南"
-                              >
-                                <CircleQuestion width={18} height={18} />
-                              </Button>
-                              <Tooltip.Content>查看接入指南</Tooltip.Content>
-                            </Tooltip>
-                          </InputGroup.Suffix>
-                        </InputGroup>
-                      </TextField>
-                    )}
-
-                    {!!currentProvider?.protocolOptions?.length && (
-                      <Select
-                        selectedKey={customProtocol}
-                        onSelectionChange={(key) => {
-                          if (key != null) setCustomProtocol(key as AiProviderProtocol)
-                        }}
-                        placeholder="请选择协议"
-                        variant="secondary"
-                        fullWidth
-                      >
-                        <Label>协议</Label>
-                        <Select.Trigger>
-                          <Select.Value>{({ defaultChildren }) => currentProtocolOption?.label ?? defaultChildren}</Select.Value>
-                          <Select.Indicator />
-                        </Select.Trigger>
-                        <Select.Popover>
-                          <ListBox>
-                            {protocolOptions.map(option => (
-                              <ListBox.Item key={option.value} id={option.value} textValue={option.label} className="shrink-0">
-                                {option.label}
-                                <ListBox.ItemIndicator />
-                              </ListBox.Item>
-                            ))}
-                          </ListBox>
-                        </Select.Popover>
-                      </Select>
-                    )}
-                  </div>
+                  {currentProvider?.allowCustomBaseURL && (
+                    <TextField fullWidth value={baseURL} onChange={setBaseURL}>
+                      <Label>服务地址</Label>
+                      <InputGroup variant="secondary" fullWidth>
+                        <InputGroup.Input placeholder={provider === 'ollama' ? 'http://localhost:11434/v1' : 'https://api.example.com/v1'} />
+                        <InputGroup.Suffix>
+                          <Tooltip delay={0}>
+                            <Button
+                              type="button"
+                              variant="tertiary"
+                              size="sm"
+                              isIconOnly
+                              onPress={provider === 'ollama' ? openOllamaGuide : openCustomGuide}
+                              aria-label="查看接入指南"
+                            >
+                              <CircleQuestion width={18} height={18} />
+                            </Button>
+                            <Tooltip.Content>查看接入指南</Tooltip.Content>
+                          </Tooltip>
+                        </InputGroup.Suffix>
+                      </InputGroup>
+                    </TextField>
+                  )}
 
                   {!isCodexSubscription && (
                     <div className="space-y-1">
@@ -1083,11 +1046,41 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                           </InputGroup.Suffix>
                         </InputGroup>
                       </TextField>
-                      {provider === 'relayone' && <Description>通过上方账户创建 Key 后会自动填入，并刷新模型列表。</Description>}
+                      {provider === 'relayone' && <Description>在 RelayOne 账户卡片中创建 Key 后会自动填入，并刷新模型列表。</Description>}
                     </div>
                   )}
 
-                  <div className="space-y-2">
+                  <div className={`grid items-start gap-4 ${currentProvider?.protocolOptions?.length ? 'lg:grid-cols-2' : ''}`}>
+                    {!!currentProvider?.protocolOptions?.length && (
+                      <Select
+                        selectedKey={customProtocol}
+                        onSelectionChange={(key) => {
+                          if (key != null) setCustomProtocol(key as AiProviderProtocol)
+                        }}
+                        placeholder="请选择协议"
+                        variant="secondary"
+                        fullWidth
+                        className="min-w-0"
+                      >
+                        <Label>协议</Label>
+                        <Select.Trigger>
+                          <Select.Value>{({ defaultChildren }) => currentProtocolOption?.label ?? defaultChildren}</Select.Value>
+                          <Select.Indicator />
+                        </Select.Trigger>
+                        <Select.Popover>
+                          <ListBox>
+                            {protocolOptions.map(option => (
+                              <ListBox.Item key={option.value} id={option.value} textValue={option.label} className="shrink-0">
+                                {option.label}
+                                <ListBox.ItemIndicator />
+                              </ListBox.Item>
+                            ))}
+                          </ListBox>
+                        </Select.Popover>
+                      </Select>
+                    )}
+
+                  <div className="min-w-0 space-y-2">
                     <div className="flex min-w-0 items-end gap-2">
                       <ComboBox
                         allowsCustomValue
@@ -1145,6 +1138,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                       <Description>{remoteModels.length > 0 ? '远程模型列表' : '在线模型列表'}</Description>
                     )}
                   </div>
+                  </div>
                   </Fieldset.Group>
                 </Fieldset>
               </Card.Content>
@@ -1162,6 +1156,15 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
           </Card>
 
           <aside className="space-y-4">
+            {provider === 'relayone' && (
+              <RelayOneAccountPanel
+                onProviderApplied={handleRelayOneProviderApplied}
+                showMessage={showMessage}
+                hasConfiguredApiKey={Boolean(apiKey.trim())}
+                statusHost={relayOneStatusHost}
+              />
+            )}
+
             <Card>
               <Card.Header className="flex-row items-center gap-3">
                 <AIProviderLogo providerId={provider} logo={currentProvider?.logo} alt={currentProvider?.displayName || provider} className="shrink-0" size={34} />
