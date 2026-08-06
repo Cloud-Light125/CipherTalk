@@ -971,6 +971,35 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
+  ipcMain.handle('agent:getChatSummary', async (_event, payload: { sessionId: string; range: string }) => {
+    try {
+      const { agentConversationStore } = await import('../../services/agent/conversationStore')
+      return { success: true, summary: agentConversationStore.getChatSummary(payload?.sessionId, payload?.range) }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  ipcMain.handle('agent:saveChatSummary', async (_event, payload: {
+    sessionId: string
+    range: string
+    displayName?: string
+    content: string
+  }) => {
+    try {
+      const { agentConversationStore } = await import('../../services/agent/conversationStore')
+      agentConversationStore.saveChatSummary({
+        sessionId: payload?.sessionId,
+        rangeKey: payload?.range,
+        displayName: payload?.displayName,
+        content: payload?.content,
+      })
+      return { success: true }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   ipcMain.handle('agent:createConversation', async (_event, payload: {
     scope?: AgentScope
     title?: string

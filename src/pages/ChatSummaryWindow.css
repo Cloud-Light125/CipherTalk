@@ -61,6 +61,13 @@
     padding: 8px 16px 4px;
 }
 
+.chat-summary-cached-at {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
 .chat-summary-progress {
     display: flex;
     align-items: center;

@@ -37,6 +37,23 @@ export interface AgentConversationLoaded extends AgentConversationRecord {
   messages: UIMessage[]
 }
 
+/** 聊天摘要缓存：按 会话 + 时间范围 存最新一份 */
+export interface ChatSummaryRecord {
+  sessionId: string
+  rangeKey: string
+  displayName: string
+  content: string
+  createdAt: number
+  updatedAt: number
+}
+
+interface ChatSummaryRow {
+  displayName?: string
+  content?: string
+  createdAt?: number
+  updatedAt?: number
+}
+
 export type AgentConversationChangeType =
   | 'created'
   | 'messages-appended'
@@ -512,6 +529,51 @@ export class AgentConversationStore {
 
   getLast(scope?: AgentScope): AgentConversationRecord | null {
     return this.list({ scope, limit: 1 })[0] || null
+  }
+
+  /** 读取某会话某时间范围的摘要缓存 */
+  getChatSummary(sessionId: string, rangeKey: string): ChatSummaryRecord | null {
+    const id = String(sessionId || '').trim()
+    const range = String(rangeKey || '').trim()
+    if (!id || !range) return null
+    const row = this.getDb().prepare(`
+      SELECT display_name AS displayName, content, created_at AS createdAt, updated_at AS updatedAt
+      FROM chat_summaries
+      WHERE account_id = ? AND session_id = ? AND range_key = ?
+    `).get(this.getAccountId(), id, range) as ChatSummaryRow | undefined
+    if (!row?.content) return null
+    return {
+      sessionId: id,
+      rangeKey: range,
+      displayName: String(row.displayName || ''),
+      content: String(row.content),
+      createdAt: Number(row.createdAt || 0),
+      updatedAt: Number(row.updatedAt || 0),
+    }
+  }
+
+  /** 写入摘要缓存，同会话同范围覆盖（保留首次生成时间） */
+  saveChatSummary(input: { sessionId: string; rangeKey: string; displayName?: string; content: string }): void {
+    const id = String(input?.sessionId || '').trim()
+    const range = String(input?.rangeKey || '').trim()
+    const content = String(input?.content || '').trim()
+    if (!id || !range || !content) return
+    const now = Date.now()
+    this.getDb().prepare(`
+      INSERT INTO chat_summaries (account_id, session_id, range_key, display_name, content, created_at, updated_at)
+      VALUES (@accountId, @sessionId, @rangeKey, @displayName, @content, @now, @now)
+      ON CONFLICT(account_id, session_id, range_key) DO UPDATE SET
+        display_name = excluded.display_name,
+        content = excluded.content,
+        updated_at = excluded.updated_at
+    `).run({
+      accountId: this.getAccountId(),
+      sessionId: id,
+      rangeKey: range,
+      displayName: String(input?.displayName || ''),
+      content,
+      now,
+    })
   }
 }
 

@@ -86,6 +86,18 @@ export function ensureAgentConversationSchema(db: Database.Database): void {
     );
 
     DROP TABLE IF EXISTS agent_raw_responses;
+
+    -- 聊天摘要缓存：同一会话+时间范围只保留最新一份，重新生成即覆盖
+    CREATE TABLE IF NOT EXISTS chat_summaries (
+      account_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      range_key TEXT NOT NULL,
+      display_name TEXT NOT NULL DEFAULT '',
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (account_id, session_id, range_key)
+    );
   `)
 
   // CREATE TABLE IF NOT EXISTS does not add new columns to an existing database.

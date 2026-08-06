@@ -220,6 +220,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('agent:loadConversation', id) as Promise<{ success: boolean; conversation?: unknown; error?: string }>,
     createConversation: (payload: unknown) =>
       ipcRenderer.invoke('agent:createConversation', payload) as Promise<{ success: boolean; conversation?: unknown; error?: string }>,
+    // 聊天摘要缓存：同会话+时间范围只存最新一份
+    getChatSummary: (payload: { sessionId: string; range: string }) =>
+      ipcRenderer.invoke('agent:getChatSummary', payload) as Promise<{ success: boolean; summary?: unknown; error?: string }>,
+    saveChatSummary: (payload: { sessionId: string; range: string; displayName?: string; content: string }) =>
+      ipcRenderer.invoke('agent:saveChatSummary', payload) as Promise<{ success: boolean; error?: string }>,
     deleteConversation: (idOrPayload: number | { id?: number; originClientId?: string | null }) =>
       ipcRenderer.invoke('agent:deleteConversation', idOrPayload) as Promise<{ success: boolean; error?: string }>,
     deleteConversationsByScope: (scope: unknown) =>

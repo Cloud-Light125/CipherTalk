@@ -1649,6 +1649,13 @@ export interface ElectronAPI {
     listConversations: (scope?: unknown) => Promise<{ success: boolean; conversations?: unknown[]; error?: string }>
     loadConversation: (id: number) => Promise<{ success: boolean; conversation?: unknown; error?: string }>
     createConversation: (payload: unknown) => Promise<{ success: boolean; conversation?: unknown; error?: string }>
+    /** 聊天摘要缓存：同会话+时间范围只存最新一份，重新生成即覆盖 */
+    getChatSummary: (payload: { sessionId: string; range: string }) => Promise<{
+      success: boolean
+      summary?: { sessionId: string; rangeKey: string; displayName: string; content: string; createdAt: number; updatedAt: number } | null
+      error?: string
+    }>
+    saveChatSummary: (payload: { sessionId: string; range: string; displayName?: string; content: string }) => Promise<{ success: boolean; error?: string }>
     deleteConversation: (idOrPayload: number | { id?: number; originClientId?: string | null }) => Promise<{ success: boolean; error?: string }>
     deleteConversationsByScope: (scope: unknown) => Promise<{ success: boolean; deleted?: number; error?: string }>
     renameConversation: (id: number, title: string, originClientId?: string | null) => Promise<{ success: boolean; conversation?: unknown; error?: string }>

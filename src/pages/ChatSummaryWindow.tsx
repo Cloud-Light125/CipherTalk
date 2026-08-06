@@ -88,17 +88,46 @@ export default function ChatSummaryWindow() {
   const startSummary = () => {
     setMessages([])
     setProgressText('')
+    setCachedAt(0)
     void sendMessage({ parts: [{ type: 'text', text: buildSummaryPrompt(displayName, isGroup, range) }] })
   }
 
-  // 挂载即跑首轮；StrictMode 下 effect 会跑两次，用 ref 挡住
+  // 摘要缓存：命中就直接展示旧结果，不再烧一轮 token；生成时间显示在结果下方
+  const [cachedAt, setCachedAt] = useState(0)
+
+  // 挂载先查缓存，没有才跑；StrictMode 下 effect 会跑两次，用 ref 挡住
   const startedRef = useRef(false)
   useEffect(() => {
     if (startedRef.current || !sessionId) return
     startedRef.current = true
-    startSummary()
+    void window.electronAPI.agent.getChatSummary({ sessionId, range })
+      .then((res) => {
+        const cached = res.success ? res.summary : null
+        if (!cached?.content) {
+          startSummary()
+          return
+        }
+        // 还原成一轮完整对话，首条提示词照旧隐藏，后续追问能接着上下文
+        setMessages([
+          { id: 'cached-prompt', role: 'user', parts: [{ type: 'text', text: buildSummaryPrompt(displayName, isGroup, range) }] },
+          { id: 'cached-summary', role: 'assistant', parts: [{ type: 'text', text: cached.content }] },
+        ])
+        setCachedAt(cached.updatedAt)
+      })
+      .catch(() => startSummary())
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时跑一次
   }, [sessionId])
+
+  // 首轮摘要生成完就落盘（追问产生的后续消息不覆盖摘要）
+  useEffect(() => {
+    if (busy || cachedAt) return
+    const first = messages.find((message) => message.role === 'assistant')
+    const text = first ? textOf(first.parts as { type: string; text?: string }[]) : ''
+    if (!text) return
+    void window.electronAPI.agent.saveChatSummary({ sessionId, range, displayName, content: text })
+      .then(() => setCachedAt(Date.now()))
+      .catch(() => { /* 存不下不影响本次查看 */ })
+  }, [busy, cachedAt, messages, sessionId, range, displayName])
 
   const handleSubmit = (message: PromptInputMessage) => {
     const text = message.text?.trim()
@@ -159,6 +188,11 @@ export default function ChatSummaryWindow() {
                           <ArrowsRotateLeft className="size-3.5" />
                         </MessageAction>
                       </MessageActions>
+                      {cachedAt > 0 && message.id === 'cached-summary' && (
+                        <span className="chat-summary-cached-at">
+                          生成于 {new Date(cachedAt).toLocaleString('zh-CN', { hour12: false })}
+                        </span>
+                      )}
                     </div>
                   )}
                 </MessageContent>
