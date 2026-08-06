@@ -2026,6 +2026,9 @@ export default function AgentPage() {
     }
     if (busy) {
       void stop()
+      // 审批恢复的运行被手动停止时收不到 run_finished，这里必须同步清掉 pending，
+      // 否则 effectiveStatus 永远停在 streaming，按钮卡在停止图标
+      setAgentRunPending(false)
       setSubAgentProgress([])
       return
     }
@@ -2175,11 +2178,16 @@ export default function AgentPage() {
     setSubAgentProgress([])
     runIsPlanRef.current = false
     submitScopeRef.current = activeScopeRef.current
-      await addToolApprovalResponse({
-        id: approvalId,
-        approved,
-        reason: approved ? '用户已确认' : '用户拒绝',
-      })
+      try {
+        await addToolApprovalResponse({
+          id: approvalId,
+          approved,
+          reason: approved ? '用户已确认' : '用户拒绝',
+        })
+      } catch {
+        // 审批提交失败不会有 run_finished 事件来清 pending，必须自己清，否则停止图标卡死
+        setAgentRunPending(false)
+      }
     })()
   }, [addToolApprovalResponse, busy, localAgentRunning])
 
