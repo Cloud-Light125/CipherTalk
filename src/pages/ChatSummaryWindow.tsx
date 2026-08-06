@@ -6,11 +6,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useChat } from '@ai-sdk/react'
-import { Button } from '@heroui/react'
-import { ArrowsRotateLeft } from '@gravity-ui/icons'
+import { ArrowsRotateLeft, Check, Copy, Volume } from '@gravity-ui/icons'
 import { Conversation, ConversationContent, ConversationScrollButton } from '@/components/ai-elements/conversation'
-import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message'
+import { Message, MessageAction, MessageActions, MessageContent, MessageResponse } from '@/components/ai-elements/message'
 import { Loader } from '@/components/ai-elements/loader'
+import { useTtsSpeaker } from '@/lib/ttsPlayer'
 import {
   PromptInput,
   PromptInputBody,
@@ -63,6 +63,17 @@ export default function ChatSummaryWindow() {
   const { messages, sendMessage, setMessages, status, stop, error } = useChat({ transport, experimental_throttle: 50 })
   const busy = status === 'submitted' || status === 'streaming'
 
+  // 消息操作条：复制/朗读/重新生成，悬停消息时显示（与 Agent 页一致）
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const { speakingKey, speak: speakMessage, stop: stopSpeaking } = useTtsSpeaker()
+  useEffect(() => () => { stopSpeaking() }, [stopSpeaking])
+  const handleCopy = async (id: string, text: string) => {
+    if (!text || !navigator.clipboard?.writeText) return
+    await navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    window.setTimeout(() => setCopiedId((current) => current === id ? null : current), 1600)
+  }
+
   const startSummary = () => {
     setMessages([])
     setProgressText('')
@@ -106,12 +117,36 @@ export default function ChatSummaryWindow() {
             if (isFirstPrompt) return null
             const text = textOf(message.parts as { type: string; text?: string }[])
             if (!text) return null
+            const speaking = speakingKey === message.id
             return (
               <Message key={message.id} from={message.role}>
                 <MessageContent>
                   {message.role === 'assistant'
                     ? <MessageResponse isStreaming={busy}>{text}</MessageResponse>
                     : text}
+                  {message.role === 'assistant' && !busy && (
+                    <div className="mt-2 transition-opacity pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                      <MessageActions className="shrink-0">
+                        <MessageAction
+                          label="复制"
+                          onClick={() => void handleCopy(message.id, text)}
+                          tooltip={copiedId === message.id ? '已复制' : '复制'}
+                        >
+                          {copiedId === message.id ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                        </MessageAction>
+                        <MessageAction
+                          label={speaking ? '停止播放' : '播放'}
+                          onClick={() => { if (speaking) stopSpeaking(); else void speakMessage(message.id, text) }}
+                          tooltip={speaking ? '停止播放' : '播放'}
+                        >
+                          <Volume className={`size-3.5 ${speaking ? 'text-accent-foreground' : ''}`} />
+                        </MessageAction>
+                        <MessageAction label="重新生成" onClick={startSummary} tooltip="重新生成">
+                          <ArrowsRotateLeft className="size-3.5" />
+                        </MessageAction>
+                      </MessageActions>
+                    </div>
+                  )}
                 </MessageContent>
               </Message>
             )
@@ -123,14 +158,6 @@ export default function ChatSummaryWindow() {
             </div>
           )}
           {error && <div className="chat-summary-error">{error.message}</div>}
-          {!busy && messages.some((message) => message.role === 'assistant') && (
-            <div>
-              <Button size="sm" variant="ghost" onPress={startSummary}>
-                <ArrowsRotateLeft width={15} height={15} />
-                重新生成
-              </Button>
-            </div>
-          )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
