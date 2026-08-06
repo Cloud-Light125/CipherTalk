@@ -123,26 +123,27 @@ export default function ChatSummaryWindow() {
             </div>
           )}
           {error && <div className="chat-summary-error">{error.message}</div>}
+          {!busy && messages.some((message) => message.role === 'assistant') && (
+            <div>
+              <Button size="sm" variant="ghost" onPress={startSummary}>
+                <ArrowsRotateLeft width={15} height={15} />
+                重新生成
+              </Button>
+            </div>
+          )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
 
       <div className="chat-summary-footer">
-        <Button
-          size="sm"
-          variant="ghost"
-          isDisabled={busy}
-          onPress={startSummary}
-          className="chat-summary-regen"
+        <PromptInput
+          className="chat-summary-input w-full **:data-[slot=input-group]:border-border **:data-[slot=input-group]:bg-surface/55 **:data-[slot=input-group]:shadow-lg"
+          onSubmit={handleSubmit}
         >
-          <ArrowsRotateLeft width={15} height={15} />
-          重新生成
-        </Button>
-        <PromptInput className="chat-summary-input" onSubmit={handleSubmit}>
           <PromptInputBody>
-            <PromptInputTextarea placeholder="就这份摘要继续追问…" />
+            <PromptInputTextarea className="min-h-10 max-h-40 py-2 text-sm leading-5" placeholder="就这份摘要继续追问…" />
           </PromptInputBody>
-          <PromptInputFooter>
+          <PromptInputFooter className="items-center px-2.5 pt-1 pb-2">
             <span />
             <PromptInputSubmit status={status} onClick={busy ? () => void stop() : undefined} />
           </PromptInputFooter>

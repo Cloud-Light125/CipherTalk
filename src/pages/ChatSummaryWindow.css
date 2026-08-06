@@ -69,10 +69,6 @@
     -webkit-app-region: no-drag;
 }
 
-.chat-summary-regen {
-    align-self: flex-start;
-}
-
 .chat-summary-empty {
     display: grid;
     place-items: center;
