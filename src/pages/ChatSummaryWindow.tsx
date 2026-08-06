@@ -48,6 +48,17 @@ export default function ChatSummaryWindow() {
   const isGroup = sessionId.endsWith('@chatroom')
 
   const [progressText, setProgressText] = useState('')
+  // 标题栏头像：加载失败或没有头像时退回首字母
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [avatarFailed, setAvatarFailed] = useState(false)
+  useEffect(() => {
+    if (!sessionId) return
+    let cancelled = false
+    void window.electronAPI.chat.getSessionDetail(sessionId).then((res) => {
+      if (!cancelled && res.success && res.detail?.avatarUrl) setAvatarUrl(res.detail.avatarUrl)
+    }).catch(() => { /* 取不到头像用首字母兜底 */ })
+    return () => { cancelled = true }
+  }, [sessionId])
   const scope = useMemo<AgentScope>(() => ({ kind: 'session', sessionId, displayName }), [sessionId, displayName])
   const scopeRef = useRef(scope)
   scopeRef.current = scope
@@ -103,6 +114,9 @@ export default function ChatSummaryWindow() {
     <div className="chat-summary-window">
       <div className="chat-summary-titlebar">
         <div className="chat-summary-title">
+          {avatarUrl && !avatarFailed
+            ? <img className="chat-summary-avatar" src={avatarUrl} alt={displayName} onError={() => setAvatarFailed(true)} />
+            : <span className="chat-summary-avatar chat-summary-avatar--fallback">{displayName.trim().slice(0, 1)}</span>}
           <strong>{displayName}</strong>
           <span className="chat-summary-range">{range}的聊天摘要</span>
         </div>

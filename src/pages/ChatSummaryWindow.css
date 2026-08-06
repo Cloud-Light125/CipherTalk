@@ -19,13 +19,28 @@
 
 .chat-summary-title {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
     font-size: 13px;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.chat-summary-avatar {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.chat-summary-avatar--fallback {
+    display: grid;
+    place-items: center;
+    background: var(--bg-tertiary, rgba(127, 127, 127, .2));
+    font-size: 11px;
 }
 
 .chat-summary-range {
