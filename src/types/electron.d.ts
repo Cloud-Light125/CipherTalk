@@ -198,8 +198,8 @@ export interface AgentCanvasRefData {
   action: 'created' | 'updated' | 'renamed' | 'restored'
 }
 
-export type TtsProviderId = 'xiaomi' | 'volcengine' | 'aliyun-qwen'
-export type TtsProtocol = 'xiaomi-mimo-tts' | 'volcengine-bidirectional' | 'aliyun-qwen-realtime'
+export type TtsProviderId = 'xiaomi' | 'volcengine' | 'aliyun-qwen' | 'stepfun'
+export type TtsProtocol = 'xiaomi-mimo-tts' | 'volcengine-bidirectional' | 'aliyun-qwen-realtime' | 'stepfun-speech'
 
 export interface TtsProviderConfig {
   protocol: TtsProtocol
