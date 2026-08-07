@@ -278,32 +278,43 @@ function ProviderOptionContent({ providerInfo }: { providerInfo: AIProviderInfo 
   )
 }
 
+/** 同首页「开发者愿景」的做法：整屏模糊遮罩 + 内容直接铺在上面，不套卡片，整层滚动。 */
 function GuideModal({ title, html, onClose }: { title: string; html: string; onClose: () => void }) {
-  const modalState = useOverlayState({
-    defaultOpen: true,
-    onOpenChange: (open) => {
-      if (!open) onClose()
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
     }
-  })
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
 
-  return (
-    <Modal state={modalState}>
-      <Modal.Backdrop variant="blur">
-        <Modal.Container size="lg" scroll="inside" placement="center">
-          <Modal.Dialog>
-            <Modal.Header className="items-center justify-between">
-              <Modal.Heading className="text-base font-semibold text-foreground">{title}</Modal.Heading>
-              <CloseButton aria-label="关闭指南" onPress={onClose} />
-            </Modal.Header>
-            <Modal.Body>
-              <Typography.Prose className="max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: html || '<p>加载中...</p>' }} />
-              </Typography.Prose>
-            </Modal.Body>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
+  // 原生窗口控件画在最上层，遮罩盖不住，只能让主进程收起来（同开发者愿景）
+  useEffect(() => {
+    const symbolColor = () => (document.documentElement.dataset.mode === 'dark' ? '#ffffff' : '#1a1a1a')
+    window.electronAPI?.window?.setTitleBarOverlay?.({ hidden: true, symbolColor: symbolColor() })
+    return () => {
+      window.electronAPI?.window?.setTitleBarOverlay?.({ hidden: false, symbolColor: symbolColor() })
+    }
+  }, [])
+
+  // 必须挂到 body：设置页祖先有 backdrop-filter，会成为 fixed 的包含块，不挂出去只能盖住主区域
+  return createPortal(
+    <div
+      aria-label={title}
+      aria-modal="true"
+      className="fixed inset-0 overflow-hidden bg-backdrop backdrop-blur-xl"
+      role="dialog"
+      style={{ zIndex: 2000 }}
+    >
+      {/* 关闭按钮与滚动容器平级，才不会跟着内容滚 */}
+      <CloseButton aria-label="关闭指南" className="absolute right-5 top-5 z-10 sm:right-8 sm:top-8" onPress={onClose} />
+      <div className="size-full overflow-y-auto">
+        <Typography.Prose className="mx-auto max-w-3xl px-5 py-16 sm:px-10">
+          <div dangerouslySetInnerHTML={{ __html: html || '<p>加载中...</p>' }} />
+        </Typography.Prose>
+      </div>
+    </div>,
+    document.body
   )
 }
 
