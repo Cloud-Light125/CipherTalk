@@ -417,6 +417,20 @@ function responseRequestUrl(input: FetchRequestInput): URL {
   return new URL(input.url)
 }
 
+export function sanitizeCodexSubscriptionResponsesBody(bodyText: string): string {
+  try {
+    const payload = JSON.parse(bodyText) as Record<string, unknown>
+    const hasUnsupportedParameter = Object.prototype.hasOwnProperty.call(payload, 'max_output_tokens')
+      || Object.prototype.hasOwnProperty.call(payload, 'temperature')
+    if (!hasUnsupportedParameter) return bodyText
+    delete payload.max_output_tokens
+    delete payload.temperature
+    return JSON.stringify(payload)
+  } catch {
+    return bodyText
+  }
+}
+
 async function sanitizeResponsesBody(input: FetchRequestInput, init?: RequestInit): Promise<RequestInit['body']> {
   const directBody = init?.body
   let text: string | null = typeof directBody === 'string' ? directBody : null
@@ -428,14 +442,8 @@ async function sanitizeResponsesBody(input: FetchRequestInput, init?: RequestIni
     }
   }
   if (!text) return directBody
-  try {
-    const payload = JSON.parse(text) as Record<string, unknown>
-    if (!Object.prototype.hasOwnProperty.call(payload, 'max_output_tokens')) return directBody ?? text
-    delete payload.max_output_tokens
-    return JSON.stringify(payload)
-  } catch {
-    return directBody
-  }
+  const sanitized = sanitizeCodexSubscriptionResponsesBody(text)
+  return sanitized === text ? (directBody ?? text) : sanitized
 }
 
 export function createCodexSubscriptionFetch(options: CodexSubscriptionFetchOptions): typeof globalThis.fetch {

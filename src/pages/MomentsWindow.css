@@ -596,6 +596,10 @@
 .post-item:last-child {
   border-bottom: none;
 }
+/* virtua 给每个 item 包一层定位 div，:last-child 会命中所有行导致分隔线全消失，这里补回 */
+.posts-list--virtual .post-item:last-child {
+  border-bottom: 1px solid var(--border-color);
+}
 
 .post-header {
   display: flex;
