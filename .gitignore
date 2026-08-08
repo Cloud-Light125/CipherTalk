@@ -84,6 +84,8 @@ skills-lock.json
 .heroui-docs/
 release-verify/
 /tools/
+# 手机遥控端：独立私有仓库，在本目录下开发但不进主仓库
+/CipherTalk-Mobile/
 
 # 插件打包产物
 *.ctp

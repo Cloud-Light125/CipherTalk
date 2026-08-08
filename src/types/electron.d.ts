@@ -24,6 +24,7 @@ import type {
   RelayOneUser
 } from './relayOne'
 import type { AgentReasoningEffort } from '../features/aiagent/transport/ipcChatTransport'
+import type { RemoteControlInfo } from '../../electron/services/remote/remoteControl'
 
 /** 全自动回复队列的状态推送，与 electron/services/autoReplyService.ts 的 AutoSendStatus 对应。 */
 export type ReplyTileAutoStatus =
@@ -759,6 +760,11 @@ export interface ElectronAPI {
       onStatus: (callback: (payload: { status: 'disconnected' | 'connecting' | 'connected' | 'error'; botId: string | null; userId: string | null; error: string | null }) => void) => () => void
       onQrcode: (callback: (payload: { qrcodeImage: string }) => void) => () => void
       onScanState: (callback: (payload: { state: 'scaned' | 'failed'; error?: string }) => void) => () => void
+    }
+    remote: {
+      getInfo: () => Promise<RemoteControlInfo>
+      setEnabled: (enabled: boolean) => Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>
+      rotatePairing: () => Promise<{ success: boolean; info: RemoteControlInfo }>
     }
   }
   accounts: {

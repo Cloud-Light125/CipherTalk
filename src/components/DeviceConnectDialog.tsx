@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Chip, Modal, Spinner, toast } from '@heroui/react'
+import { RemotePhoneCard } from './RemotePhoneCard'
 
 type WechatStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 
@@ -141,6 +142,10 @@ export function DeviceConnectDialog({ isOpen, onClose }: { isOpen: boolean; onCl
                 ) : (
                   <Button variant="primary" fullWidth isDisabled={busy} onPress={handleConnect}>连接微信</Button>
                 )}
+
+                <div className="h-px bg-default-200" />
+
+                <RemotePhoneCard />
               </div>
             </Modal.Body>
           </Modal.Dialog>
