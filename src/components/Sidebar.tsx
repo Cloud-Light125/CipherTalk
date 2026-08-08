@@ -9,6 +9,7 @@ import { PluginIcon } from '../features/plugins/PluginIcon'
 import { useDeviceConnectStatus } from '../hooks/useDeviceConnectStatus'
 import { DeviceConnectStatusDot } from './DeviceConnectStatusDot'
 import DeviceConnectDialog from './DeviceConnectDialog'
+import RemotePhoneDialog from './RemotePhoneDialog'
 import { cn } from '../lib/utils'
 
 const EXPANDED_WIDTH = 220
@@ -17,6 +18,7 @@ const NAV_ICON_SIZE = 23
 const SIDEBAR_ACTION_ICON_SIZE = 23
 const APP_DISPLAY_NAME = packageJson.build?.productName || packageJson.name
 const WECHAT_LOGO_SRC = './微信logo.png'
+const CIPHERTALK_LOGO_SRC = './logo.png'
 
 type RouteItem = {
   key: string
@@ -43,10 +45,20 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
   const deviceStatus = useDeviceConnectStatus()
  const [collapsed, setCollapsed] = useState(false)
  const [deviceConnectOpen, setDeviceConnectOpen] = useState(false)
+ const [remotePhoneOpen, setRemotePhoneOpen] = useState(false)
+ const [remoteRunning, setRemoteRunning] = useState(false)
   const [diaryEnabled, setDiaryEnabled] = useState(true)
   const plugins = usePluginStore(state => state.plugins)
 
   useEffect(() => { ensurePluginStoreSubscribed() }, [])
+
+  // 手机遥控开关状态：进来读一次，弹窗关闭时再读（弹窗里可能开关过）
+  useEffect(() => {
+    if (remotePhoneOpen) return
+    window.electronAPI.deviceConnect.remote.getInfo()
+      .then((info) => setRemoteRunning(info.running))
+      .catch(() => undefined)
+  }, [remotePhoneOpen])
  const userDisplayName = userInfo?.nickName?.trim() || userInfo?.alias?.trim() || '未连接用户'
   const userInitial = userDisplayName.slice(0, 1).toUpperCase()
 
@@ -210,6 +222,21 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
     </span>
   )
 
+  const remotePhoneIcon = (
+    <span className="relative inline-flex">
+      <img
+        src={CIPHERTALK_LOGO_SRC}
+        alt=""
+        className="shrink-0 object-contain"
+        style={{ width: SIDEBAR_ACTION_ICON_SIZE, height: SIDEBAR_ACTION_ICON_SIZE }}
+      />
+      <DeviceConnectStatusDot
+        status={remoteRunning ? 'connected' : 'disconnected'}
+        className="absolute -right-0.5 -top-0.5 size-2.5 ring-2 ring-background"
+      />
+    </span>
+  )
+
   return (
     <>
       <aside
@@ -278,6 +305,11 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
 
         <div className={cn('flex flex-col gap-1', collapsed && 'items-center')}>
           {renderNavButton({
+            label: '密语 App',
+            icon: remotePhoneIcon,
+            onPress: () => setRemotePhoneOpen(true),
+          })}
+          {renderNavButton({
             label: 'ClawLink',
             icon: deviceConnectIcon,
             onPress: () => setDeviceConnectOpen(true),
@@ -297,6 +329,7 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
       </div>
       </aside>
       <DeviceConnectDialog isOpen={deviceConnectOpen} onClose={() => setDeviceConnectOpen(false)} />
+      <RemotePhoneDialog isOpen={remotePhoneOpen} onClose={() => setRemotePhoneOpen(false)} />
     </>
   )
 }
