@@ -53,7 +53,8 @@ function agentTemperatureOption(
   config: AgentProviderConfig,
   temperature: number,
 ): { temperature?: number } {
-  if (config.providerKind !== 'openai-responses' && config.providerKind !== 'codex-subscription') return { temperature }
+  if (config.providerKind === 'codex-subscription') return {}
+  if (config.providerKind !== 'openai-responses') return { temperature }
   const model = config.model.trim().toLowerCase()
   const reasoningModel = model.startsWith('o1')
     || model.startsWith('o3')
