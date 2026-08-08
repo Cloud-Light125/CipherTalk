@@ -18,6 +18,7 @@ import type {
   RelayOneUser
 } from '../src/types/relayOne'
 import type { AgentReasoningEffort } from './services/agent/types'
+import type { RemoteControlInfo } from './services/remote/remoteControl'
 
 function getMcpLaunchConfigSafe(): Promise<{
   command: string
@@ -166,6 +167,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('deviceConnect:wechat:scanState', listener)
         return () => { ipcRenderer.removeListener('deviceConnect:wechat:scanState', listener) }
       },
+    },
+    remote: {
+      getInfo: () => ipcRenderer.invoke('deviceConnect:remote:getInfo') as Promise<RemoteControlInfo>,
+      setEnabled: (enabled: boolean) => ipcRenderer.invoke('deviceConnect:remote:setEnabled', enabled) as Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>,
+      rotatePairing: () => ipcRenderer.invoke('deviceConnect:remote:rotatePairing') as Promise<{ success: boolean; info: RemoteControlInfo }>,
     },
   },
 

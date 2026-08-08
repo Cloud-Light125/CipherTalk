@@ -5,6 +5,8 @@ import { chatService } from '../services/chatService'
 import { nightlyMemoryService } from '../services/memory/nightlyMemoryService'
 import { getMcpProxyConfig } from '../services/mcp/runtime'
 import { mcpProxyService } from '../services/mcp/proxyService'
+import { remoteGatewayService } from '../services/remote/gateway'
+import { closeBridgeWindow, getRemoteControlInfo, startRemoteControl } from '../services/remote/remoteControl'
 import { mcpClientService } from '../services/mcpClientService'
 import { wcdbService } from '../services/wcdbService'
 import { monitorBridge } from '../services/monitorBridge'
@@ -303,10 +305,28 @@ export async function startLocalIntegrationServices(ctx: MainProcessContext): Pr
     logStartupError('startup:mcp-client-restore-failed', e)
     console.error('[McpClient] 自动恢复连接失败:', e)
   })
+
+  // 手机遥控端网关：默认关闭，设置页「设备连接 → 手机遥控」开启；
+  // 开发时也可用环境变量 CIPHERTALK_REMOTE_GATEWAY=1 强开
+  const remoteGatewayEnabled = process.env.CIPHERTALK_REMOTE_GATEWAY === '1'
+    || configService?.get('remoteGatewayEnabled') === true
+  if (remoteGatewayEnabled) {
+    const result = await startRemoteControl(ctx)
+    if (result.success) {
+      const info = await getRemoteControlInfo(ctx)
+      console.info('[RemoteGateway] 手机遥控已启动，配对码 ' + info.pairingId)
+    } else {
+      console.error('[RemoteGateway] 启动失败:', result.error)
+    }
+  }
 }
 
 export function stopLocalIntegrationServices(): void {
   nightlyMemoryService.stop()
+  closeBridgeWindow()
+  remoteGatewayService.stop().catch((e) => {
+    console.error('[RemoteGateway] 停止失败:', e)
+  })
   mcpProxyService.stop().catch((e) => {
     console.error('[McpProxy] 停止失败:', e)
   })
