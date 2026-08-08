@@ -990,9 +990,9 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
 
       const isDark = nativeTheme.shouldUseDarkColors
       momentsWindow = new BrowserWindow({
-        width: 1200,
+        width: 900,
         height: 800,
-        minWidth: 900,
+        minWidth: 700,
         minHeight: 600,
         ...getWindowIconOptions(ctx),
         webPreferences: {
