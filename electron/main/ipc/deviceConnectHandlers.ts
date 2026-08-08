@@ -31,7 +31,7 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
       configService.set('remoteGatewayEnabled', false)
       return result
     }
-    return { success: true, info: getRemoteControlInfo(ctx) }
+    return { success: true, info: await getRemoteControlInfo(ctx) }
   })
 
   ipcMain.handle('deviceConnect:remote:rotatePairing', async () => {

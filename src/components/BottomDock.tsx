@@ -8,10 +8,12 @@ import { useThemeStore } from '@/stores/themeStore'
 import { useDeviceConnectStatus } from '@/hooks/useDeviceConnectStatus'
 import { DeviceConnectStatusDot } from '@/components/DeviceConnectStatusDot'
 import DeviceConnectDialog from '@/components/DeviceConnectDialog'
+import RemotePhoneDialog from '@/components/RemotePhoneDialog'
 
 const HIDE_DELAY = 2500
 const EDGE_TRIGGER_PX = 8
 const WECHAT_LOGO_SRC = './微信logo.png'
+const CIPHERTALK_LOGO_SRC = './logo.png'
 
 // 无背景图标：白色线条 + 细黑描边（四向 drop-shadow 叠出黑边），在玻璃上仍有对比
 function AppIcon({ Icon }: { Icon: IconComponent }) {
@@ -40,8 +42,18 @@ function BottomDock() {
   const autoHide = autoHideSetting && location.pathname !== '/home'
   const [visible, setVisible] = useState(true)
   const [deviceConnectOpen, setDeviceConnectOpen] = useState(false)
+  const [remotePhoneOpen, setRemotePhoneOpen] = useState(false)
+  const [remoteRunning, setRemoteRunning] = useState(false)
   const [diaryEnabled, setDiaryEnabled] = useState(true)
   const hideTimerRef = useRef<number | undefined>(undefined)
+
+  // 手机遥控开关状态：进来读一次，弹窗关闭时再读（弹窗里可能开关过）
+  useEffect(() => {
+    if (remotePhoneOpen) return
+    window.electronAPI.deviceConnect.remote.getInfo()
+      .then((info) => setRemoteRunning(info.running))
+      .catch(() => undefined)
+  }, [remotePhoneOpen])
 
   // 与侧边栏一致：日记项受 diaryEnabled 配置控制，关闭时不显示
   useEffect(() => {
@@ -126,6 +138,12 @@ function BottomDock() {
     { id: 'data-management', name: '数据管理', icon: makeIcon(Database) },
     { id: 'mcp', name: 'MCP & Skills', icon: makeIcon(LogoMcp) },
     { id: 'settings', name: '设置', icon: makeIcon(Gear) },
+    { id: 'remote-phone', name: '密语 App', icon: (
+      <div className="relative w-full h-full p-1">
+        <img src={CIPHERTALK_LOGO_SRC} alt="密语 App" className="h-full w-full object-contain" />
+        <DeviceConnectStatusDot status={remoteRunning ? 'connected' : 'disconnected'} className="absolute right-[4%] top-[4%] size-[26%] ring-2 ring-white" />
+      </div>
+    ) },
     { id: 'device-connect', name: 'ClawLink', icon: (
       <div className="relative w-full h-full p-1">
         <img src={WECHAT_LOGO_SRC} alt="微信" className="h-full w-full object-contain" />
@@ -144,6 +162,7 @@ function BottomDock() {
       case 'pets': navigate('/pets'); break
       case 'chat': void openChatWindow(); break
       case 'moments': void openMomentsWindow(); break
+      case 'remote-phone': setRemotePhoneOpen(true); break
       case 'device-connect': setDeviceConnectOpen(true); break
       case 'export': navigate('/export'); break
       case 'data-management': navigate('/data-management'); break
@@ -172,6 +191,7 @@ function BottomDock() {
         </div>
       </motion.div>
       <DeviceConnectDialog isOpen={deviceConnectOpen} onClose={() => setDeviceConnectOpen(false)} />
+      <RemotePhoneDialog isOpen={remotePhoneOpen} onClose={() => setRemotePhoneOpen(false)} />
     </>
   )
 }
