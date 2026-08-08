@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Virtualizer } from 'virtua'
 import { Button, Card } from '@heroui/react'
 import { ArrowDownToLine, ArrowUp, ArrowsRotateLeft, Calendar, ChevronLeft, ChevronRight, CircleDashed, Copy, FileArrowDown, Funnel, HeartFill, Link, Magnifier, MusicNote, Person, Play, PlayFill, SquareArticle, TriangleExclamation, Xmark } from '@gravity-ui/icons'
 import { ImagePreview } from '../components/ImagePreview'
@@ -339,6 +340,15 @@ const MediaItem = ({ media, isSingle, allMedia, onPreview }: { media: any; isSin
 
     const run = async () => {
       try {
+        // 虚拟化后滚回视口会重挂载：命中内存路径缓存直接复用，省一次 IPC 往返
+        if (!isVideo) {
+          const cached = mediaPathCache.get(targetUrl)
+          if (cached && (!isLive || cached.liveVideoPath)) {
+            setThumbSrc(cached.imagePath)
+            if (cached.liveVideoPath) setLiveVideoPath(cached.liveVideoPath)
+            return
+          }
+        }
         if (isVideo) {
           setIsDecrypting(true)
 
@@ -847,6 +857,7 @@ interface SelfProfile {
 function MomentsWindow() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadingNewer, setLoadingNewer] = useState(false)
+  const [loadingOlder, setLoadingOlder] = useState(false)
   const [coverSrc, setCoverSrc] = useState<string | null>(null)
   const [selfProfile, setSelfProfile] = useState<SelfProfile | null>(null)
   const [selfAvatarFailed, setSelfAvatarFailed] = useState(false)
@@ -975,6 +986,28 @@ function MomentsWindow() {
     }
   }
 
+  // virtua 的 startMargin：滚动内容顶部到虚拟列表起点的距离（头图 + feed padding + 更新提示条）。
+  // 用零高 marker 实测，头图有无、窗口尺寸变化都能跟上。
+  const startMarkerRef = useRef<HTMLDivElement>(null)
+  const [virtualStartMargin, setVirtualStartMargin] = useState(0)
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    const marker = startMarkerRef.current
+    if (!container || !marker) return
+
+    const measure = () => {
+      const top = marker.getBoundingClientRect().top
+        - container.getBoundingClientRect().top
+        + container.scrollTop
+      setVirtualStartMargin(Math.max(0, Math.round(top)))
+    }
+    measure()
+
+    const observer = new ResizeObserver(measure)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [coverSrc, loadingNewer, isLoading, error, posts.length])
+
   // 加载联系人
   const loadContacts = useCallback(async () => {
     try {
@@ -1048,7 +1081,7 @@ function MomentsWindow() {
     loadingRef.current = true
     if (direction === 'newer') setLoadingNewer(true)
     else if (reset) setIsLoading(true)
-    // else loading more (handled by infinite scroll UI)
+    else setLoadingOlder(true)
 
     if (reset) {
       setError(null)
@@ -1141,6 +1174,7 @@ function MomentsWindow() {
     } finally {
       setIsLoading(false)
       setLoadingNewer(false)
+      setLoadingOlder(false)
       loadingRef.current = false
     }
   }, [selectedUsernames, jumpTargetDate])
@@ -1934,7 +1968,7 @@ document.querySelectorAll('.vi video').forEach(function(v) {
                   )}
                 </div>
               ) : (
-                <div className="posts-list">
+                <div className="posts-list posts-list--virtual">
                   {loadingNewer && (
                     <div className="loading-more">
                       <CircleDashed className="spin" width={20} height={20} />
@@ -1942,6 +1976,10 @@ document.querySelectorAll('.vi video').forEach(function(v) {
                     </div>
                   )}
 
+                  <div ref={startMarkerRef} aria-hidden="true" />
+                  {/* itemSize: 未实测行的高度估值。默认 40px 与实际行高（约 400px）差一个量级，
+                      追加一页后容器高度会先低估再逐行修正，表现为滚动位置跳动 + sentinel 连环触发 */}
+                  <Virtualizer scrollRef={scrollContainerRef} startMargin={virtualStartMargin} itemSize={400}>
                   {posts.map((post) => (
                     <div key={post.id} className="post-item">
                       <div className="post-header">
@@ -2078,12 +2116,18 @@ document.querySelectorAll('.vi video').forEach(function(v) {
                       )}
                     </div>
                   ))}
+                  </Virtualizer>
 
                   <div ref={sentinelRef} className="load-more-sentinel">
                     {/* Observer Target */}
-                    {!hasMore && (
+                    {loadingOlder ? (
+                      <div className="loading-more">
+                        <CircleDashed className="spin" width={20} height={20} />
+                        <span>加载中...</span>
+                      </div>
+                    ) : !hasMore ? (
                       <div className="no-more">没有更多动态了</div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
