@@ -167,6 +167,13 @@ class RemoteGatewayService {
       return
     }
 
+    // WebRTC 桥接页：跑在桌面端隐藏窗口里，把 DataChannel 桥到同源 /rpc（阶段2）
+    if (method === 'GET' && url.pathname === '/bridge') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+      res.end(BRIDGE_PAGE_HTML)
+      return
+    }
+
     if (!this.isAuthorized(req, url)) {
       this.logger?.warn('RemoteGateway', '远程网关鉴权失败', { pathname: url.pathname })
       this.sendJson(res, 401, { success: false, error: 'Unauthorized' })
@@ -369,5 +376,146 @@ function handleEvent(event, data) {
 fetch('/status?token=' + encodeURIComponent(token)).then(r => r.json()).then(d => {
   setStatus(d.success ? '已连接（端口 ' + d.data.port + '）' : '连接失败：token 无效？')
 }).catch(() => setStatus('连接失败'))
+</script></body></html>
+`
+
+/**
+ * WebRTC 桥接页：跑在桌面端隐藏 BrowserWindow 里（url 带 token/signaling/room 参数）。
+ * 角色=answerer：连信令等手机 offer，DataChannel 收到 req 帧就转同源 /rpc，
+ * SSE 事件转 ev 帧、结果转 res 帧，大帧按 16000 字符分片（t:part）。
+ * DataChannel 断开会 abort 全部在途 fetch，网关侧随即触发 agent:abort。
+ */
+const BRIDGE_PAGE_HTML = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>密语远程桥</title></head><body>
+<pre id="log" style="font: 12px/1.5 monospace"></pre>
+<script>
+const q = new URLSearchParams(location.search)
+const token = q.get('token') || ''
+const signalingUrl = q.get('signaling') || ''
+const room = q.get('room') || ''
+const ICE_SERVERS = [{ urls: 'stun:stun.miwifi.com:3478' }, { urls: 'stun:stun.l.google.com:19302' }]
+const PART_SIZE = 16000
+
+let ws = null, pc = null, dc = null
+let pidSeq = 1
+const pendingAborts = new Map()
+const partsBuf = new Map()
+
+function log(msg) {
+  const el = document.getElementById('log')
+  el.textContent += new Date().toISOString().slice(11, 19) + ' ' + msg + '\\n'
+  console.log('[bridge]', msg)
+}
+
+function connectSignaling() {
+  if (!signalingUrl || !room) { log('缺少 signaling/room 参数'); return }
+  const wsUrl = signalingUrl.replace(/\\/+$/, '') + '/ws?room=' + encodeURIComponent(room)
+  ws = new WebSocket(wsUrl)
+  ws.onopen = () => log('信令已连接: ' + wsUrl)
+  ws.onmessage = (e) => {
+    let msg = null
+    try { msg = JSON.parse(e.data) } catch { return }
+    if (msg.type === 'offer') void onOffer(msg)
+    else if (msg.type === 'candidate' && pc) pc.addIceCandidate(msg.candidate).catch(() => {})
+    else if (msg.t === 'peerLeft') log('手机端离开信令')
+  }
+  ws.onclose = () => { log('信令断开，5 秒后重连'); setTimeout(connectSignaling, 5000) }
+  ws.onerror = () => {}
+}
+
+async function onOffer(msg) {
+  log('收到 offer，建立新 PeerConnection')
+  if (pc) { try { pc.close() } catch {} abortAll() }
+  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+  pc.onicecandidate = (e) => { if (e.candidate && ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'candidate', candidate: e.candidate })) }
+  pc.onconnectionstatechange = () => log('RTC 状态: ' + pc.connectionState)
+  pc.ondatachannel = (e) => {
+    dc = e.channel
+    dc.onopen = () => log('DataChannel 已打开')
+    dc.onclose = () => { log('DataChannel 关闭，中止在途请求'); abortAll() }
+    dc.onmessage = (ev) => onFrameRaw(String(ev.data))
+  }
+  await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp })
+  const answer = await pc.createAnswer()
+  await pc.setLocalDescription(answer)
+  ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }))
+}
+
+function abortAll() {
+  for (const ctrl of pendingAborts.values()) { try { ctrl.abort() } catch {} }
+  pendingAborts.clear()
+}
+
+function sendFrame(obj) {
+  if (!dc || dc.readyState !== 'open') return
+  const s = JSON.stringify(obj)
+  if (s.length <= PART_SIZE) { dc.send(s); return }
+  const pid = 'p' + (pidSeq++)
+  const total = Math.ceil(s.length / PART_SIZE)
+  for (let i = 0; i < total; i++) {
+    dc.send(JSON.stringify({ t: 'part', pid, seq: i, total, data: s.slice(i * PART_SIZE, (i + 1) * PART_SIZE) }))
+  }
+}
+
+function onFrameRaw(raw) {
+  let frame = null
+  try { frame = JSON.parse(raw) } catch { return }
+  if (frame.t === 'part') {
+    let buf = partsBuf.get(frame.pid)
+    if (!buf) { buf = { total: frame.total, parts: [] }; partsBuf.set(frame.pid, buf) }
+    buf.parts[frame.seq] = frame.data
+    if (buf.parts.filter(Boolean).length < buf.total) return
+    partsBuf.delete(frame.pid)
+    try { frame = JSON.parse(buf.parts.join('')) } catch { return }
+  }
+  if (frame.t === 'req') void handleReq(frame)
+}
+
+async function handleReq(frame) {
+  const ctrl = new AbortController()
+  pendingAborts.set(frame.id, ctrl)
+  try {
+    const res = await fetch('/rpc?token=' + encodeURIComponent(token), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method: frame.method, params: frame.params || [] }),
+      signal: ctrl.signal
+    })
+    const contentType = String(res.headers.get('content-type') || '')
+    if (!contentType.includes('text/event-stream')) {
+      sendFrame({ t: 'res', id: frame.id, data: await res.json() })
+      return
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    while (true) {
+      const r = await reader.read()
+      if (r.done) break
+      buf += decoder.decode(r.value, { stream: true })
+      let idx
+      while ((idx = buf.indexOf('\\n\\n')) >= 0) {
+        const block = buf.slice(0, idx); buf = buf.slice(idx + 2)
+        let event = '', data = null
+        for (const line of block.split('\\n')) {
+          if (line.startsWith('event: ')) event = line.slice(7)
+          else if (line.startsWith('data: ')) { try { data = JSON.parse(line.slice(6)) } catch {} }
+        }
+        if (event === 'result') sendFrame({ t: 'res', id: frame.id, data })
+        else if (event) sendFrame({ t: 'ev', event, payload: data })
+      }
+    }
+  } catch (e) {
+    sendFrame({ t: 'res', id: frame.id, data: { success: false, error: String(e) } })
+  } finally {
+    pendingAborts.delete(frame.id)
+  }
+}
+
+// 30s 心跳保活（CF Worker 侧配了 auto-response，不会唤醒 DO）
+setInterval(() => { if (ws && ws.readyState === 1) ws.send('{"t":"ping"}') }, 30000)
+
+log('桥接页启动 room=' + room)
+connectSignaling()
 </script></body></html>
 `

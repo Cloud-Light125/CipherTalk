@@ -1,4 +1,4 @@
-import { net } from 'electron'
+import { BrowserWindow, net } from 'electron'
 import { ConfigService } from '../services/config'
 import { appUpdateService } from '../services/appUpdateService'
 import { chatService } from '../services/chatService'
@@ -328,11 +328,57 @@ export async function startLocalIntegrationServices(ctx: MainProcessContext): Pr
       console.error('[RemoteGateway] 启动失败:', result.error)
       ctx.getLogService()?.error('RemoteGateway', '远程网关启动失败', { error: result.error })
     }
+
+    // 阶段2：配置了信令地址就开隐藏桥接窗口（WebRTC answerer，桥到本机网关）
+    const signalingUrl = String(process.env.CIPHERTALK_REMOTE_SIGNALING || configService.get('remoteSignalingUrl') || '')
+    if (result.success && signalingUrl) {
+      let pairingId = String(configService.get('remotePairingId') || '')
+      if (!pairingId) {
+        pairingId = require('crypto').randomBytes(16).toString('hex')
+        configService.set('remotePairingId', pairingId)
+      }
+      const port = Number(configService.get('remoteGatewayPort')) || 5033
+      const bridgeUrl = `http://127.0.0.1:${port}/bridge`
+        + `?token=${encodeURIComponent(token)}`
+        + `&signaling=${encodeURIComponent(signalingUrl)}`
+        + `&room=${encodeURIComponent(pairingId)}`
+      openRemoteBridgeWindow(bridgeUrl)
+      const phoneUrl = signalingUrl.replace(/^ws/, 'http').replace(/\/$/, '') + `/?room=${pairingId}`
+      console.info('[RemoteGateway] 手机 P2P 测试页（任意网络可用）: ' + phoneUrl)
+    }
   }
+}
+
+/** 阶段2 WebRTC 桥接：隐藏窗口跑 /bridge 页（纯 Web API，无 node 能力） */
+let remoteBridgeWindow: BrowserWindow | null = null
+
+function openRemoteBridgeWindow(url: string): void {
+  if (remoteBridgeWindow && !remoteBridgeWindow.isDestroyed()) {
+    void remoteBridgeWindow.loadURL(url)
+    return
+  }
+  remoteBridgeWindow = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      // 隐藏窗口的定时器不能被节流，信令断线重连靠它
+      backgroundThrottling: false
+    }
+  })
+  remoteBridgeWindow.on('closed', () => { remoteBridgeWindow = null })
+  void remoteBridgeWindow.loadURL(url)
+}
+
+export function closeRemoteBridgeWindow(): void {
+  if (remoteBridgeWindow && !remoteBridgeWindow.isDestroyed()) remoteBridgeWindow.destroy()
+  remoteBridgeWindow = null
 }
 
 export function stopLocalIntegrationServices(): void {
   nightlyMemoryService.stop()
+  closeRemoteBridgeWindow()
   remoteGatewayService.stop().catch((e) => {
     console.error('[RemoteGateway] 停止失败:', e)
   })

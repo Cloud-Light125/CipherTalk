@@ -256,6 +256,9 @@ interface ConfigSchema {
   remoteGatewayEnabled: boolean
   remoteGatewayPort: number
   remoteGatewayToken: string
+  // 阶段2：信令服务器地址（ws:// 或 wss://，空=不启用 WebRTC 桥）+ 配对房间号（自动生成）
+  remoteSignalingUrl: string
+  remotePairingId: string
   // Agent 工具审批 HMAC 签名密钥：跨 AI utility 进程重启/App 重启保持稳定，
   // 否则每次重启换新密钥会让待处理的审批签名验证失败（见 engine.ts TOOL_APPROVAL_SECRET）
   agentToolApprovalSecret: string
@@ -466,7 +469,9 @@ const defaults: ConfigSchema = {
   mcpProxyToken: '',
   remoteGatewayEnabled: false,
   remoteGatewayPort: 5033,
-  remoteGatewayToken: ''
+  remoteGatewayToken: '',
+  remoteSignalingUrl: '',
+  remotePairingId: ''
 }
 
 export class ConfigService {
