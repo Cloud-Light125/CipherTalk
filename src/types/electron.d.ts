@@ -1280,6 +1280,11 @@ export interface ElectronAPI {
   }
   // 朋友圈相关
   sns: {
+    getCover: () => Promise<{
+      success: boolean
+      dataUrl?: string
+      error?: string
+    }>
     getTimeline: (limit?: number, offset?: number, usernames?: string[], keyword?: string, startTime?: number, endTime?: number) => Promise<{
       success: boolean
       timeline?: Array<{
