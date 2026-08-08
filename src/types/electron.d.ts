@@ -1726,7 +1726,7 @@ export interface ElectronAPI {
     deleteBankNote: (kind: MemoryBankNoteKind, fileName: string) => Promise<{ success: boolean; error?: string }>
     readDiary: (date: string) => Promise<{ success: boolean; diary?: MemoryDiaryEntryInfo; error?: string }>
     deleteDiary: (date: string) => Promise<{ success: boolean; error?: string }>
-    summarizeTodayDiary: () => Promise<{ success: boolean; alreadyExists?: boolean; diary?: MemoryDiaryEntryInfo; error?: string }>
+    summarizeTodayDiary: () => Promise<{ success: boolean; diary?: MemoryDiaryEntryInfo; error?: string }>
     create: (payload: { memoryUid?: string; sourceType?: AgentMemorySourceType; content?: string; title?: string; importance?: number; confidence?: number; tags?: string[] }) => Promise<{ success: boolean; item?: AgentMemoryItem; error?: string }>
     delete: (id: number) => Promise<{ success: boolean; error?: string }>
     update: (payload: { id: number; sourceType?: AgentMemorySourceType; content?: string; importance?: number; confidence?: number; tags?: string[] }) => Promise<{ success: boolean; item?: AgentMemoryItem; error?: string }>

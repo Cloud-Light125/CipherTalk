@@ -333,11 +333,6 @@ function mergeUiMessagesById(dbMessages: UIMessage[] = [], incomingMessages: UIM
   return merged
 }
 
-function localDateKey(date = new Date()): string {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
 function extractUploadedMediaContext(messages: UIMessage[] = []): AgentUploadedMediaContext | undefined {
   let userMessage: UIMessage | undefined
   for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -1505,11 +1500,11 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
 
   ipcMain.handle('memory:summarizeTodayDiary', async () => {
     try {
-      const date = localDateKey()
-      const { memoryDatabase } = await import('../../services/memory/memoryDatabase')
-      const existing = memoryDatabase.readDiary(date)
-      if (existing) return { success: true, alreadyExists: true, diary: existing }
-
+      const config = ctx.getConfigService()
+      const { memoryDatabase, normalizeDiarySummaryHour, diaryWindowDateForNow } = await import('../../services/memory/memoryDatabase')
+      const summaryHour = normalizeDiarySummaryHour(config?.get('diarySummaryHour' as any) ?? 2)
+      // 复用定时任务的窗口日期规则：到点后属于今天，凌晨未到点时仍属于昨天。避免凌晨取到全在未来、空内容的窗口。
+      const date = diaryWindowDateForNow(undefined, summaryHour)
       const [
         { resolveProviderConfig },
         { runDailyDiaryConsolidation },
@@ -1519,14 +1514,20 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
         import('../../services/agent/tools/memory'),
         import('../../services/memory/nightlyMemoryService')
       ])
-      const customPrompt = String(ctx.getConfigService()?.get('diaryCustomPrompt' as any) || '').trim()
+      const customPrompt = String(config?.get('diaryCustomPrompt' as any) || '').trim()
       const [unreadMessages, dayMessages] = await Promise.all([
         readUnreadDiarySource().catch(() => ''),
-        readTodayChatDiarySource(date).catch(() => '')
+        readTodayChatDiarySource(date, summaryHour).catch(() => '')
       ])
-      await runDailyDiaryConsolidation(date, resolveProviderConfig(), undefined, { unreadMessages, dayMessages, customPrompt })
+      await runDailyDiaryConsolidation(date, resolveProviderConfig(), undefined, {
+        unreadMessages,
+        dayMessages,
+        summaryHour,
+        customPrompt,
+        finalize: false
+      })
       const diary = memoryDatabase.readDiary(date)
-      return diary ? { success: true, alreadyExists: false, diary } : { success: false, error: '日记生成后未找到文件' }
+      return diary ? { success: true, diary } : { success: false, error: '日记生成后未找到文件' }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
