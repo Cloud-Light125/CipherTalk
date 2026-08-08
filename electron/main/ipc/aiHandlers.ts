@@ -9,6 +9,17 @@ import type { AgentPromptOptimizeContextMessage, AgentProviderConfig, AgentProvi
 import type { CodeWorkspaceRef } from '../../services/agent/codeWorkspaceTypes'
 import type { PersonaCard, PersonaNotes, PersonaRecord, PersonaTtsVoiceBinding } from '../../services/agent/persona/personaTypes'
 import { formatAgentError } from '../../services/agent/errorFormat'
+import { agentRpcHandlers, type AgentRpcHandler } from '../../services/remote/agentRpcRegistry'
+
+/**
+ * agent:* 通道统一走这里注册：除了 ipcMain，还进 agentRpcHandlers 注册表，
+ * 供远程网关（手机遥控端）以同一套 handler 处理 RPC。handler 里只有 agent:run
+ * 用到 event.sender（流式推送），远程调用时由网关伪造 sender 转发到自己的通道。
+ */
+const handleAgent = (channel: string, listener: AgentRpcHandler): void => {
+  agentRpcHandlers.set(channel, listener)
+  ipcMain.handle(channel, listener as (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown)
+}
 
 /** 进行中的 agent 运行：runId → AbortController，用于取消。 */
 const agentAborters = new Map<string, AbortController>()
@@ -665,7 +676,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     .catch(() => undefined)
 
   // ========= AI Agent（跑在独立 utilityProcess 子进程，主进程仅做 broker）=========
-  ipcMain.handle('agent:run', async (event, payload: {
+  handleAgent('agent:run', async (event, payload: {
     runId: string
     messages: UIMessage[]
     scope?: AgentScope
@@ -945,7 +956,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:listConversations', async (_event, scope?: AgentScope) => {
+  handleAgent('agent:listConversations', async (_event, scope?: AgentScope) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       return { success: true, conversations: agentConversationStore.list({ scope }) }
@@ -954,7 +965,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:loadConversation', async (_event, id: number) => {
+  handleAgent('agent:loadConversation', async (_event, id: number) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       const conversation = agentConversationStore.load(Number(id))
@@ -966,7 +977,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:getChatSummary', async (_event, payload: { sessionId: string; range: string }) => {
+  handleAgent('agent:getChatSummary', async (_event, payload: { sessionId: string; range: string }) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       return { success: true, summary: agentConversationStore.getChatSummary(payload?.sessionId, payload?.range) }
@@ -975,7 +986,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:saveChatSummary', async (_event, payload: {
+  handleAgent('agent:saveChatSummary', async (_event, payload: {
     sessionId: string
     range: string
     displayName?: string
@@ -995,7 +1006,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:createConversation', async (_event, payload: {
+  handleAgent('agent:createConversation', async (_event, payload: {
     scope?: AgentScope
     title?: string
     modelProvider?: string
@@ -1016,7 +1027,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:deleteConversation', async (_event, idOrPayload: number | { id?: number; originClientId?: string | null }) => {
+  handleAgent('agent:deleteConversation', async (_event, idOrPayload: number | { id?: number; originClientId?: string | null }) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       const id = typeof idOrPayload === 'object' && idOrPayload ? Number(idOrPayload.id) : Number(idOrPayload)
@@ -1028,7 +1039,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:deleteConversationsByScope', async (_event, scope: AgentScope) => {
+  handleAgent('agent:deleteConversationsByScope', async (_event, scope: AgentScope) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       return agentConversationStore.removeByScope(scope)
@@ -1037,7 +1048,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:renameConversation', async (_event, id: number, title: string, originClientId?: string | null) => {
+  handleAgent('agent:renameConversation', async (_event, id: number, title: string, originClientId?: string | null) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       // 带上来源 clientId：否则自动起标题的广播会被发起窗口误判为外部修改，流结束后触发重载盖掉刚生成的正文
@@ -1047,7 +1058,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:saveConversationMessages', async (_event, payload: {
+  handleAgent('agent:saveConversationMessages', async (_event, payload: {
     id: number
     messages: UIMessage[]
     scope?: AgentScope
@@ -1094,7 +1105,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:sendConversationReplyToWechat', async (_event, payload: {
+  handleAgent('agent:sendConversationReplyToWechat', async (_event, payload: {
     conversationId?: number
     messageId?: string
     bubbles?: string[]
@@ -1111,7 +1122,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:getLastConversation', async (_event, scope?: AgentScope) => {
+  handleAgent('agent:getLastConversation', async (_event, scope?: AgentScope) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       return { success: true, conversation: agentConversationStore.getLast(scope) }
@@ -1120,7 +1131,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:abort', (_e, runId: string) => {
+  handleAgent('agent:abort', (_e, runId: string) => {
     ctx.getLogService()?.warn('AIAgent', '收到 AI Agent 取消请求', { runId })
     agentAborters.get(runId)?.abort()
     return { success: true }
@@ -2007,7 +2018,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     return result
   })
 
-  ipcMain.handle('agent:generateTitle', async (_event, payload: {
+  handleAgent('agent:generateTitle', async (_event, payload: {
     firstMessage: string
     modelConfig?: AgentProviderConfigOverride | null
   }) => {
@@ -2027,7 +2038,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:optimizePrompt', async (_event, payload: {
+  handleAgent('agent:optimizePrompt', async (_event, payload: {
     prompt: string
     modelConfig?: AgentProviderConfigOverride | null
     context?: AgentPromptOptimizeContextMessage[]
@@ -2049,7 +2060,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  ipcMain.handle('agent:replySuggest', async (_event, payload: {
+  handleAgent('agent:replySuggest', async (_event, payload: {
     input: Omit<import('../../services/agent/engine').ReplySuggestInput, 'providerConfig'>
     modelConfig?: AgentProviderConfigOverride | null
   }) => {

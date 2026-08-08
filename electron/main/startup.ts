@@ -5,6 +5,7 @@ import { chatService } from '../services/chatService'
 import { nightlyMemoryService } from '../services/memory/nightlyMemoryService'
 import { getMcpProxyConfig } from '../services/mcp/runtime'
 import { mcpProxyService } from '../services/mcp/proxyService'
+import { remoteGatewayService } from '../services/remote/gateway'
 import { mcpClientService } from '../services/mcpClientService'
 import { wcdbService } from '../services/wcdbService'
 import { monitorBridge } from '../services/monitorBridge'
@@ -303,10 +304,38 @@ export async function startLocalIntegrationServices(ctx: MainProcessContext): Pr
     logStartupError('startup:mcp-client-restore-failed', e)
     console.error('[McpClient] 自动恢复连接失败:', e)
   })
+
+  // 手机遥控端网关（阶段1：局域网 HTTP+SSE）。默认关闭；
+  // 开发时用环境变量 CIPHERTALK_REMOTE_GATEWAY=1 打开，或设置 config remoteGatewayEnabled=true
+  const remoteGatewayEnabled = process.env.CIPHERTALK_REMOTE_GATEWAY === '1'
+    || configService?.get('remoteGatewayEnabled') === true
+  if (remoteGatewayEnabled && configService) {
+    let token = String(configService.get('remoteGatewayToken') || '')
+    if (!token) {
+      token = require('crypto').randomBytes(16).toString('hex')
+      configService.set('remoteGatewayToken', token)
+    }
+    remoteGatewayService.setLogger(ctx.getLogService())
+    remoteGatewayService.applySettings({
+      port: Number(configService.get('remoteGatewayPort')) || 5033,
+      token
+    })
+    const result = await remoteGatewayService.start()
+    if (result.success) {
+      console.info('[RemoteGateway] 手机遥控测试页（同一局域网手机浏览器打开）:')
+      for (const url of remoteGatewayService.getLanUrls()) console.info('  ' + url)
+    } else {
+      console.error('[RemoteGateway] 启动失败:', result.error)
+      ctx.getLogService()?.error('RemoteGateway', '远程网关启动失败', { error: result.error })
+    }
+  }
 }
 
 export function stopLocalIntegrationServices(): void {
   nightlyMemoryService.stop()
+  remoteGatewayService.stop().catch((e) => {
+    console.error('[RemoteGateway] 停止失败:', e)
+  })
   mcpProxyService.stop().catch((e) => {
     console.error('[McpProxy] 停止失败:', e)
   })
