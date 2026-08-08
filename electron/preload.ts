@@ -388,7 +388,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteDiary: (date: string) =>
       ipcRenderer.invoke('memory:deleteDiary', date) as Promise<{ success: boolean; error?: string }>,
     summarizeTodayDiary: () =>
-      ipcRenderer.invoke('memory:summarizeTodayDiary') as Promise<{ success: boolean; alreadyExists?: boolean; diary?: unknown; error?: string }>,
+      ipcRenderer.invoke('memory:summarizeTodayDiary') as Promise<{ success: boolean; diary?: unknown; error?: string }>,
     create: (payload: {
       memoryUid?: string
       sourceType?: string
