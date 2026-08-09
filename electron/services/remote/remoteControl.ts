@@ -54,7 +54,13 @@ function authorizeDevice(ctx: MainProcessContext, input: { token?: string; name?
   if (token) {
     const index = devices.findIndex((d) => d.token === token)
     if (index < 0) return { ok: false, reason: 'revoked' }
-    devices[index] = { ...devices[index], lastSeenAt: Date.now() }
+    // 同时更新名字：手机上改了名要能同步过来，否则列表里永远是首次配对时的旧名
+    const incomingName = String(input.name || '').trim().slice(0, 40)
+    devices[index] = {
+      ...devices[index],
+      name: incomingName || devices[index].name,
+      lastSeenAt: Date.now(),
+    }
     configService.set('remoteDevices', devices)
     return { ok: true, deviceToken: token, deviceName: devices[index].name }
   }
