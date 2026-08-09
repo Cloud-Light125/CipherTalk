@@ -19,6 +19,9 @@ type RemoteInfo = {
   fingerprint: string
   candidateKinds: string[]
   lanUrls: string[]
+  hasPassword: boolean
+  deviceCount: number
+  locked: boolean
 }
 
 const PHONE_ICON_SRC = './logo.png'
@@ -32,8 +35,12 @@ export function RemotePhoneCard() {
   const [devices, setDevices] = useState<RemoteDeviceSummary[]>([])
   const [busy, setBusy] = useState(false)
   const [showCode, setShowCode] = useState(false)
+  const [pwInput, setPwInput] = useState('')
+  const [pwConfirm, setPwConfirm] = useState('')
+  const [pwError, setPwError] = useState('')
 
-  // 卡片显示期间才允许新手机配对：关掉弹窗就关闸，被吊销的手机没法自己配回来
+  // 卡片显示期间才允许新手机配对：关掉弹窗就关闸（同时后端重新上锁），
+  // 被吊销的手机没法自己配回来
   useEffect(() => {
     const api = window.electronAPI.deviceConnect.remote
     void api.setPairingOpen(true).catch(() => undefined)
@@ -122,6 +129,35 @@ export function RemotePhoneCard() {
     }
   }
 
+  const submitPassword = async () => {
+    setPwError('')
+    if (pwInput.length < 4) { setPwError('密码至少 4 位'); return }
+    if (pwInput !== pwConfirm) { setPwError('两次输入不一致'); return }
+    setBusy(true)
+    try {
+      const res = await window.electronAPI.deviceConnect.remote.setPassword({ password: pwInput })
+      if (!res.success) { setPwError(res.error || '设置失败'); return }
+      if (res.info) setInfo(res.info)
+      setPwInput(''); setPwConfirm('')
+      toast.success('密码已设置')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const submitUnlock = async () => {
+    setPwError('')
+    setBusy(true)
+    try {
+      const res = await window.electronAPI.deviceConnect.remote.unlock(pwInput)
+      if (!res.success) { setPwError(res.error || '密码不正确'); return }
+      if (res.info) setInfo(res.info)
+      setPwInput('')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const revoke = async (device: RemoteDeviceSummary) => {
     setBusy(true)
     try {
@@ -137,6 +173,8 @@ export function RemotePhoneCard() {
 
   const running = info?.running === true
   const connected = info?.connected === true
+  // 绑定关系和「当前是否在线」是两回事：手机切后台会断连，绑定还在
+  const bound = (info?.deviceCount ?? 0) > 0
 
   return (
     <div className="flex flex-col gap-4">
@@ -148,20 +186,70 @@ export function RemotePhoneCard() {
           <div className="flex items-center gap-2">
             <span className="truncate text-base font-semibold text-foreground">手机遥控</span>
             <Chip size="sm" variant="soft" color={connected ? 'success' : undefined}>
-              {connected ? '已连接' : running ? '等待连接' : '未开启'}
+              {connected ? '已连接' : !running ? '未开启' : bound ? '已绑定' : '等待配对'}
             </Chip>
           </div>
           <p className="mt-1 text-sm text-muted">
             {connected
               ? '手机已连接，可远程使用 AI 助手和克隆功能'
-              : running
-                ? '用手机 App 扫码配对，远程使用 AI 助手'
-                : '开启后可用手机远程控制 AI 助手和克隆功能'}
+              : !running
+                ? '开启后可用手机远程控制 AI 助手和克隆功能'
+                : bound
+                  // 手机切到后台会断开，但绑定关系还在，不需要重新扫码
+                  ? '手机不在线，回到 App 会自动重连'
+                  : '用手机 App 扫码配对，远程使用 AI 助手'}
           </p>
         </div>
       </div>
 
-      {running && !connected && (
+      {running && !info?.hasPassword && (
+        <div className="flex flex-col gap-2 rounded-lg bg-default-100 p-3">
+          <p className="text-sm text-foreground">先设置一个查看密码</p>
+          <p className="text-xs text-muted">
+            之后要新增手机、查看配对二维码都需要它。密码只存哈希，忘了只能重设。
+          </p>
+          <input
+            type="password"
+            className="rounded-md border border-default-300 bg-background px-2 py-1.5 text-sm"
+            placeholder="设置密码（至少 4 位）"
+            value={pwInput}
+            onChange={(e) => setPwInput(e.target.value)}
+          />
+          <input
+            type="password"
+            className="rounded-md border border-default-300 bg-background px-2 py-1.5 text-sm"
+            placeholder="再输一次"
+            value={pwConfirm}
+            onChange={(e) => setPwConfirm(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void submitPassword() }}
+          />
+          {pwError ? <p className="text-xs text-danger">{pwError}</p> : null}
+          <Button size="sm" isDisabled={busy} onPress={() => void submitPassword()}>保存密码</Button>
+        </div>
+      )}
+
+      {running && info?.locked && (
+        <div className="flex flex-col gap-2 rounded-lg bg-default-100 p-3">
+          <p className="text-sm text-foreground">
+            已绑定 {info.deviceCount} 台手机{connected ? '，当前在线' : '，手机不在线时也保持绑定'}
+          </p>
+          <p className="text-xs text-muted">要新增手机或查看二维码，请输入查看密码</p>
+          <input
+            type="password"
+            className="rounded-md border border-default-300 bg-background px-2 py-1.5 text-sm"
+            placeholder="查看密码"
+            value={pwInput}
+            onChange={(e) => setPwInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') void submitUnlock() }}
+          />
+          {pwError ? <p className="text-xs text-danger">{pwError}</p> : null}
+          <Button size="sm" variant="tertiary" isDisabled={busy} onPress={() => void submitUnlock()}>
+            解锁查看二维码
+          </Button>
+        </div>
+      )}
+
+      {running && info?.hasPassword && !info.locked && (
         <div className="flex flex-col items-center gap-3 py-1">
           <div className="relative flex size-60 items-center justify-center rounded-xl bg-white">
             {info?.qrImage

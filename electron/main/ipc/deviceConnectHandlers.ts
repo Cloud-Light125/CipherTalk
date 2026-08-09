@@ -3,6 +3,9 @@ import type { MainProcessContext } from '../context'
 import { weixinBotService } from '../../services/deviceConnect/weixinBotService'
 import {
   getRemoteControlInfo,
+  hasPairingPassword,
+  setPairingPassword,
+  unlockPairing,
   listRemoteDevices,
   revokeRemoteDevice,
   rotatePairingId,
@@ -52,6 +55,19 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
   ipcMain.handle('deviceConnect:remote:setPairingOpen', (_event, open: boolean) => {
     setPairingOpen(open === true)
     return { success: true }
+  })
+
+  ipcMain.handle('deviceConnect:remote:hasPassword', () => ({ success: true, hasPassword: hasPairingPassword(ctx) }))
+
+  ipcMain.handle('deviceConnect:remote:setPassword', async (_event, payload: { password: string; currentPassword?: string }) => {
+    const result = setPairingPassword(ctx, String(payload?.password || ''), payload?.currentPassword)
+    if (!result.success) return result
+    return { success: true, info: await getRemoteControlInfo(ctx) }
+  })
+
+  ipcMain.handle('deviceConnect:remote:unlock', async (_event, password: string) => {
+    if (!unlockPairing(ctx, String(password || ''))) return { success: false, error: '密码不正确' }
+    return { success: true, info: await getRemoteControlInfo(ctx) }
   })
 
   ipcMain.handle('deviceConnect:wechat:getStatus', () => weixinBotService.getStatus())

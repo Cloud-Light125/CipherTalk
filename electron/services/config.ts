@@ -261,6 +261,9 @@ interface ConfigSchema {
   remotePairingId: string
   // 已配对手机：token 是长期凭据，吊销=从表里删掉；只在二维码弹窗打开时才允许新配对
   remoteDevices: Array<{ id: string; name: string; token: string; pairedAt: number; lastSeenAt: number }>
+  // 查看配对二维码的密码，格式 scrypt$<saltHex>$<hashHex>。
+  // 存哈希不存密文：只需要验证不需要还原，加密的话密钥也在本机、等于没锁
+  remotePairingPasswordHash: string
   // Agent 工具审批 HMAC 签名密钥：跨 AI utility 进程重启/App 重启保持稳定，
   // 否则每次重启换新密钥会让待处理的审批签名验证失败（见 engine.ts TOOL_APPROVAL_SECRET）
   agentToolApprovalSecret: string
@@ -474,7 +477,8 @@ const defaults: ConfigSchema = {
   remoteGatewayToken: '',
   remoteSignalingUrl: '',
   remotePairingId: '',
-  remoteDevices: []
+  remoteDevices: [],
+  remotePairingPasswordHash: ''
 }
 
 export class ConfigService {

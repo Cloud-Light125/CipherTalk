@@ -3,7 +3,7 @@
  * 启动时（startup.ts）和设置页开关（deviceConnectHandlers）都走这里，避免两份启动逻辑。
  */
 import { BrowserWindow } from 'electron'
-import { randomBytes } from 'crypto'
+import { randomBytes, scryptSync, timingSafeEqual } from 'crypto'
 import QRCode from 'qrcode'
 import type { MainProcessContext } from '../../main/context'
 import { remoteGatewayService } from './gateway'
@@ -18,6 +18,8 @@ let bridgeWindow: BrowserWindow | null = null
  * 没有这道闸，"吊销设备"就是假的——被吊销的手机拿着房间号能立刻重新配一个。
  */
 let pairingOpen = false
+/** 本次弹窗内是否已通过密码校验。关闭弹窗即失效，不做持久化 */
+let pairingUnlocked = false
 
 export type RemoteDevice = {
   id: string
@@ -29,6 +31,63 @@ export type RemoteDevice = {
 
 export function setPairingOpen(open: boolean): void {
   pairingOpen = open
+  // 关掉弹窗就重新上锁，下次要看二维码得再输一次密码
+  if (!open) pairingUnlocked = false
+}
+
+export function unlockPairing(ctx: MainProcessContext, password: string): boolean {
+  pairingUnlocked = verifyPairingPassword(ctx, password)
+  return pairingUnlocked
+}
+
+/** 已绑定过设备且设了密码，未解锁前不给看二维码，也不接受新配对 */
+function isPairingLocked(ctx: MainProcessContext): boolean {
+  if (pairingUnlocked) return false
+  if (!hasPairingPassword(ctx)) return false
+  return (ctx.getConfigService()?.get('remoteDevices') ?? []).length > 0
+}
+
+// ===== 查看二维码的密码 =====
+// 用 scrypt 哈希而不是加密：只需要验证不需要还原，
+// 加密的话解密密钥同样存在本机，等于没上锁。
+const SCRYPT_KEYLEN = 64
+
+function hashPairingPassword(password: string, salt: Buffer): Buffer {
+  return scryptSync(password, salt, SCRYPT_KEYLEN)
+}
+
+export function hasPairingPassword(ctx: MainProcessContext): boolean {
+  return Boolean(ctx.getConfigService()?.get('remotePairingPasswordHash'))
+}
+
+export function setPairingPassword(
+  ctx: MainProcessContext,
+  password: string,
+  currentPassword?: string
+): { success: boolean; error?: string } {
+  const configService = ctx.getConfigService()
+  if (!configService) return { success: false, error: '配置服务未就绪' }
+  const next = String(password || '')
+  if (next.length < 4) return { success: false, error: '密码至少 4 位' }
+  // 已设过就必须先验旧密码，否则任何人都能直接改掉这道锁
+  if (hasPairingPassword(ctx) && !verifyPairingPassword(ctx, String(currentPassword || ''))) {
+    return { success: false, error: '原密码不正确' }
+  }
+  const salt = randomBytes(16)
+  const hash = hashPairingPassword(next, salt)
+  configService.set('remotePairingPasswordHash', `scrypt$${salt.toString('hex')}$${hash.toString('hex')}`)
+  return { success: true }
+}
+
+export function verifyPairingPassword(ctx: MainProcessContext, password: string): boolean {
+  const stored = String(ctx.getConfigService()?.get('remotePairingPasswordHash') || '')
+  const [scheme, saltHex, hashHex] = stored.split('$')
+  if (scheme !== 'scrypt' || !saltHex || !hashHex) return false
+  const expected = Buffer.from(hashHex, 'hex')
+  const actual = hashPairingPassword(String(password || ''), Buffer.from(saltHex, 'hex'))
+  // 长度不等时 timingSafeEqual 会抛，先挡掉
+  if (expected.length !== actual.length) return false
+  return timingSafeEqual(expected, actual)
 }
 
 export function listRemoteDevices(ctx: MainProcessContext): Array<Omit<RemoteDevice, 'token'>> {
@@ -65,7 +124,7 @@ function authorizeDevice(ctx: MainProcessContext, input: { token?: string; name?
     return { ok: true, deviceToken: token, deviceName: devices[index].name }
   }
 
-  if (!pairingOpen) return { ok: false, reason: 'pairing-closed' }
+  if (!pairingOpen || isPairingLocked(ctx)) return { ok: false, reason: 'pairing-closed' }
 
   const device: RemoteDevice = {
     id: randomBytes(8).toString('hex'),
@@ -95,6 +154,12 @@ export type RemoteControlInfo = {
   candidateKinds: string[]
   /** 局域网直连地址（浏览器兜底用，不走 P2P） */
   lanUrls: string[]
+  /** 是否已设置查看密码 */
+  hasPassword: boolean
+  /** 已绑定设备数 */
+  deviceCount: number
+  /** 已绑定 + 设了密码 + 未解锁：此时二维码相关字段一律为空 */
+  locked: boolean
 }
 
 function buildQrPayload(signaling: string, pairingId: string, fingerprint: string): string {
@@ -110,7 +175,10 @@ export async function getRemoteControlInfo(ctx: MainProcessContext): Promise<Rem
   const connected = remoteGatewayService.isRemoteConnected()
   // 指纹由桥接页启动后上报，没拿到就先不出二维码——否则手机会存下空指纹，等于没有钉扎
   const fingerprint = remoteGatewayService.getDtlsFingerprint()
-  const qrPayload = pairingId && running && fingerprint
+  const deviceCount = (configService?.get('remoteDevices') ?? []).length
+  const locked = isPairingLocked(ctx)
+  // 上锁时连载荷都不下发：只在渲染层隐藏等于没锁
+  const qrPayload = !locked && pairingId && running && fingerprint
     ? buildQrPayload(signaling, pairingId, fingerprint)
     : ''
   return {
@@ -123,9 +191,12 @@ export async function getRemoteControlInfo(ctx: MainProcessContext): Promise<Rem
     qrImage: qrPayload
       ? await QRCode.toDataURL(qrPayload, { width: 480, margin: 1 }).catch(() => '')
       : '',
-    fingerprint,
+    fingerprint: locked ? '' : fingerprint,
     candidateKinds: remoteGatewayService.getCandidateKinds(),
     lanUrls: running ? remoteGatewayService.getLanUrls() : [],
+    hasPassword: hasPairingPassword(ctx),
+    deviceCount,
+    locked,
   }
 }
 
