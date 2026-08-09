@@ -522,9 +522,15 @@ function collectCandidate(line) {
   if (!m) return
   const [, address, type] = m
   // 带上真实地址：光有类型看不出自己对外是哪个 IP，排查跨网问题时没法比对
-  if (address.endsWith('.local')) candidateKinds.add('mDNS 隐藏（跨网不可用）')
-  else if (address.includes(':')) candidateKinds.add(`IPv6 ${type} ${address}`)
-  else candidateKinds.add(`IPv4 ${type} ${address}`)
+  // 同时标出公网/私网：host 只代表「本机网卡上的地址」，IPv6 的 host 往往就是公网地址，
+  // 光看类型会把跨网直连误当成局域网
+  if (address.endsWith('.local')) { candidateKinds.add('mDNS 隐藏（跨网不可用）'); return }
+  const v6 = address.includes(':')
+  const low = address.toLowerCase()
+  const priv = v6
+    ? (low.startsWith('fe80') || low.startsWith('fc') || low.startsWith('fd'))
+    : /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address)
+  candidateKinds.add(`${v6 ? 'IPv6' : 'IPv4'} ${priv ? '内网' : '公网'} ${type} ${address}`)
 }
 
 function reportCandidates() {
