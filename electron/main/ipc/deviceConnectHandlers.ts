@@ -3,7 +3,10 @@ import type { MainProcessContext } from '../context'
 import { weixinBotService } from '../../services/deviceConnect/weixinBotService'
 import {
   getRemoteControlInfo,
+  listRemoteDevices,
+  revokeRemoteDevice,
   rotatePairingId,
+  setPairingOpen,
   startRemoteControl,
   stopRemoteControl,
 } from '../../services/remote/remoteControl'
@@ -36,6 +39,19 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
 
   ipcMain.handle('deviceConnect:remote:rotatePairing', async () => {
     return { success: true, info: await rotatePairingId(ctx) }
+  })
+
+  ipcMain.handle('deviceConnect:remote:listDevices', () => ({ success: true, devices: listRemoteDevices(ctx) }))
+
+  ipcMain.handle('deviceConnect:remote:revokeDevice', (_event, deviceId: string) => ({
+    success: true,
+    devices: revokeRemoteDevice(ctx, String(deviceId || '')),
+  }))
+
+  // 配对窗口：二维码弹窗打开期间才允许新手机配对，否则被吊销的手机能立刻重新配一个
+  ipcMain.handle('deviceConnect:remote:setPairingOpen', (_event, open: boolean) => {
+    setPairingOpen(open === true)
+    return { success: true }
   })
 
   ipcMain.handle('deviceConnect:wechat:getStatus', () => weixinBotService.getStatus())

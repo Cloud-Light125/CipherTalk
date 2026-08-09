@@ -26,6 +26,15 @@ import type {
 import type { AgentReasoningEffort } from '../features/aiagent/transport/ipcChatTransport'
 import type { RemoteControlInfo } from '../../electron/services/remote/remoteControl'
 
+// 显式声明而非 Omit<RemoteDevice,'token'>：渲染端和主进程是两个 TS 项目，
+// 跨项目取类型会退化成不可赋值的空类型（token 也本来就不该出主进程）
+type RemoteDeviceSummary = {
+  id: string
+  name: string
+  pairedAt: number
+  lastSeenAt: number
+}
+
 /** 全自动回复队列的状态推送，与 electron/services/autoReplyService.ts 的 AutoSendStatus 对应。 */
 export type ReplyTileAutoStatus =
   | { phase: 'idle' }
@@ -765,6 +774,9 @@ export interface ElectronAPI {
       getInfo: () => Promise<RemoteControlInfo>
       setEnabled: (enabled: boolean) => Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>
       rotatePairing: () => Promise<{ success: boolean; info: RemoteControlInfo }>
+      listDevices: () => Promise<{ success: boolean; devices: RemoteDeviceSummary[] }>
+      revokeDevice: (deviceId: string) => Promise<{ success: boolean; devices: RemoteDeviceSummary[] }>
+      setPairingOpen: (open: boolean) => Promise<{ success: boolean }>
       onStatus: (callback: (payload: { connected: boolean }) => void) => () => void
     }
   }

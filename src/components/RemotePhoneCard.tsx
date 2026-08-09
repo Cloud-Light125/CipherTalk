@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Button, Chip, Spinner, toast } from '@heroui/react'
 
+type RemoteDeviceSummary = {
+  id: string
+  name: string
+  pairedAt: number
+  lastSeenAt: number
+}
+
 type RemoteInfo = {
   enabled: boolean
   running: boolean
@@ -9,6 +16,8 @@ type RemoteInfo = {
   pairingId: string
   qrPayload: string
   qrImage: string
+  fingerprint: string
+  candidateKinds: string[]
   lanUrls: string[]
 }
 
@@ -20,12 +29,23 @@ const PHONE_ICON_SRC = './logo.png'
  */
 export function RemotePhoneCard() {
   const [info, setInfo] = useState<RemoteInfo | null>(null)
+  const [devices, setDevices] = useState<RemoteDeviceSummary[]>([])
   const [busy, setBusy] = useState(false)
   const [showCode, setShowCode] = useState(false)
+
+  // 卡片显示期间才允许新手机配对：关掉弹窗就关闸，被吊销的手机没法自己配回来
+  useEffect(() => {
+    const api = window.electronAPI.deviceConnect.remote
+    void api.setPairingOpen(true).catch(() => undefined)
+    return () => { void api.setPairingOpen(false).catch(() => undefined) }
+  }, [])
 
   useEffect(() => {
     const api = window.electronAPI.deviceConnect.remote
     let mounted = true
+    api.listDevices()
+      .then((res) => { if (mounted && res.success) setDevices(res.devices) })
+      .catch(() => undefined)
     let latestConnected: boolean | null = null
     api.getInfo()
       .then((next) => {
@@ -34,7 +54,11 @@ export function RemotePhoneCard() {
       .catch(() => undefined)
     const offStatus = api.onStatus(({ connected }) => {
       latestConnected = connected
-      if (connected) setShowCode(false)
+      if (connected) {
+        setShowCode(false)
+        // 刚配上的新手机要立刻出现在列表里
+        api.listDevices().then((res) => { if (res.success) setDevices(res.devices) }).catch(() => undefined)
+      }
       setInfo((current) => current ? { ...current, connected } : current)
     })
     return () => { mounted = false; offStatus() }
@@ -64,6 +88,19 @@ export function RemotePhoneCard() {
       const res = await window.electronAPI.deviceConnect.remote.rotatePairing()
       setInfo(res.info)
       toast.success('配对码已更换，已配对的手机需重新扫码')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const revoke = async (device: RemoteDeviceSummary) => {
+    setBusy(true)
+    try {
+      const res = await window.electronAPI.deviceConnect.remote.revokeDevice(device.id)
+      if (res.success) {
+        setDevices(res.devices)
+        toast.success(`已吊销「${device.name}」`)
+      }
     } finally {
       setBusy(false)
     }
@@ -109,12 +146,45 @@ export function RemotePhoneCard() {
               <p className="text-xs text-muted">信令地址</p>
               <p className="mb-2 break-all font-mono text-xs text-foreground">{info?.signaling}</p>
               <p className="text-xs text-muted">配对码</p>
-              <p className="break-all font-mono text-xs text-foreground">{info?.pairingId}</p>
+              <p className="mb-2 break-all font-mono text-xs text-foreground">{info?.pairingId}</p>
+              <p className="text-xs text-muted">身份指纹（手动输入时也要填，否则没有防中间人保护）</p>
+              <p className="break-all font-mono text-xs text-foreground">{info?.fingerprint}</p>
             </div>
           ) : (
             <Button size="sm" variant="ghost" onPress={() => setShowCode(true)}>
               没法扫码？手动输入
             </Button>
+          )}
+        </div>
+      )}
+
+      {running && devices.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-muted">已配对手机</p>
+          {devices.map((device) => (
+            <div key={device.id} className="flex items-center gap-2 rounded-lg bg-default-100 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-foreground">{device.name}</p>
+                <p className="text-xs text-muted">
+                  最近连接 {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString('zh-CN') : '—'}
+                </p>
+              </div>
+              <Button size="sm" variant="ghost" isDisabled={busy} onPress={() => void revoke(device)}>
+                吊销
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {running && info && info.candidateKinds.length > 0 && (
+        <div className="rounded-lg bg-default-100 px-3 py-2">
+          <p className="text-xs text-muted">本机网络通道</p>
+          <p className="text-xs text-foreground">{info.candidateKinds.join('、')}</p>
+          {!info.candidateKinds.some((k) => k.startsWith('IPv6')) && (
+            <p className="mt-1 text-xs text-warning">
+              没有 IPv6 通道，手机用流量可能连不上（本机或路由器没有公网 IPv6）
+            </p>
           )}
         </div>
       )}

@@ -18,7 +18,9 @@ import type {
   RelayOneUser
 } from '../src/types/relayOne'
 import type { AgentReasoningEffort } from './services/agent/types'
-import type { RemoteControlInfo } from './services/remote/remoteControl'
+import type { RemoteControlInfo, RemoteDevice } from './services/remote/remoteControl'
+
+type RemoteDeviceSummary = Omit<RemoteDevice, 'token'>
 
 function getMcpLaunchConfigSafe(): Promise<{
   command: string
@@ -172,6 +174,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       getInfo: () => ipcRenderer.invoke('deviceConnect:remote:getInfo') as Promise<RemoteControlInfo>,
       setEnabled: (enabled: boolean) => ipcRenderer.invoke('deviceConnect:remote:setEnabled', enabled) as Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>,
       rotatePairing: () => ipcRenderer.invoke('deviceConnect:remote:rotatePairing') as Promise<{ success: boolean; info: RemoteControlInfo }>,
+      listDevices: () => ipcRenderer.invoke('deviceConnect:remote:listDevices') as Promise<{ success: boolean; devices: RemoteDeviceSummary[] }>,
+      revokeDevice: (deviceId: string) => ipcRenderer.invoke('deviceConnect:remote:revokeDevice', deviceId) as Promise<{ success: boolean; devices: RemoteDeviceSummary[] }>,
+      setPairingOpen: (open: boolean) => ipcRenderer.invoke('deviceConnect:remote:setPairingOpen', open) as Promise<{ success: boolean }>,
       onStatus: (callback: (payload: { connected: boolean }) => void) => {
         const listener = (_: any, payload: { connected: boolean }) => callback(payload)
         ipcRenderer.on('deviceConnect:remote:status', listener)
