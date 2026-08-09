@@ -43,17 +43,20 @@ function BottomDock() {
   const [visible, setVisible] = useState(true)
   const [deviceConnectOpen, setDeviceConnectOpen] = useState(false)
   const [remotePhoneOpen, setRemotePhoneOpen] = useState(false)
-  const [remoteRunning, setRemoteRunning] = useState(false)
+  const [remoteConnected, setRemoteConnected] = useState(false)
   const [diaryEnabled, setDiaryEnabled] = useState(true)
   const hideTimerRef = useRef<number | undefined>(undefined)
 
-  // 手机遥控开关状态：进来读一次，弹窗关闭时再读（弹窗里可能开关过）
+  // 手机遥控连接状态
   useEffect(() => {
-    if (remotePhoneOpen) return
-    window.electronAPI.deviceConnect.remote.getInfo()
-      .then((info) => setRemoteRunning(info.running))
+    const api = window.electronAPI.deviceConnect.remote
+    let mounted = true
+    api.getInfo()
+      .then((info) => { if (mounted) setRemoteConnected(info.connected) })
       .catch(() => undefined)
-  }, [remotePhoneOpen])
+    const offStatus = api.onStatus(({ connected }) => setRemoteConnected(connected))
+    return () => { mounted = false; offStatus() }
+  }, [])
 
   // 与侧边栏一致：日记项受 diaryEnabled 配置控制，关闭时不显示
   useEffect(() => {
@@ -141,7 +144,7 @@ function BottomDock() {
     { id: 'remote-phone', name: '密语 App', icon: (
       <div className="relative w-full h-full p-1">
         <img src={CIPHERTALK_LOGO_SRC} alt="密语 App" className="h-full w-full object-contain" />
-        <DeviceConnectStatusDot status={remoteRunning ? 'connected' : 'disconnected'} className="absolute right-[4%] top-[4%] size-[26%] ring-2 ring-white" />
+        <DeviceConnectStatusDot status={remoteConnected ? 'connected' : 'disconnected'} className="absolute right-[4%] top-[4%] size-[26%] ring-2 ring-white" />
       </div>
     ) },
     { id: 'device-connect', name: 'ClawLink', icon: (

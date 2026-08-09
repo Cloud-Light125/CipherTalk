@@ -4,6 +4,7 @@ import { Button, Chip, Spinner, toast } from '@heroui/react'
 type RemoteInfo = {
   enabled: boolean
   running: boolean
+  connected: boolean
   signaling: string
   pairingId: string
   qrPayload: string
@@ -23,9 +24,20 @@ export function RemotePhoneCard() {
   const [showCode, setShowCode] = useState(false)
 
   useEffect(() => {
-    window.electronAPI.deviceConnect.remote.getInfo()
-      .then(setInfo)
+    const api = window.electronAPI.deviceConnect.remote
+    let mounted = true
+    let latestConnected: boolean | null = null
+    api.getInfo()
+      .then((next) => {
+        if (mounted) setInfo(latestConnected === null ? next : { ...next, connected: latestConnected })
+      })
       .catch(() => undefined)
+    const offStatus = api.onStatus(({ connected }) => {
+      latestConnected = connected
+      if (connected) setShowCode(false)
+      setInfo((current) => current ? { ...current, connected } : current)
+    })
+    return () => { mounted = false; offStatus() }
   }, [])
 
   const toggle = async () => {
@@ -58,6 +70,7 @@ export function RemotePhoneCard() {
   }
 
   const running = info?.running === true
+  const connected = info?.connected === true
 
   return (
     <div className="flex flex-col gap-4">
@@ -68,17 +81,21 @@ export function RemotePhoneCard() {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-base font-semibold text-foreground">手机遥控</span>
-            <Chip size="sm" variant="soft" color={running ? 'success' : undefined}>
-              {running ? '已开启' : '未开启'}
+            <Chip size="sm" variant="soft" color={connected ? 'success' : undefined}>
+              {connected ? '已连接' : running ? '等待连接' : '未开启'}
             </Chip>
           </div>
           <p className="mt-1 text-sm text-muted">
-            {running ? '用手机 App 扫码配对，远程使用 AI 助手' : '开启后可用手机远程控制 AI 助手和克隆功能'}
+            {connected
+              ? '手机已连接，可远程使用 AI 助手和克隆功能'
+              : running
+                ? '用手机 App 扫码配对，远程使用 AI 助手'
+                : '开启后可用手机远程控制 AI 助手和克隆功能'}
           </p>
         </div>
       </div>
 
-      {running && (
+      {running && !connected && (
         <div className="flex flex-col items-center gap-3 py-1">
           <div className="relative flex size-60 items-center justify-center rounded-xl bg-white">
             {info?.qrImage

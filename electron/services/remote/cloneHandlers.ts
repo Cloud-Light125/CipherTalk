@@ -6,6 +6,22 @@ import type { ConfigService } from '../config'
 import { agentRpcHandlers } from './agentRpcRegistry'
 
 export function registerRemoteCloneHandlers(configService: ConfigService): void {
+  agentRpcHandlers.set('clone:listPersonas', async () => {
+    try {
+      const { personaStore } = await import('../agent/persona/personaStore')
+      const personas = personaStore.list()
+        .filter((persona) => !persona.sessionId.startsWith('self:'))
+        .map((persona) => ({
+          sessionId: persona.sessionId,
+          displayName: persona.displayName,
+          updatedAt: persona.updatedAt,
+        }))
+      return { success: true, personas }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   agentRpcHandlers.set('clone:getConfig', () => {
     try {
       return {

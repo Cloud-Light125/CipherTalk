@@ -1646,7 +1646,7 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
 
   // ========= 克隆好友（数字分身画像，agent_personas.db）=========
   // 克隆聊天：加载画像 → 子进程预检索 + 单次 generateText；完整结果按气泡经 persona:chunk 推回
-  ipcMain.handle('persona:chat', async (event, payload: {
+  const personaChatHandler: AgentRpcHandler = async (event, payload: {
     runId: string
     sessionId: string
     messages: UIMessage[]
@@ -1728,7 +1728,9 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     } finally {
       agentAborters.delete(runId)
     }
-  })
+  }
+  ipcMain.handle('persona:chat', personaChatHandler as (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown)
+  agentRpcHandlers.set('clone:chat', personaChatHandler)
 
   ipcMain.handle('persona:abort', (_e, runId: string) => {
     agentAborters.get(runId)?.abort()
