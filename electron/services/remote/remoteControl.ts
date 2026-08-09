@@ -8,6 +8,7 @@ import QRCode from 'qrcode'
 import type { MainProcessContext } from '../../main/context'
 import { remoteGatewayService } from './gateway'
 import { registerRemoteCloneHandlers } from './cloneHandlers'
+import { registerRemoteWechatHandlers } from './wechatHandlers'
 
 const DEFAULT_SIGNALING_URL = 'wss://ctapp.aiqji.com'
 
@@ -70,6 +71,7 @@ export async function startRemoteControl(ctx: MainProcessContext): Promise<{ suc
   }
 
   registerRemoteCloneHandlers(configService)
+  registerRemoteWechatHandlers(configService)
   remoteGatewayService.setLogger(ctx.getLogService())
   remoteGatewayService.setConnectionListener((connected) => {
     ctx.broadcastToWindows('deviceConnect:remote:status', { connected })
