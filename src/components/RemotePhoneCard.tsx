@@ -43,15 +43,25 @@ export function RemotePhoneCard() {
   useEffect(() => {
     const api = window.electronAPI.deviceConnect.remote
     let mounted = true
+    let latestConnected: boolean | null = null
+    let latestInfo: RemoteInfo | null = null
+
+    const refresh = () => {
+      api.getInfo()
+        .then((next) => {
+          if (!mounted) return
+          const merged = latestConnected === null ? next : { ...next, connected: latestConnected }
+          latestInfo = merged
+          setInfo(merged)
+        })
+        .catch(() => undefined)
+    }
+
     api.listDevices()
       .then((res) => { if (mounted && res.success) setDevices(res.devices) })
       .catch(() => undefined)
-    let latestConnected: boolean | null = null
-    api.getInfo()
-      .then((next) => {
-        if (mounted) setInfo(latestConnected === null ? next : { ...next, connected: latestConnected })
-      })
-      .catch(() => undefined)
+    refresh()
+
     const offStatus = api.onStatus(({ connected }) => {
       latestConnected = connected
       if (connected) {
@@ -61,7 +71,16 @@ export function RemotePhoneCard() {
       }
       setInfo((current) => current ? { ...current, connected } : current)
     })
-    return () => { mounted = false; offStatus() }
+
+    // 二维码要等桥接页上报指纹、本机地址要等候选自测，都是异步的。
+    // 只在打开时取一次的话，开得快就只剩一个转圈，所以补齐之前每 2 秒重取。
+    const timer = setInterval(() => {
+      if (!latestInfo?.running) return
+      if (latestInfo.qrImage && latestInfo.candidateKinds.length > 0) return
+      refresh()
+    }, 2000)
+
+    return () => { mounted = false; clearInterval(timer); offStatus() }
   }, [])
 
   const toggle = async () => {

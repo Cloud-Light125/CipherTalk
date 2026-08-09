@@ -518,18 +518,27 @@ function reportConnected(connected) {
 let candidateKinds = new Set()
 
 function collectCandidate(line) {
-  const m = /candidate:\S+ \d+ \S+ \d+ (\S+) \d+ typ (\w+)/.exec(line || '')
-  if (!m) return
-  const [, address, type] = m
-  // 带上真实地址：光有类型看不出自己对外是哪个 IP，排查跨网问题时没法比对
-  // 同时标出公网/私网：host 只代表「本机网卡上的地址」，IPv6 的 host 往往就是公网地址，
-  // 光看类型会把跨网直连误当成局域网
+  // 不用正则：这段代码活在 TS 模板字符串里，正则里的 \S \d 会被模板吃掉退化成普通字母，
+  // 曾经因此永远匹配不上、候选一直是空。按空格切分没有这个坑。
+  const parts = String(line || '').split(' ')
+  const typIndex = parts.indexOf('typ')
+  if (typIndex < 5) return
+  const address = parts[4]
+  const type = parts[typIndex + 1] || ''
+  if (!address) return
   if (address.endsWith('.local')) { candidateKinds.add('mDNS 隐藏（跨网不可用）'); return }
+  // 标出公网/内网：host 只代表「本机网卡上的地址」，IPv6 的 host 往往就是公网地址，
+  // 光看类型会把跨网直连误当成局域网
   const v6 = address.includes(':')
   const low = address.toLowerCase()
-  const priv = v6
-    ? (low.startsWith('fe80') || low.startsWith('fc') || low.startsWith('fd'))
-    : /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address)
+  let priv
+  if (v6) {
+    priv = low.startsWith('fe80') || low.startsWith('fc') || low.startsWith('fd') || low === '::1'
+  } else {
+    const seg = address.split('.')
+    const a = Number(seg[0]), b = Number(seg[1])
+    priv = a === 10 || a === 127 || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31)
+  }
   candidateKinds.add((v6 ? 'IPv6' : 'IPv4') + ' ' + (priv ? '内网' : '公网') + ' ' + type + ' ' + address)
 }
 
@@ -592,6 +601,35 @@ async function certFingerprint(cert) {
     const offer = await probe.createOffer()
     const m = /a=fingerprint:sha-256 ([0-9A-Fa-f:]+)/.exec(offer.sdp || '')
     return m ? m[1].toUpperCase() : ''
+  } finally {
+    try { probe.close() } catch {}
+  }
+}
+
+/**
+ * 启动就自测一次候选地址：原先只有手机发来 offer 时才收集，
+ * 而用户看二维码配对的时候恰恰还没有手机连过，界面上永远是空的。
+ */
+async function probeCandidates() {
+  const probe = new RTCPeerConnection({
+    iceServers: ICE_SERVERS,
+    certificates: localCert ? [localCert] : undefined,
+  })
+  try {
+    probe.createDataChannel('probe')
+    probe.onicecandidate = (e) => {
+      if (e.candidate) collectCandidate(e.candidate.candidate || '')
+    }
+    await probe.setLocalDescription(await probe.createOffer())
+    // 等收集完成，最多 6 秒（STUN 不通时会一直等）
+    await new Promise((resolve) => {
+      const done = () => resolve(undefined)
+      const timer = setTimeout(done, 6000)
+      probe.onicegatheringstatechange = () => {
+        if (probe.iceGatheringState === 'complete') { clearTimeout(timer); done() }
+      }
+    })
+    reportCandidates()
   } finally {
     try { probe.close() } catch {}
   }
@@ -774,6 +812,8 @@ window.addEventListener('beforeunload', () => reportConnected(false))
 
 log('桥接页启动 room=' + room)
 // 证书就绪后再连信令：否则先到的 offer 会用临时证书应答，指纹对不上
-initCert().catch((e) => log('证书初始化失败: ' + e)).then(connectSignaling)
+initCert()
+  .catch((e) => log('证书初始化失败: ' + e))
+  .then(() => { connectSignaling(); return probeCandidates().catch((e) => log('候选自测失败: ' + e)) })
 </script></body></html>
 `
