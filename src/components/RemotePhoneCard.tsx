@@ -93,6 +93,16 @@ export function RemotePhoneCard() {
     }
   }
 
+  const copy = async (text: string | undefined, label: string) => {
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(`已复制${label}`)
+    } catch {
+      toast.danger('复制失败')
+    }
+  }
+
   const revoke = async (device: RemoteDeviceSummary) => {
     setBusy(true)
     try {
@@ -143,11 +153,15 @@ export function RemotePhoneCard() {
 
           {showCode ? (
             <div className="w-full rounded-lg bg-default-100 p-3">
-              <p className="text-xs text-muted">信令地址</p>
-              <p className="mb-2 break-all font-mono text-xs text-foreground">{info?.signaling}</p>
-              <p className="text-xs text-muted">配对码</p>
-              <p className="mb-2 break-all font-mono text-xs text-foreground">{info?.pairingId}</p>
-              <p className="text-xs text-muted">身份指纹（手动输入时也要填，否则没有防中间人保护）</p>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs text-muted">配对码</p>
+                <Button size="sm" variant="ghost" onPress={() => void copy(info?.pairingId, '配对码')}>复制</Button>
+              </div>
+              <p className="mb-3 break-all font-mono text-xs text-foreground">{info?.pairingId}</p>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs text-muted">身份指纹（必填，防信令服务器冒充）</p>
+                <Button size="sm" variant="ghost" onPress={() => void copy(info?.fingerprint, '身份指纹')}>复制</Button>
+              </div>
               <p className="break-all font-mono text-xs text-foreground">{info?.fingerprint}</p>
             </div>
           ) : (
@@ -179,11 +193,13 @@ export function RemotePhoneCard() {
 
       {running && info && info.candidateKinds.length > 0 && (
         <div className="rounded-lg bg-default-100 px-3 py-2">
-          <p className="text-xs text-muted">本机网络通道</p>
-          <p className="text-xs text-foreground">{info.candidateKinds.join('、')}</p>
+          <p className="mb-1 text-xs text-muted">本机地址</p>
+          {info.candidateKinds.map((kind) => (
+            <p key={kind} className="break-all font-mono text-xs text-foreground">{kind}</p>
+          ))}
           {!info.candidateKinds.some((k) => k.startsWith('IPv6')) && (
             <p className="mt-1 text-xs text-warning">
-              没有 IPv6 通道，手机用流量可能连不上（本机或路由器没有公网 IPv6）
+              没有 IPv6 地址，手机用流量可能连不上（本机或路由器没有公网 IPv6）
             </p>
           )}
         </div>

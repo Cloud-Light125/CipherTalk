@@ -521,9 +521,10 @@ function collectCandidate(line) {
   const m = /candidate:\S+ \d+ \S+ \d+ (\S+) \d+ typ (\w+)/.exec(line || '')
   if (!m) return
   const [, address, type] = m
-  if (address.endsWith('.local')) candidateKinds.add('mDNS 隐藏')
-  else if (address.includes(':')) candidateKinds.add('IPv6 ' + type)
-  else candidateKinds.add('IPv4 ' + type)
+  // 带上真实地址：光有类型看不出自己对外是哪个 IP，排查跨网问题时没法比对
+  if (address.endsWith('.local')) candidateKinds.add('mDNS 隐藏（跨网不可用）')
+  else if (address.includes(':')) candidateKinds.add(`IPv6 ${type} ${address}`)
+  else candidateKinds.add(`IPv4 ${type} ${address}`)
 }
 
 function reportCandidates() {
