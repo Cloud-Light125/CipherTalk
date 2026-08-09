@@ -777,6 +777,9 @@ export interface ElectronAPI {
       listDevices: () => Promise<{ success: boolean; devices: RemoteDeviceSummary[] }>
       revokeDevice: (deviceId: string) => Promise<{ success: boolean; devices: RemoteDeviceSummary[] }>
       setPairingOpen: (open: boolean) => Promise<{ success: boolean }>
+      hasPassword: () => Promise<{ success: boolean; hasPassword: boolean }>
+      setPassword: (payload: { password: string; currentPassword?: string }) => Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>
+      unlock: (password: string) => Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>
       onStatus: (callback: (payload: { connected: boolean }) => void) => () => void
     }
   }

@@ -177,6 +177,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       listDevices: () => ipcRenderer.invoke('deviceConnect:remote:listDevices') as Promise<{ success: boolean; devices: RemoteDeviceSummary[] }>,
       revokeDevice: (deviceId: string) => ipcRenderer.invoke('deviceConnect:remote:revokeDevice', deviceId) as Promise<{ success: boolean; devices: RemoteDeviceSummary[] }>,
       setPairingOpen: (open: boolean) => ipcRenderer.invoke('deviceConnect:remote:setPairingOpen', open) as Promise<{ success: boolean }>,
+      hasPassword: () => ipcRenderer.invoke('deviceConnect:remote:hasPassword') as Promise<{ success: boolean; hasPassword: boolean }>,
+      setPassword: (payload: { password: string; currentPassword?: string }) => ipcRenderer.invoke('deviceConnect:remote:setPassword', payload) as Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>,
+      unlock: (password: string) => ipcRenderer.invoke('deviceConnect:remote:unlock', password) as Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>,
       onStatus: (callback: (payload: { connected: boolean }) => void) => {
         const listener = (_: any, payload: { connected: boolean }) => callback(payload)
         ipcRenderer.on('deviceConnect:remote:status', listener)
