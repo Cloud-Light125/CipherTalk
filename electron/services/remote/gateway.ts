@@ -530,7 +530,7 @@ function collectCandidate(line) {
   const priv = v6
     ? (low.startsWith('fe80') || low.startsWith('fc') || low.startsWith('fd'))
     : /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address)
-  candidateKinds.add(`${v6 ? 'IPv6' : 'IPv4'} ${priv ? '内网' : '公网'} ${type} ${address}`)
+  candidateKinds.add((v6 ? 'IPv6' : 'IPv4') + ' ' + (priv ? '内网' : '公网') + ' ' + type + ' ' + address)
 }
 
 function reportCandidates() {
