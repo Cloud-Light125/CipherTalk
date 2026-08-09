@@ -16,6 +16,7 @@ let bridgeWindow: BrowserWindow | null = null
 export type RemoteControlInfo = {
   enabled: boolean
   running: boolean
+  connected: boolean
   signaling: string
   pairingId: string
   /** 手机扫的二维码内容，同时也是 App 手动输入的依据 */
@@ -36,10 +37,12 @@ export async function getRemoteControlInfo(ctx: MainProcessContext): Promise<Rem
   const signaling = String(configService?.get('remoteSignalingUrl') || DEFAULT_SIGNALING_URL)
   const pairingId = String(configService?.get('remotePairingId') || '')
   const running = remoteGatewayService.isRunning()
+  const connected = remoteGatewayService.isRemoteConnected()
   const qrPayload = pairingId && running ? buildQrPayload(signaling, pairingId) : ''
   return {
     enabled,
     running,
+    connected,
     signaling,
     pairingId,
     qrPayload,
@@ -68,6 +71,9 @@ export async function startRemoteControl(ctx: MainProcessContext): Promise<{ suc
 
   registerRemoteCloneHandlers(configService)
   remoteGatewayService.setLogger(ctx.getLogService())
+  remoteGatewayService.setConnectionListener((connected) => {
+    ctx.broadcastToWindows('deviceConnect:remote:status', { connected })
+  })
   remoteGatewayService.applySettings({
     port: Number(configService.get('remoteGatewayPort')) || 5033,
     token,
@@ -111,6 +117,7 @@ export async function rotatePairingId(ctx: MainProcessContext): Promise<RemoteCo
 /** 桥接窗口：隐藏窗口跑 /bridge 页做 WebRTC answerer（纯 Web API，无 node 能力） */
 function openBridgeWindow(url: string): void {
   if (bridgeWindow && !bridgeWindow.isDestroyed()) {
+    remoteGatewayService.setRemoteConnected(false)
     void bridgeWindow.loadURL(url)
     return
   }
@@ -124,11 +131,18 @@ function openBridgeWindow(url: string): void {
       backgroundThrottling: false,
     },
   })
-  bridgeWindow.on('closed', () => { bridgeWindow = null })
+  bridgeWindow.on('closed', () => {
+    bridgeWindow = null
+    remoteGatewayService.setRemoteConnected(false)
+  })
+  bridgeWindow.webContents.on('render-process-gone', () => {
+    remoteGatewayService.setRemoteConnected(false)
+  })
   void bridgeWindow.loadURL(url)
 }
 
 export function closeBridgeWindow(): void {
   if (bridgeWindow && !bridgeWindow.isDestroyed()) bridgeWindow.destroy()
   bridgeWindow = null
+  remoteGatewayService.setRemoteConnected(false)
 }

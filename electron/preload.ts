@@ -172,6 +172,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       getInfo: () => ipcRenderer.invoke('deviceConnect:remote:getInfo') as Promise<RemoteControlInfo>,
       setEnabled: (enabled: boolean) => ipcRenderer.invoke('deviceConnect:remote:setEnabled', enabled) as Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>,
       rotatePairing: () => ipcRenderer.invoke('deviceConnect:remote:rotatePairing') as Promise<{ success: boolean; info: RemoteControlInfo }>,
+      onStatus: (callback: (payload: { connected: boolean }) => void) => {
+        const listener = (_: any, payload: { connected: boolean }) => callback(payload)
+        ipcRenderer.on('deviceConnect:remote:status', listener)
+        return () => { ipcRenderer.removeListener('deviceConnect:remote:status', listener) }
+      },
     },
   },
 

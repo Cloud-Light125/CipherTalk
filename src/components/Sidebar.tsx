@@ -46,19 +46,22 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
  const [collapsed, setCollapsed] = useState(false)
  const [deviceConnectOpen, setDeviceConnectOpen] = useState(false)
  const [remotePhoneOpen, setRemotePhoneOpen] = useState(false)
- const [remoteRunning, setRemoteRunning] = useState(false)
+ const [remoteConnected, setRemoteConnected] = useState(false)
   const [diaryEnabled, setDiaryEnabled] = useState(true)
   const plugins = usePluginStore(state => state.plugins)
 
   useEffect(() => { ensurePluginStoreSubscribed() }, [])
 
-  // 手机遥控开关状态：进来读一次，弹窗关闭时再读（弹窗里可能开关过）
+  // 手机遥控连接状态
   useEffect(() => {
-    if (remotePhoneOpen) return
-    window.electronAPI.deviceConnect.remote.getInfo()
-      .then((info) => setRemoteRunning(info.running))
+    const api = window.electronAPI.deviceConnect.remote
+    let mounted = true
+    api.getInfo()
+      .then((info) => { if (mounted) setRemoteConnected(info.connected) })
       .catch(() => undefined)
-  }, [remotePhoneOpen])
+    const offStatus = api.onStatus(({ connected }) => setRemoteConnected(connected))
+    return () => { mounted = false; offStatus() }
+  }, [])
  const userDisplayName = userInfo?.nickName?.trim() || userInfo?.alias?.trim() || '未连接用户'
   const userInitial = userDisplayName.slice(0, 1).toUpperCase()
 
@@ -231,7 +234,7 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
         style={{ width: SIDEBAR_ACTION_ICON_SIZE, height: SIDEBAR_ACTION_ICON_SIZE }}
       />
       <DeviceConnectStatusDot
-        status={remoteRunning ? 'connected' : 'disconnected'}
+        status={remoteConnected ? 'connected' : 'disconnected'}
         className="absolute -right-0.5 -top-0.5 size-2.5 ring-2 ring-background"
       />
     </span>

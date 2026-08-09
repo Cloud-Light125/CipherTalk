@@ -28,12 +28,14 @@ type GatewayLogger = {
   error(category: string, message: string, data?: any): void
 }
 
-const STREAM_METHODS = new Set(['agent:run'])
+const STREAM_METHODS = new Set(['agent:run', 'clone:chat'])
 
 class RemoteGatewayService {
   private server: http.Server | null = null
   private readonly connections = new Set<Socket>()
   private logger: GatewayLogger | null = null
+  private remoteConnected = false
+  private connectionListener: ((connected: boolean) => void) | null = null
   private startedAt = 0
   private lastError = ''
   private settings: GatewaySettings = {
@@ -46,12 +48,26 @@ class RemoteGatewayService {
     this.logger = logger
   }
 
+  setConnectionListener(listener: ((connected: boolean) => void) | null): void {
+    this.connectionListener = listener
+  }
+
   applySettings(next: Partial<GatewaySettings>): void {
     this.settings = { ...this.settings, ...next }
   }
 
   isRunning(): boolean {
     return Boolean(this.server)
+  }
+
+  isRemoteConnected(): boolean {
+    return this.remoteConnected
+  }
+
+  setRemoteConnected(connected: boolean): void {
+    if (this.remoteConnected === connected) return
+    this.remoteConnected = connected
+    this.connectionListener?.(connected)
   }
 
   /** 局域网访问地址（含 token 的测试页 URL，供控制台/未来二维码使用）。 */
@@ -69,6 +85,7 @@ class RemoteGatewayService {
   getStatus() {
     return {
       running: this.isRunning(),
+      connected: this.remoteConnected,
       port: this.settings.port,
       startedAt: this.startedAt,
       tokenConfigured: Boolean(this.settings.token),
@@ -106,6 +123,7 @@ class RemoteGatewayService {
 
       server.listen(this.settings.port, this.settings.host, () => {
         this.server = server
+        this.setRemoteConnected(false)
         this.startedAt = Date.now()
         this.lastError = ''
         this.logger?.info('RemoteGateway', '远程网关已启动', { port: this.settings.port })
@@ -115,6 +133,7 @@ class RemoteGatewayService {
   }
 
   async stop(): Promise<void> {
+    this.setRemoteConnected(false)
     if (!this.server) return
     const currentServer = this.server
     this.server = null
@@ -182,6 +201,13 @@ class RemoteGatewayService {
 
     if (method === 'GET' && url.pathname === '/status') {
       this.sendJson(res, 200, { success: true, data: this.getStatus() })
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/bridge-status') {
+      const body = await this.readJson(req)
+      this.setRemoteConnected(body.connected === true)
+      this.sendJson(res, 200, { success: true })
       return
     }
 
@@ -398,6 +424,7 @@ const PART_SIZE = 16000
 
 let ws = null, pc = null, dc = null
 let pidSeq = 1
+let reportedConnected = false
 const pendingAborts = new Map()
 const partsBuf = new Map()
 
@@ -405,6 +432,17 @@ function log(msg) {
   const el = document.getElementById('log')
   el.textContent += new Date().toISOString().slice(11, 19) + ' ' + msg + '\\n'
   console.log('[bridge]', msg)
+}
+
+function reportConnected(connected) {
+  if (reportedConnected === connected) return
+  reportedConnected = connected
+  fetch('/bridge-status?token=' + encodeURIComponent(token), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ connected }),
+    keepalive: true
+  }).catch(() => {})
 }
 
 function connectSignaling() {
@@ -426,18 +464,42 @@ function connectSignaling() {
 async function onOffer(msg) {
   log('收到 offer，建立新 PeerConnection')
   if (pc) { try { pc.close() } catch {} abortAll() }
-  pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
-  pc.onicecandidate = (e) => { if (e.candidate && ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'candidate', candidate: e.candidate })) }
-  pc.onconnectionstatechange = () => log('RTC 状态: ' + pc.connectionState)
-  pc.ondatachannel = (e) => {
-    dc = e.channel
-    dc.onopen = () => log('DataChannel 已打开')
-    dc.onclose = () => { log('DataChannel 关闭，中止在途请求'); abortAll() }
-    dc.onmessage = (ev) => onFrameRaw(String(ev.data))
+  reportConnected(false)
+  const nextPc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+  pc = nextPc
+  nextPc.onicecandidate = (e) => { if (e.candidate && ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'candidate', candidate: e.candidate })) }
+  nextPc.onconnectionstatechange = () => {
+    if (pc !== nextPc) return
+    log('RTC 状态: ' + nextPc.connectionState)
+    if (nextPc.connectionState === 'connected' && dc?.readyState === 'open') {
+      reportConnected(true)
+    } else if (nextPc.connectionState === 'failed' || nextPc.connectionState === 'disconnected' || nextPc.connectionState === 'closed') {
+      reportConnected(false)
+    }
   }
-  await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp })
-  const answer = await pc.createAnswer()
-  await pc.setLocalDescription(answer)
+  nextPc.ondatachannel = (e) => {
+    if (pc !== nextPc) return
+    const nextDc = e.channel
+    dc = nextDc
+    nextDc.onopen = () => {
+      if (dc !== nextDc) return
+      log('DataChannel 已打开')
+      reportConnected(true)
+    }
+    nextDc.onclose = () => {
+      if (dc !== nextDc) return
+      dc = null
+      log('DataChannel 关闭，中止在途请求')
+      reportConnected(false)
+      abortAll()
+    }
+    nextDc.onmessage = (ev) => { if (dc === nextDc) onFrameRaw(String(ev.data)) }
+  }
+  await nextPc.setRemoteDescription({ type: 'offer', sdp: msg.sdp })
+  if (pc !== nextPc) return
+  const answer = await nextPc.createAnswer()
+  await nextPc.setLocalDescription(answer)
+  if (pc !== nextPc) return
   ws.send(JSON.stringify({ type: 'answer', sdp: answer.sdp }))
 }
 
@@ -514,6 +576,7 @@ async function handleReq(frame) {
 
 // 30s 心跳保活（CF Worker 侧配了 auto-response，不会唤醒 DO）
 setInterval(() => { if (ws && ws.readyState === 1) ws.send('{"t":"ping"}') }, 30000)
+window.addEventListener('beforeunload', () => reportConnected(false))
 
 log('桥接页启动 room=' + room)
 connectSignaling()

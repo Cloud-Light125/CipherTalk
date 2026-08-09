@@ -765,6 +765,7 @@ export interface ElectronAPI {
       getInfo: () => Promise<RemoteControlInfo>
       setEnabled: (enabled: boolean) => Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>
       rotatePairing: () => Promise<{ success: boolean; info: RemoteControlInfo }>
+      onStatus: (callback: (payload: { connected: boolean }) => void) => () => void
     }
   }
   accounts: {
