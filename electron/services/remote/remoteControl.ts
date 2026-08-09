@@ -13,6 +13,65 @@ import { registerRemoteWechatHandlers } from './wechatHandlers'
 const DEFAULT_SIGNALING_URL = 'wss://ctapp.aiqji.com'
 
 let bridgeWindow: BrowserWindow | null = null
+/**
+ * 配对窗口：只有二维码弹窗打开着才允许新手机配对。
+ * 没有这道闸，"吊销设备"就是假的——被吊销的手机拿着房间号能立刻重新配一个。
+ */
+let pairingOpen = false
+
+export type RemoteDevice = {
+  id: string
+  name: string
+  token: string
+  pairedAt: number
+  lastSeenAt: number
+}
+
+export function setPairingOpen(open: boolean): void {
+  pairingOpen = open
+}
+
+export function listRemoteDevices(ctx: MainProcessContext): Array<Omit<RemoteDevice, 'token'>> {
+  const devices = ctx.getConfigService()?.get('remoteDevices') ?? []
+  // token 不出主进程，UI 不需要也不该拿到
+  return devices.map(({ token: _token, ...rest }) => rest)
+}
+
+export function revokeRemoteDevice(ctx: MainProcessContext, deviceId: string): Array<Omit<RemoteDevice, 'token'>> {
+  const configService = ctx.getConfigService()
+  const devices = configService?.get('remoteDevices') ?? []
+  configService?.set('remoteDevices', devices.filter((d) => d.id !== deviceId))
+  return listRemoteDevices(ctx)
+}
+
+/** 手机连上 DataChannel 后的第一道关：验令牌，或在配对窗口内发新令牌 */
+function authorizeDevice(ctx: MainProcessContext, input: { token?: string; name?: string }) {
+  const configService = ctx.getConfigService()
+  if (!configService) return { ok: false, reason: 'unavailable' }
+  const devices = [...(configService.get('remoteDevices') ?? [])]
+  const token = String(input.token || '')
+
+  if (token) {
+    const index = devices.findIndex((d) => d.token === token)
+    if (index < 0) return { ok: false, reason: 'revoked' }
+    devices[index] = { ...devices[index], lastSeenAt: Date.now() }
+    configService.set('remoteDevices', devices)
+    return { ok: true, deviceToken: token, deviceName: devices[index].name }
+  }
+
+  if (!pairingOpen) return { ok: false, reason: 'pairing-closed' }
+
+  const device: RemoteDevice = {
+    id: randomBytes(8).toString('hex'),
+    name: String(input.name || '').trim().slice(0, 40) || '手机',
+    token: randomBytes(24).toString('hex'),
+    pairedAt: Date.now(),
+    lastSeenAt: Date.now(),
+  }
+  devices.push(device)
+  configService.set('remoteDevices', devices)
+  return { ok: true, deviceToken: device.token, deviceName: device.name }
+}
 
 export type RemoteControlInfo = {
   enabled: boolean
@@ -24,12 +83,14 @@ export type RemoteControlInfo = {
   qrPayload: string
   /** 二维码图片 data URL；未启用时为空 */
   qrImage: string
+  /** 桌面端 DTLS 指纹，手动配对时手机也要填 */
+  fingerprint: string
   /** 局域网直连地址（浏览器兜底用，不走 P2P） */
   lanUrls: string[]
 }
 
-function buildQrPayload(signaling: string, pairingId: string): string {
-  return JSON.stringify({ v: 1, signaling, room: pairingId })
+function buildQrPayload(signaling: string, pairingId: string, fingerprint: string): string {
+  return JSON.stringify({ v: 1, signaling, room: pairingId, fingerprint })
 }
 
 export async function getRemoteControlInfo(ctx: MainProcessContext): Promise<RemoteControlInfo> {
@@ -39,7 +100,11 @@ export async function getRemoteControlInfo(ctx: MainProcessContext): Promise<Rem
   const pairingId = String(configService?.get('remotePairingId') || '')
   const running = remoteGatewayService.isRunning()
   const connected = remoteGatewayService.isRemoteConnected()
-  const qrPayload = pairingId && running ? buildQrPayload(signaling, pairingId) : ''
+  // 指纹由桥接页启动后上报，没拿到就先不出二维码——否则手机会存下空指纹，等于没有钉扎
+  const fingerprint = remoteGatewayService.getDtlsFingerprint()
+  const qrPayload = pairingId && running && fingerprint
+    ? buildQrPayload(signaling, pairingId, fingerprint)
+    : ''
   return {
     enabled,
     running,
@@ -50,6 +115,7 @@ export async function getRemoteControlInfo(ctx: MainProcessContext): Promise<Rem
     qrImage: qrPayload
       ? await QRCode.toDataURL(qrPayload, { width: 480, margin: 1 }).catch(() => '')
       : '',
+    fingerprint,
     lanUrls: running ? remoteGatewayService.getLanUrls() : [],
   }
 }
@@ -76,6 +142,7 @@ export async function startRemoteControl(ctx: MainProcessContext): Promise<{ suc
   remoteGatewayService.setConnectionListener((connected) => {
     ctx.broadcastToWindows('deviceConnect:remote:status', { connected })
   })
+  remoteGatewayService.setDeviceAuthorizer((input) => authorizeDevice(ctx, input))
   remoteGatewayService.applySettings({
     port: Number(configService.get('remoteGatewayPort')) || 5033,
     token,
