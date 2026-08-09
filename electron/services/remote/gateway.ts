@@ -50,6 +50,8 @@ class RemoteGatewayService {
   private dtlsFingerprint = ''
   /** 设备授权回调：由 remoteControl 注入（需要读写 config，gateway 本身不碰 electron） */
   private deviceAuthorizer: DeviceAuthorizer | null = null
+  /** 桥接页实际收集到的候选类型，用来诊断「局域网能连、流量连不上」 */
+  private candidateKinds: string[] = []
   private startedAt = 0
   private lastError = ''
   private settings: GatewaySettings = {
@@ -88,6 +90,10 @@ class RemoteGatewayService {
 
   setDeviceAuthorizer(authorizer: DeviceAuthorizer | null): void {
     this.deviceAuthorizer = authorizer
+  }
+
+  getCandidateKinds(): string[] {
+    return this.candidateKinds
   }
 
   setRemoteConnected(connected: boolean): void {
@@ -246,6 +252,14 @@ class RemoteGatewayService {
         this.logger?.warn('RemoteGateway', '手机设备鉴权被拒', { reason: result.reason })
       }
       this.sendJson(res, 200, result)
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/bridge-candidates') {
+      const body = await this.readJson(req)
+      this.candidateKinds = Array.isArray(body.kinds) ? body.kinds.map(String) : []
+      this.logger?.info('RemoteGateway', '桥接页候选地址', { kinds: this.candidateKinds })
+      this.sendJson(res, 200, { success: true })
       return
     }
 
@@ -465,7 +479,13 @@ const q = new URLSearchParams(location.search)
 const token = q.get('token') || ''
 const signalingUrl = q.get('signaling') || ''
 const room = q.get('room') || ''
-const ICE_SERVERS = [{ urls: 'stun:stun.miwifi.com:3478' }, { urls: 'stun:stun.l.google.com:19302' }]
+const ICE_SERVERS = [
+  // 顺序有讲究：cloudflare 有 AAAA 记录，是唯一能拿到 IPv6 映射的；
+  // miwifi 只有 A 记录（IPv4 srflx）；谷歌那个国内不稳，放最后当兜底
+  { urls: 'stun:turn.cloudflare.com:3478' },
+  { urls: 'stun:stun.miwifi.com:3478' },
+  { urls: 'stun:stun.l.google.com:19302' },
+]
 const PART_SIZE = 16000
 
 let ws = null, pc = null, dc = null
@@ -489,6 +509,30 @@ function reportConnected(connected) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ connected }),
     keepalive: true
+  }).catch(() => {})
+}
+
+// ===== 候选地址自检 =====
+// 「局域网能连、流量连不上」几乎都出在这里：host 候选被 mDNS 换成 xxx.local，
+// 跨网解析不了，公网 IPv6 等于从没通告过。把实际收集到的类型汇报上去，一眼看得见。
+let candidateKinds = new Set()
+
+function collectCandidate(line) {
+  const m = /candidate:\S+ \d+ \S+ \d+ (\S+) \d+ typ (\w+)/.exec(line || '')
+  if (!m) return
+  const [, address, type] = m
+  if (address.endsWith('.local')) candidateKinds.add('mDNS 隐藏')
+  else if (address.includes(':')) candidateKinds.add('IPv6 ' + type)
+  else candidateKinds.add('IPv4 ' + type)
+}
+
+function reportCandidates() {
+  const kinds = Array.from(candidateKinds)
+  log('本机候选: ' + (kinds.join('、') || '无'))
+  fetch('/bridge-candidates?token=' + encodeURIComponent(token), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kinds })
   }).catch(() => {})
 }
 
@@ -575,6 +619,7 @@ function connectSignaling() {
 
 async function onOffer(msg) {
   log('收到 offer，建立新 PeerConnection')
+  candidateKinds = new Set()
   if (pc) { try { pc.close() } catch {} abortAll() }
   reportConnected(false)
   const nextPc = new RTCPeerConnection({
@@ -582,7 +627,11 @@ async function onOffer(msg) {
     certificates: localCert ? [localCert] : undefined,
   })
   pc = nextPc
-  nextPc.onicecandidate = (e) => { if (e.candidate && ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'candidate', candidate: e.candidate })) }
+  nextPc.onicecandidate = (e) => {
+    if (!e.candidate) { reportCandidates(); return }
+    collectCandidate(e.candidate.candidate || '')
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'candidate', candidate: e.candidate }))
+  }
   nextPc.onconnectionstatechange = () => {
     if (pc !== nextPc) return
     log('RTC 状态: ' + nextPc.connectionState)

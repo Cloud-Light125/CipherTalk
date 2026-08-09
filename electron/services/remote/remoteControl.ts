@@ -85,6 +85,8 @@ export type RemoteControlInfo = {
   qrImage: string
   /** 桌面端 DTLS 指纹，手动配对时手机也要填 */
   fingerprint: string
+  /** 桥接页实际收集到的候选类型，诊断「流量连不上」用 */
+  candidateKinds: string[]
   /** 局域网直连地址（浏览器兜底用，不走 P2P） */
   lanUrls: string[]
 }
@@ -116,6 +118,7 @@ export async function getRemoteControlInfo(ctx: MainProcessContext): Promise<Rem
       ? await QRCode.toDataURL(qrPayload, { width: 480, margin: 1 }).catch(() => '')
       : '',
     fingerprint,
+    candidateKinds: remoteGatewayService.getCandidateKinds(),
     lanUrls: running ? remoteGatewayService.getLanUrls() : [],
   }
 }
@@ -200,6 +203,11 @@ function openBridgeWindow(url: string): void {
       backgroundThrottling: false,
     },
   })
+  // 关掉 mDNS 混淆。默认策略下 Chromium 把 host 候选换成 xxx.local：
+  // 局域网靠 mDNS 能解析所以连得上，手机换流量就解析不了，
+  // 而真实的公网 IPv6 从来没被通告出去，只剩 IPv4 srflx 硬打运营商 CGNAT，必然失败。
+  // 代价是把内网 IP 告诉对端——对端是用户自己已配对的手机，可以接受。
+  bridgeWindow.webContents.setWebRTCIPHandlingPolicy('default_public_and_private_interfaces')
   bridgeWindow.on('closed', () => {
     bridgeWindow = null
     remoteGatewayService.setRemoteConnected(false)

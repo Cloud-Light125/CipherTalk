@@ -17,6 +17,7 @@ type RemoteInfo = {
   qrPayload: string
   qrImage: string
   fingerprint: string
+  candidateKinds: string[]
   lanUrls: string[]
 }
 
@@ -173,6 +174,18 @@ export function RemotePhoneCard() {
               </Button>
             </div>
           ))}
+        </div>
+      )}
+
+      {running && info && info.candidateKinds.length > 0 && (
+        <div className="rounded-lg bg-default-100 px-3 py-2">
+          <p className="text-xs text-muted">本机网络通道</p>
+          <p className="text-xs text-foreground">{info.candidateKinds.join('、')}</p>
+          {!info.candidateKinds.some((k) => k.startsWith('IPv6')) && (
+            <p className="mt-1 text-xs text-warning">
+              没有 IPv6 通道，手机用流量可能连不上（本机或路由器没有公网 IPv6）
+            </p>
+          )}
         </div>
       )}
 
