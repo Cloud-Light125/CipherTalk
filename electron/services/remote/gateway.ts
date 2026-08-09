@@ -480,9 +480,9 @@ const token = q.get('token') || ''
 const signalingUrl = q.get('signaling') || ''
 const room = q.get('room') || ''
 const ICE_SERVERS = [
-  // 顺序有讲究：cloudflare 有 AAAA 记录，是唯一能拿到 IPv6 映射的；
+  // 顺序有讲究：cloudflare 是专用公共 STUN 且有 AAAA 记录，唯一能拿到 IPv6 映射；
   // miwifi 只有 A 记录（IPv4 srflx）；谷歌那个国内不稳，放最后当兜底
-  { urls: 'stun:turn.cloudflare.com:3478' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
   { urls: 'stun:stun.miwifi.com:3478' },
   { urls: 'stun:stun.l.google.com:19302' },
 ]
