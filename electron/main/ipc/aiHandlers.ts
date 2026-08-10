@@ -134,7 +134,7 @@ function stripHistoricalToolPartsForModel(messages: UIMessage[] = []): UIMessage
   const next = messages.map((message, index) => {
     if (index >= lastUserIndex || message.role !== 'assistant' || !Array.isArray((message as any).parts)) return message
     const parts = ((message as any).parts as any[]).filter((part) => {
-      const keep = !(part && typeof part.type === 'string' && part.type.startsWith('tool-'))
+      const keep = !isUiToolPart(part)
       if (!keep) changed = true
       return keep
     })
@@ -143,12 +143,17 @@ function stripHistoricalToolPartsForModel(messages: UIMessage[] = []): UIMessage
   return changed ? next : messages
 }
 
+function isUiToolPart(part: unknown): boolean {
+  const type = (part as { type?: unknown } | null)?.type
+  return typeof type === 'string' && (type === 'dynamic-tool' || type.startsWith('tool-'))
+}
+
 function countToolParts(messages: UIMessage[] = []): number {
   let count = 0
   for (const message of messages) {
     const parts = Array.isArray((message as any)?.parts) ? (message as any).parts as any[] : []
     for (const part of parts) {
-      if (part && typeof part.type === 'string' && part.type.startsWith('tool-')) count += 1
+      if (isUiToolPart(part)) count += 1
     }
   }
   return count

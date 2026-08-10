@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { isAbsolute, join, relative } from 'node:path'
+import { readFileSync, realpathSync, statSync } from 'node:fs'
 import { ipcMain } from 'electron'
 import { chatService } from '../../services/chatService'
 import { pickRandomPrivateIncomingMoment } from '../../services/randomMomentService'
@@ -12,6 +13,12 @@ function sniffImageMediaType(buffer: Buffer): string {
   if (buffer[0] === 0xff && buffer[1] === 0xd8) return 'image/jpeg'
   if (buffer.subarray(8, 12).toString('latin1') === 'WEBP') return 'image/webp'
   return 'image/png'
+}
+
+const MAX_REMOTE_IMAGE_BYTES = 20 * 1024 * 1024
+
+function imageBufferToDataUrl(buffer: Buffer): string {
+  return `data:${sniffImageMediaType(buffer)};base64,${buffer.toString('base64')}`
 }
 
 /**
@@ -235,8 +242,44 @@ export function registerChatHandlers(ctx: MainProcessContext): void {
         payload?.cdnUrl || '', payload?.md5, payload?.productId, undefined, payload?.encryptUrl, payload?.aesKey,
       )
       if (!result.success || !result.localPath) return { success: false, error: result.error || '表情下载失败' }
-      const buffer = readFileSync(result.localPath)
-      return { success: true, dataUrl: `data:${sniffImageMediaType(buffer)};base64,${buffer.toString('base64')}` }
+      if (result.localPath.startsWith('data:image/')) {
+        return { success: true, dataUrl: result.localPath }
+      }
+      const buffer = readFileSync(result.cachePath || result.localPath)
+      return { success: true, dataUrl: imageBufferToDataUrl(buffer) }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  // Agent 图片工具输出的 filePath 是电脑本地路径，手机端需通过已鉴权 RPC 读取。
+  // 只允许 Agent 图片工具使用的缓存目录，防止该通道变成任意文件读取。
+  agentRpcHandlers.set('agent:readAgentImageData', async (_event, payload: { filePath?: string }) => {
+    try {
+      const requestedPath = String(payload?.filePath || '').trim()
+      const cacheBasePath = ctx.getConfigService()?.getCacheBasePath()
+      if (!requestedPath || !cacheBasePath) return { success: false, error: '图片路径无效' }
+
+      const actualPath = realpathSync(requestedPath)
+      const allowedRoots = ['ai-images', 'sns_cache']
+        .map((directory) => {
+          try { return realpathSync(join(cacheBasePath, directory)) } catch { return '' }
+        })
+        .filter(Boolean)
+      const isAllowed = allowedRoots.some((root) => {
+        const relativePath = relative(root, actualPath)
+        return Boolean(relativePath) && !relativePath.startsWith('..') && !isAbsolute(relativePath)
+      })
+      if (!isAllowed) {
+        return { success: false, error: '图片不在允许的缓存目录中' }
+      }
+
+      const stat = statSync(actualPath)
+      if (!stat.isFile() || stat.size <= 0 || stat.size > MAX_REMOTE_IMAGE_BYTES) {
+        return { success: false, error: '图片文件无效或超过 20MB' }
+      }
+      const buffer = readFileSync(actualPath)
+      return { success: true, dataUrl: imageBufferToDataUrl(buffer) }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
