@@ -1137,6 +1137,37 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     return { success: true }
   })
 
+  // 手机遥控端用：列出已配置的 AI 服务商及各自的模型，供右上角切换（覆盖走 agent:run 的 modelConfig）
+  handleAgent('agent:listProviders', async () => {
+    try {
+      const config = ctx.getConfigService()
+      if (!config) return { success: false, error: '配置服务不可用' }
+      const { getProviderDefinitions, CODEX_SUBSCRIPTION_PROVIDER_ID } = await import('../../services/ai/providers/catalog')
+      const configs = config.getAllAIProviderConfigs() || {}
+      const current = config.getAICurrentProvider()
+      const definitions = await getProviderDefinitions()
+      const providers = definitions
+        .filter((def) => def.id === current
+          || def.id === CODEX_SUBSCRIPTION_PROVIDER_ID && Boolean(configs[def.id])
+          || Boolean(configs[def.id]?.apiKey))
+        .map((def) => {
+          const providerConfig = configs[def.id] as (typeof configs[string] & { reasoningEffort?: string }) | undefined
+          const models = def.modelDetails?.map((item) => item.id) || def.models || []
+          const configuredModel = providerConfig?.model || ''
+          return {
+            id: def.id,
+            name: def.name,
+            models: configuredModel && !models.includes(configuredModel) ? [configuredModel, ...models] : models,
+            currentModel: configuredModel || models[0] || '',
+            reasoningEffort: providerConfig?.reasoningEffort || null,
+          }
+        })
+      return { success: true, current, providers }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   // ========= 嵌入模型（语义/向量检索）=========
   ipcMain.handle('embedding:getConfig', async () => {
     try {
