@@ -253,17 +253,24 @@ export function registerChatHandlers(ctx: MainProcessContext): void {
   })
 
   // Agent 图片工具输出的 filePath 是电脑本地路径，手机端需通过已鉴权 RPC 读取。
-  // 只允许 ai-images 缓存目录中的图片，防止该通道变成任意文件读取。
+  // 只允许 Agent 图片工具使用的缓存目录，防止该通道变成任意文件读取。
   agentRpcHandlers.set('agent:readAgentImageData', async (_event, payload: { filePath?: string }) => {
     try {
       const requestedPath = String(payload?.filePath || '').trim()
       const cacheBasePath = ctx.getConfigService()?.getCacheBasePath()
       if (!requestedPath || !cacheBasePath) return { success: false, error: '图片路径无效' }
 
-      const allowedRoot = realpathSync(join(cacheBasePath, 'ai-images'))
       const actualPath = realpathSync(requestedPath)
-      const relativePath = relative(allowedRoot, actualPath)
-      if (!relativePath || relativePath.startsWith('..') || isAbsolute(relativePath)) {
+      const allowedRoots = ['ai-images', 'sns_cache']
+        .map((directory) => {
+          try { return realpathSync(join(cacheBasePath, directory)) } catch { return '' }
+        })
+        .filter(Boolean)
+      const isAllowed = allowedRoots.some((root) => {
+        const relativePath = relative(root, actualPath)
+        return Boolean(relativePath) && !relativePath.startsWith('..') && !isAbsolute(relativePath)
+      })
+      if (!isAllowed) {
         return { success: false, error: '图片不在允许的缓存目录中' }
       }
 
