@@ -1,7 +1,18 @@
+import { readFileSync } from 'node:fs'
 import { ipcMain } from 'electron'
 import { chatService } from '../../services/chatService'
 import { pickRandomPrivateIncomingMoment } from '../../services/randomMomentService'
+import { agentRpcHandlers } from '../../services/remote/agentRpcRegistry'
 import type { MainProcessContext } from '../context'
+
+/** 按文件头识别表情图片类型（表情包多为 gif/png/webp）。 */
+function sniffImageMediaType(buffer: Buffer): string {
+  if (buffer.subarray(0, 3).toString('latin1') === 'GIF') return 'image/gif'
+  if (buffer[0] === 0x89 && buffer[1] === 0x50) return 'image/png'
+  if (buffer[0] === 0xff && buffer[1] === 0xd8) return 'image/jpeg'
+  if (buffer.subarray(8, 12).toString('latin1') === 'WEBP') return 'image/webp'
+  return 'image/png'
+}
 
 /**
  * 聊天 IPC 与增量消息事件。
@@ -209,6 +220,26 @@ export function registerChatHandlers(ctx: MainProcessContext): void {
     const result = chatService.getMyUserInfo()
     // 首页会调用这个接口，失败是正常的，不记录错误日志
     return result
+  })
+
+  // 手机遥控端用：下载/解密表情包后直接回传 base64 数据（localPath 是桌面本地路径，手机加载不了）
+  agentRpcHandlers.set('agent:downloadEmojiData', async (_event, payload: {
+    cdnUrl?: string
+    md5?: string
+    productId?: string
+    encryptUrl?: string
+    aesKey?: string
+  }) => {
+    try {
+      const result = await chatService.downloadEmoji(
+        payload?.cdnUrl || '', payload?.md5, payload?.productId, undefined, payload?.encryptUrl, payload?.aesKey,
+      )
+      if (!result.success || !result.localPath) return { success: false, error: result.error || '表情下载失败' }
+      const buffer = readFileSync(result.localPath)
+      return { success: true, dataUrl: `data:${sniffImageMediaType(buffer)};base64,${buffer.toString('base64')}` }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
   })
 
   ipcMain.handle('chat:downloadEmoji', async (_, cdnUrl: string, md5?: string, productId?: string, createTime?: number, encryptUrl?: string, aesKey?: string) => {
