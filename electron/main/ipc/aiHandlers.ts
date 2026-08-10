@@ -1137,6 +1137,16 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     return { success: true }
   })
 
+  // 手机遥控端用：桌面端 TTS 合成后把音频 base64 回传手机播放（一句话约 50-300KB，DataChannel 分片扛得住）
+  handleAgent('agent:ttsSpeak', async (_e, payload: { text?: string }) => {
+    try {
+      const { synthesizeSpeech } = await import('../../services/ai/ttsService')
+      return await synthesizeSpeech(String(payload?.text || ''), { useCache: true })
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   // 手机遥控端用：列出已配置的 AI 服务商及各自的模型，供右上角切换（覆盖走 agent:run 的 modelConfig）
   handleAgent('agent:listProviders', async () => {
     try {
@@ -1156,7 +1166,8 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
           const configuredModel = providerConfig?.model || ''
           return {
             id: def.id,
-            name: def.name,
+            // displayName 才是桌面端设置页显示的名字（如「RelayOne（官方推荐）」）
+            name: def.displayName || def.name,
             models: configuredModel && !models.includes(configuredModel) ? [configuredModel, ...models] : models,
             currentModel: configuredModel || models[0] || '',
             reasoningEffort: providerConfig?.reasoningEffort || null,
