@@ -16,6 +16,8 @@ type CloneContactSummary = {
   avatarUrl?: string
   updatedAt: number
   isCloned: boolean
+  /** 最近联系时间，排序用（消息列表同款顺序） */
+  lastContactTime: number
 }
 
 type CloneBuildProgress = {
@@ -80,22 +82,36 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
                 avatarUrl: contact.avatarUrl,
                 updatedAt: persona?.updatedAt || 0,
                 isCloned: Boolean(persona),
+                lastContactTime: contact.lastContactTime || 0,
               }
-            }),
+            })
+            // 已克隆的排前面，组内按最近联系时间倒序（和消息列表一个顺序）
+            .sort((a, b) =>
+              Number(b.isCloned) - Number(a.isCloned)
+              || b.lastContactTime - a.lastContactTime),
           builtAt: Date.now(),
         }
       }
 
+      // 关键词过滤在缓存上做：手机端搜索传 query，避免把全量联系人拉过 DataChannel
+      const query = pageOptions && typeof pageOptions.query === 'string'
+        ? pageOptions.query.trim().toLowerCase()
+        : ''
       const allPersonas = pageCache?.contacts ?? []
-      const personas = allPersonas.slice(offset, offset + limit)
+      const matched = query
+        ? allPersonas.filter((persona) =>
+          persona.displayName.toLowerCase().includes(query)
+          || persona.sessionId.toLowerCase().includes(query))
+        : allPersonas
+      const personas = matched.slice(offset, offset + limit)
       const nextOffset = offset + personas.length
 
       return {
         success: true,
         personas,
-        total: allPersonas.length,
+        total: matched.length,
         nextOffset,
-        hasMore: nextOffset < allPersonas.length,
+        hasMore: nextOffset < matched.length,
       }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
@@ -119,7 +135,8 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
     }
 
     const { personaStore } = await import('../agent/persona/personaStore')
-    if (personaStore.get(sessionId)) return { success: true, alreadyCloned: true }
+    // force = 重新克隆：跳过已克隆短路，按最新聊天记录重建画像（personaStore 保存时覆盖）
+    if (!input.force && personaStore.get(sessionId)) return { success: true, alreadyCloned: true }
 
     buildInFlight.add(sessionId)
     buildStatusBySessionId.set(sessionId, {

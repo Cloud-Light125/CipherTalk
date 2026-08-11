@@ -26,6 +26,8 @@ import {
   type PromptInputMessage,
 } from '@/components/ai-elements/prompt-input'
 import { ImagePreview, type ImagePreviewOriginRect } from '@/components/ImagePreview'
+import { LottieView, type DotLottie } from '@/components/LottieView'
+import successLottieUrl from '@/assets/lottie/Success.lottie?url'
 import { PersonaChatTransport } from '../features/aiagent/transport/personaChatTransport'
 import type { AgentReasoningEffort } from '../features/aiagent/transport/ipcChatTransport'
 import { cn } from '../lib/utils'
@@ -563,6 +565,16 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
   const [persona, setPersona] = useState<PersonaRecordInfo | null>(null)
   const [buildProgress, setBuildProgress] = useState<PersonaBuildProgressInfo | null>(null)
   const [buildError, setBuildError] = useState<string | null>(null)
+  // 克隆刚完成的庆祝动画：播完一遍 → 缩小淡出退场 → 移除
+  const [celebration, setCelebration] = useState<'hidden' | 'playing' | 'leaving'>('hidden')
+  const handleSuccessLottieRef = useCallback((instance: DotLottie | null) => {
+    instance?.addEventListener('complete', () => setCelebration('leaving'))
+  }, [])
+  useEffect(() => {
+    if (celebration !== 'leaving') return
+    const timer = setTimeout(() => setCelebration('hidden'), 350)
+    return () => clearTimeout(timer)
+  }, [celebration])
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [clearingConversations, setClearingConversations] = useState(false)
   const [voiceCloning, setVoiceCloning] = useState(false)
@@ -1177,6 +1189,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
     if (res.success && res.persona) {
       setPersona(res.persona)
       setPhase('chat')
+      setCelebration('playing')
       onPersonaChanged?.()
     } else {
       setBuildError(res.error || '克隆失败')
@@ -1705,6 +1718,20 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
 
   return (
     <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+      {celebration !== 'hidden' && (
+        <div
+          className={`pointer-events-none absolute inset-0 z-50 flex items-center justify-center transition-all duration-300 ease-in ${
+            celebration === 'leaving' ? 'scale-75 opacity-0' : 'scale-100 opacity-100'
+          }`}
+        >
+          <LottieView
+            autoplay
+            className="size-40"
+            dotLottieRefCallback={handleSuccessLottieRef}
+            src={successLottieUrl}
+          />
+        </div>
+      )}
       {/* 仿手机聊天头部：等待回复时只显示"对方正在输入…" */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border/60 px-3 sm:px-4">
         <PersonaAvatar name={displayName} avatarUrl={avatarUrl} size={44} />

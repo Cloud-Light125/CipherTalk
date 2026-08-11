@@ -961,10 +961,21 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  handleAgent('agent:listConversations', async (_event, scope?: AgentScope) => {
+  handleAgent('agent:listConversations', async (
+    _event,
+    scope?: AgentScope,
+    options?: { query?: string; limit?: number },
+  ) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
-      return { success: true, conversations: agentConversationStore.list({ scope }) }
+      return {
+        success: true,
+        conversations: agentConversationStore.list({
+          scope: scope || undefined,
+          query: options?.query,
+          limit: options?.limit,
+        }),
+      }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
@@ -1698,6 +1709,8 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     sessionId: string
     messages: UIMessage[]
     reasoningEffort?: AgentReasoningEffort
+    /** 手机遥控端右上角切换的服务商/模型覆盖，同 agent:run */
+    modelConfig?: AgentProviderConfigOverride | null
   }) => {
     const sender = event.sender
     const { runId } = payload
@@ -1718,7 +1731,9 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
       const { sanitizeModelMessageToolPairs } = await import('../../services/agent/compaction')
       const { prepareProviderFileUploads } = await import('../../services/agent/providerFileUpload')
       const { convertToModelMessages } = await import('ai')
-      const providerConfig = resolveProviderConfig({ reasoningEffort: payload.reasoningEffort })
+      const providerConfig = resolveProviderConfig(
+        payload.modelConfig || { reasoningEffort: payload.reasoningEffort },
+      )
       await refreshAgentRunProxyCached(refreshResolvedProxyUrl)
       const providerFileUpload = await prepareProviderFileUploads(payload.messages || [], providerConfig, logger)
       const messages = sanitizeModelMessageToolPairs(await convertToModelMessages(providerFileUpload.messages))
