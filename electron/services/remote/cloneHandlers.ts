@@ -135,7 +135,8 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
     }
 
     const { personaStore } = await import('../agent/persona/personaStore')
-    if (personaStore.get(sessionId)) return { success: true, alreadyCloned: true }
+    // force = 重新克隆：跳过已克隆短路，按最新聊天记录重建画像（personaStore 保存时覆盖）
+    if (!input.force && personaStore.get(sessionId)) return { success: true, alreadyCloned: true }
 
     buildInFlight.add(sessionId)
     buildStatusBySessionId.set(sessionId, {

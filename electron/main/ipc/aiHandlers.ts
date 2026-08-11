@@ -1709,6 +1709,8 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     sessionId: string
     messages: UIMessage[]
     reasoningEffort?: AgentReasoningEffort
+    /** 手机遥控端右上角切换的服务商/模型覆盖，同 agent:run */
+    modelConfig?: AgentProviderConfigOverride | null
   }) => {
     const sender = event.sender
     const { runId } = payload
@@ -1729,7 +1731,9 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
       const { sanitizeModelMessageToolPairs } = await import('../../services/agent/compaction')
       const { prepareProviderFileUploads } = await import('../../services/agent/providerFileUpload')
       const { convertToModelMessages } = await import('ai')
-      const providerConfig = resolveProviderConfig({ reasoningEffort: payload.reasoningEffort })
+      const providerConfig = resolveProviderConfig(
+        payload.modelConfig || { reasoningEffort: payload.reasoningEffort },
+      )
       await refreshAgentRunProxyCached(refreshResolvedProxyUrl)
       const providerFileUpload = await prepareProviderFileUploads(payload.messages || [], providerConfig, logger)
       const messages = sanitizeModelMessageToolPairs(await convertToModelMessages(providerFileUpload.messages))
