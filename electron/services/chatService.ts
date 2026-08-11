@@ -604,7 +604,7 @@ class ChatService extends EventEmitter {
    * 获取图片数据（base64）。
    * 与 WeFlow 一致，作为聊天页图片渲染的 localId 兜底通道。
    */
-  async getImageData(sessionId: string, msgId: string, createTime?: number): Promise<{ success: boolean; data?: string; error?: string }> {
+  async getImageData(sessionId: string, msgId: string, createTime?: number): Promise<{ success: boolean; data?: string; liveVideoPath?: string; error?: string }> {
     return getImageData(this.state, sessionId, msgId, createTime)
   }
 
