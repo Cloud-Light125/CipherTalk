@@ -961,10 +961,21 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  handleAgent('agent:listConversations', async (_event, scope?: AgentScope) => {
+  handleAgent('agent:listConversations', async (
+    _event,
+    scope?: AgentScope,
+    options?: { query?: string; limit?: number },
+  ) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
-      return { success: true, conversations: agentConversationStore.list({ scope }) }
+      return {
+        success: true,
+        conversations: agentConversationStore.list({
+          scope: scope || undefined,
+          query: options?.query,
+          limit: options?.limit,
+        }),
+      }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }

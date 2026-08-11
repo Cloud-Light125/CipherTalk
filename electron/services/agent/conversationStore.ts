@@ -94,6 +94,8 @@ interface CreateConversationInput {
 interface ListConversationOptions {
   scope?: AgentScope
   limit?: number
+  /** 标题关键词过滤（不区分大小写），走 SQL LIKE */
+  query?: string
 }
 
 interface AccountIdentity {
@@ -289,6 +291,12 @@ export class AgentConversationStore {
       // 不带 scope = Agent 页历史列表：分身对话只属于分身窗口（persona:chat 引擎），
       // 混进 Agent 页会被当普通 Agent 会话续聊，提示词/工具全走错
       filters.push("scope_kind != 'persona'")
+    }
+
+    const query = options.query?.trim()
+    if (query) {
+      filters.push("title LIKE @query ESCAPE '\\'")
+      params.query = `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`
     }
 
     const rows = db.prepare(`

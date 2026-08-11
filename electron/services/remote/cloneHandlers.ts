@@ -86,16 +86,25 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
         }
       }
 
+      // 关键词过滤在缓存上做：手机端搜索传 query，避免把全量联系人拉过 DataChannel
+      const query = pageOptions && typeof pageOptions.query === 'string'
+        ? pageOptions.query.trim().toLowerCase()
+        : ''
       const allPersonas = pageCache?.contacts ?? []
-      const personas = allPersonas.slice(offset, offset + limit)
+      const matched = query
+        ? allPersonas.filter((persona) =>
+          persona.displayName.toLowerCase().includes(query)
+          || persona.sessionId.toLowerCase().includes(query))
+        : allPersonas
+      const personas = matched.slice(offset, offset + limit)
       const nextOffset = offset + personas.length
 
       return {
         success: true,
         personas,
-        total: allPersonas.length,
+        total: matched.length,
         nextOffset,
-        hasMore: nextOffset < allPersonas.length,
+        hasMore: nextOffset < matched.length,
       }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
