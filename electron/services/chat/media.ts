@@ -291,7 +291,7 @@ export async function getMessageByLocalIdFromTable(
  * 获取图片数据（base64）。
  * 与 WeFlow 一致，作为聊天页图片渲染的 localId 兜底通道。
  */
-export async function getImageData(state: ChatServiceState, sessionId: string, msgId: string, createTime?: number): Promise<{ success: boolean; data?: string; error?: string }> {
+export async function getImageData(state: ChatServiceState, sessionId: string, msgId: string, createTime?: number): Promise<{ success: boolean; data?: string; liveVideoPath?: string; error?: string }> {
   try {
     const localId = parseInt(msgId, 10)
     if (isNaN(localId)) {
@@ -328,7 +328,9 @@ export async function getImageData(state: ChatServiceState, sessionId: string, m
 
     if (result.localPath.startsWith('data:')) {
       const base64Data = result.localPath.split(',')[1]
-      return base64Data ? { success: true, data: base64Data } : { success: false, error: '图片数据为空' }
+      return base64Data
+        ? { success: true, data: base64Data, liveVideoPath: result.liveVideoPath }
+        : { success: false, error: '图片数据为空' }
     }
 
     const filePath = result.localPath.startsWith('file:')
@@ -340,7 +342,11 @@ export async function getImageData(state: ChatServiceState, sessionId: string, m
     }
 
     const imageData = fs.readFileSync(filePath)
-    return { success: true, data: imageData.toString('base64') }
+    return {
+      success: true,
+      data: imageData.toString('base64'),
+      liveVideoPath: result.liveVideoPath,
+    }
   } catch (e) {
     console.error('ChatService: getImageData 失败:', e)
     return { success: false, error: String(e) }

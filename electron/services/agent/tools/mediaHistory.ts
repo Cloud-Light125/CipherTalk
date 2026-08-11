@@ -50,6 +50,10 @@ type MomentMediaIdPayload = {
   md5?: string
   encryptUrl?: string
   aesKey?: string
+  livePhotoUrl?: string
+  livePhotoThumb?: string
+  livePhotoKey?: string | number
+  livePhotoMd5?: string
 }
 
 type MediaIdPayload = ChatMediaIdPayload | MomentMediaIdPayload
@@ -414,6 +418,10 @@ function momentImagePayload(post: SnsPost, media: SnsMedia, mediaIndex: number):
     key: media.key,
     thumbKey: media.thumbKey,
     md5: media.md5,
+    livePhotoUrl: media.livePhoto?.url || undefined,
+    livePhotoThumb: media.livePhoto?.thumb || undefined,
+    livePhotoKey: media.livePhoto?.key,
+    livePhotoMd5: media.livePhoto?.md5,
   }
 }
 

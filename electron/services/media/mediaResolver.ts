@@ -36,6 +36,10 @@ export type MomentMediaIdPayload = {
   md5?: string
   encryptUrl?: string
   aesKey?: string
+  livePhotoUrl?: string
+  livePhotoThumb?: string
+  livePhotoKey?: string | number
+  livePhotoMd5?: string
 }
 
 export type MediaIdPayload = ChatMediaIdPayload | MomentMediaIdPayload
@@ -51,6 +55,7 @@ export type ResolvedMediaFile = {
   time?: string | null
   postId?: string
   content?: string
+  livePhotoVideoPath?: string
 }
 
 export type ResolveMediaResult = ResolvedMediaFile | {
@@ -144,6 +149,10 @@ export function decodeMediaId(value: string): MediaIdPayload | null {
         md5: optionalString(parsed.md5),
         encryptUrl,
         aesKey: optionalString(parsed.aesKey),
+        livePhotoUrl: optionalString(parsed.livePhotoUrl),
+        livePhotoThumb: optionalString(parsed.livePhotoThumb),
+        livePhotoKey: optionalKey(parsed.livePhotoKey),
+        livePhotoMd5: optionalString(parsed.livePhotoMd5),
       }
     }
 
@@ -241,7 +250,10 @@ export async function writeDataUrlToFile(dataUrl: string, baseName: string): Pro
   }
 }
 
-export async function resolveImageToFile(sessionId: string, localId: number, createTime: number): Promise<string | null> {
+async function resolveImageFiles(sessionId: string, localId: number, createTime: number): Promise<{
+  filePath: string
+  livePhotoVideoPath?: string
+} | null> {
   const { chatService } = await import('../chatService')
   const res = await chatService.getImageData(sessionId, String(localId), createTime)
   if (!res.success || !res.data) return null
@@ -251,7 +263,23 @@ export async function resolveImageToFile(sessionId: string, localId: number, cre
   if (!dir) return null
   const filePath = path.join(dir, `history-${safeFileSegment(sessionId)}-${localId}${ext}`)
   if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, buffer)
-  return filePath
+
+  let livePhotoVideoPath: string | undefined
+  const sourceVideoPath = res.liveVideoPath ? stripFileProtocol(res.liveVideoPath) : ''
+  if (sourceVideoPath && fs.existsSync(sourceVideoPath)) {
+    const videoExt = path.extname(sourceVideoPath) || '.mov'
+    const targetVideoPath = path.join(
+      dir,
+      `history-${safeFileSegment(sessionId)}-${localId}-live${videoExt}`,
+    )
+    if (!fs.existsSync(targetVideoPath)) fs.copyFileSync(sourceVideoPath, targetVideoPath)
+    livePhotoVideoPath = targetVideoPath
+  }
+  return { filePath, livePhotoVideoPath }
+}
+
+export async function resolveImageToFile(sessionId: string, localId: number, createTime: number): Promise<string | null> {
+  return (await resolveImageFiles(sessionId, localId, createTime))?.filePath || null
 }
 
 export async function resolveEmojiToFile(rawContent: string, localId: number, createTime: number): Promise<string | null> {
@@ -284,9 +312,12 @@ async function resolveChatPayloadToFile(payload: ChatMediaIdPayload): Promise<Re
 
   const message = msgResult.message
   const createTime = payload.createTime || Number(message.createTime || 0)
+  const resolvedImage = payload.kind === 'image'
+    ? await resolveImageFiles(payload.sessionId, payload.localId, createTime)
+    : null
   const filePath = payload.kind === 'emoji'
     ? await resolveEmojiToFile(String(message.rawContent || ''), payload.localId, createTime)
-    : await resolveImageToFile(payload.sessionId, payload.localId, createTime)
+    : resolvedImage?.filePath || null
   if (!filePath) return { success: false, error: `${mediaLabel(payload.kind)}解密或落盘失败` }
 
   const names = await resolveSenders([payload.sessionId, message.senderUsername || ''])
@@ -301,6 +332,7 @@ async function resolveChatPayloadToFile(payload: ChatMediaIdPayload): Promise<Re
       ? '我'
       : names.get(message.senderUsername || '') || message.senderUsername || undefined,
     time: toLocalTime(createTime),
+    livePhotoVideoPath: resolvedImage?.livePhotoVideoPath,
   }
 }
 
@@ -332,6 +364,28 @@ export async function resolveMomentImageToFile(payload: MomentMediaIdPayload): P
   return null
 }
 
+async function resolveMomentImageFiles(payload: MomentMediaIdPayload): Promise<{
+  filePath: string
+  livePhotoVideoPath?: string
+} | null> {
+  const filePath = await resolveMomentImageToFile(payload)
+  if (!filePath) return null
+
+  let livePhotoVideoPath: string | undefined
+  if (payload.livePhotoUrl) {
+    const { snsService } = await import('../snsService')
+    const result = await snsService.proxyImage(
+      payload.livePhotoUrl,
+      payload.livePhotoKey ?? payload.key,
+      payload.livePhotoMd5,
+    )
+    if (result.success && result.videoPath) {
+      livePhotoVideoPath = stripFileProtocol(result.videoPath)
+    }
+  }
+  return { filePath, livePhotoVideoPath }
+}
+
 export async function resolveMomentEmojiToFile(payload: MomentMediaIdPayload): Promise<string | null> {
   const { snsService } = await import('../snsService')
   const res = await snsService.downloadSnsEmoji(payload.url || '', payload.encryptUrl, payload.aesKey)
@@ -339,9 +393,10 @@ export async function resolveMomentEmojiToFile(payload: MomentMediaIdPayload): P
 }
 
 async function resolveMomentPayloadToFile(payload: MomentMediaIdPayload): Promise<ResolveMediaResult> {
+  const resolvedImage = payload.kind === 'image' ? await resolveMomentImageFiles(payload) : null
   const filePath = payload.kind === 'emoji'
     ? await resolveMomentEmojiToFile(payload)
-    : await resolveMomentImageToFile(payload)
+    : resolvedImage?.filePath || null
   if (!filePath) {
     return {
       success: false,
@@ -364,6 +419,7 @@ async function resolveMomentPayloadToFile(payload: MomentMediaIdPayload): Promis
     time: toLocalTime(payload.createTime),
     postId: payload.postId,
     content: payload.content,
+    livePhotoVideoPath: resolvedImage?.livePhotoVideoPath,
   }
 }
 
@@ -426,6 +482,10 @@ export function momentImagePayload(post: SnsPost, media: SnsMedia, mediaIndex: n
     key: media.key,
     thumbKey: media.thumbKey,
     md5: media.md5,
+    livePhotoUrl: media.livePhoto?.url || undefined,
+    livePhotoThumb: media.livePhoto?.thumb || undefined,
+    livePhotoKey: media.livePhoto?.key,
+    livePhotoMd5: media.livePhoto?.md5,
   }
 }
 

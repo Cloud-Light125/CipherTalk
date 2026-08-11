@@ -16,6 +16,7 @@ function sniffImageMediaType(buffer: Buffer): string {
 }
 
 const MAX_REMOTE_IMAGE_BYTES = 20 * 1024 * 1024
+const MAX_REMOTE_LIVE_VIDEO_BYTES = 40 * 1024 * 1024
 
 function imageBufferToDataUrl(buffer: Buffer): string {
   return `data:${sniffImageMediaType(buffer)};base64,${buffer.toString('base64')}`
@@ -254,23 +255,36 @@ export function registerChatHandlers(ctx: MainProcessContext): void {
 
   // Agent 图片工具输出的 filePath 是电脑本地路径，手机端需通过已鉴权 RPC 读取。
   // 只允许 Agent 图片工具使用的缓存目录，防止该通道变成任意文件读取。
-  agentRpcHandlers.set('agent:readAgentImageData', async (_event, payload: { filePath?: string }) => {
+  agentRpcHandlers.set('agent:readAgentImageData', async (_event, payload: {
+    filePath?: string
+    livePhotoVideoPath?: string
+  }) => {
     try {
       const requestedPath = String(payload?.filePath || '').trim()
       const cacheBasePath = ctx.getConfigService()?.getCacheBasePath()
       if (!requestedPath || !cacheBasePath) return { success: false, error: '图片路径无效' }
 
-      const actualPath = realpathSync(requestedPath)
       const allowedRoots = ['ai-images', 'sns_cache']
         .map((directory) => {
           try { return realpathSync(join(cacheBasePath, directory)) } catch { return '' }
         })
         .filter(Boolean)
-      const isAllowed = allowedRoots.some((root) => {
-        const relativePath = relative(root, actualPath)
-        return Boolean(relativePath) && !relativePath.startsWith('..') && !isAbsolute(relativePath)
-      })
-      if (!isAllowed) {
+      const resolveAllowedFile = (requestedFilePath: string): string | null => {
+        if (!requestedFilePath) return null
+        try {
+          const actualPath = realpathSync(requestedFilePath)
+          const isAllowed = allowedRoots.some((root) => {
+            const relativePath = relative(root, actualPath)
+            return Boolean(relativePath) && !relativePath.startsWith('..') && !isAbsolute(relativePath)
+          })
+          return isAllowed ? actualPath : null
+        } catch {
+          return null
+        }
+      }
+
+      const actualPath = resolveAllowedFile(requestedPath)
+      if (!actualPath) {
         return { success: false, error: '图片不在允许的缓存目录中' }
       }
 
@@ -279,7 +293,27 @@ export function registerChatHandlers(ctx: MainProcessContext): void {
         return { success: false, error: '图片文件无效或超过 20MB' }
       }
       const buffer = readFileSync(actualPath)
-      return { success: true, dataUrl: imageBufferToDataUrl(buffer) }
+
+      const requestedVideoPath = String(payload?.livePhotoVideoPath || '').trim()
+      if (!requestedVideoPath) {
+        return { success: true, dataUrl: imageBufferToDataUrl(buffer) }
+      }
+      const actualVideoPath = resolveAllowedFile(requestedVideoPath)
+      if (!actualVideoPath) {
+        return { success: true, dataUrl: imageBufferToDataUrl(buffer) }
+      }
+      const videoStat = statSync(actualVideoPath)
+      if (!videoStat.isFile() || videoStat.size <= 0 || videoStat.size > MAX_REMOTE_LIVE_VIDEO_BYTES) {
+        return { success: true, dataUrl: imageBufferToDataUrl(buffer) }
+      }
+      const videoExtension = (actualVideoPath.match(/\.[a-z0-9]+$/i)?.[0] || '.mov').toLowerCase()
+      return {
+        success: true,
+        dataUrl: imageBufferToDataUrl(buffer),
+        photoExtension: (actualPath.match(/\.[a-z0-9]+$/i)?.[0] || '.jpg').toLowerCase(),
+        pairedVideoData: readFileSync(actualVideoPath).toString('base64'),
+        pairedVideoExtension: videoExtension,
+      }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
