@@ -38,7 +38,7 @@ export type DeviceAuthResult = {
 
 export type DeviceAuthorizer = (input: { token?: string; name?: string }) => DeviceAuthResult
 
-const STREAM_METHODS = new Set(['agent:run', 'clone:chat'])
+const STREAM_METHODS = new Set(['agent:run', 'clone:chat', 'clone:build'])
 
 class RemoteGatewayService {
   private server: http.Server | null = null
