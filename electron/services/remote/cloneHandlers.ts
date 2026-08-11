@@ -16,6 +16,8 @@ type CloneContactSummary = {
   avatarUrl?: string
   updatedAt: number
   isCloned: boolean
+  /** 最近联系时间，排序用（消息列表同款顺序） */
+  lastContactTime: number
 }
 
 type CloneBuildProgress = {
@@ -80,8 +82,13 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
                 avatarUrl: contact.avatarUrl,
                 updatedAt: persona?.updatedAt || 0,
                 isCloned: Boolean(persona),
+                lastContactTime: contact.lastContactTime || 0,
               }
-            }),
+            })
+            // 已克隆的排前面，组内按最近联系时间倒序（和消息列表一个顺序）
+            .sort((a, b) =>
+              Number(b.isCloned) - Number(a.isCloned)
+              || b.lastContactTime - a.lastContactTime),
           builtAt: Date.now(),
         }
       }
