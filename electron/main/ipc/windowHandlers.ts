@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import type { ImageViewerListItem, ImageViewerOpenOptions, MainProcessContext, ReplyTileEntry } from '../context'
-import { replyTileService } from '../../services/replyTileService'
+import { applyReplyTileEnabled, replyTileService } from '../../services/replyTileService'
 import { commitWeChatInput, fillWeChatInput } from '../../services/wechatWindowTracker'
 import { autoReplyService } from '../../services/autoReplyService'
 
@@ -212,8 +212,7 @@ export function registerWindowHandlers(ctx: MainProcessContext): void {
   ipcMain.handle('window:setReplyTileEnabled', (_event, enabled: boolean) => {
     const on = Boolean(enabled)
     ctx.getConfigService()?.set('replyTileEnabled', on)
-    ctx.getWindowManager().setReplyTileEnabled(on)
-    replyTileService.setRunning(on)
+    applyReplyTileEnabled(ctx.getWindowManager(), on)
     return on
   })
 

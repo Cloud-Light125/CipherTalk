@@ -650,6 +650,25 @@ class ReplyTileService {
   private emit(entry: ReplyTileEntry): void {
     this.ctx?.getWindowManager().updateReplyTileEntry(entry)
   }
+
+  /** 告诉所有渲染窗口全局开关变了：手机遥控拨的时候，桌面设置页里的 Switch 得跟着动 */
+  broadcastEnabledChange(enabled: boolean): void {
+    this.ctx?.broadcastToWindows('reply-tile:enabledChanged', enabled)
+  }
 }
 
 export const replyTileService = new ReplyTileService()
+
+/**
+ * 全局磁贴开关的完整生效路径：调用方负责写 config，这里负责窗口和后台服务。
+ * 桌面 UI（window:setReplyTileEnabled）和手机遥控（clone:setTileEnabled）都必须走它——
+ * 少调一处的结果就是"开关点了没反应，非得去另一端再点一下"。
+ */
+export function applyReplyTileEnabled(
+  windowManager: { setReplyTileEnabled: (enabled: boolean) => void },
+  enabled: boolean,
+): void {
+  windowManager.setReplyTileEnabled(enabled)
+  replyTileService.setRunning(enabled)
+  replyTileService.broadcastEnabledChange(enabled)
+}

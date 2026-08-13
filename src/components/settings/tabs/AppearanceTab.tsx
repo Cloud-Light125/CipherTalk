@@ -85,7 +85,11 @@ function AppearanceTab() {
   // 磁贴全局开关：立即生效（不走设置页的暂存-保存模型），本地态从主进程读
   const [replyTileEnabled, setReplyTileEnabled] = useState(false)
   useEffect(() => {
-    if (SUPPORTS_REPLY_TILE) void window.electronAPI.window.getReplyTileEnabled().then(setReplyTileEnabled)
+    if (!SUPPORTS_REPLY_TILE) return
+    void window.electronAPI.window.getReplyTileEnabled().then(setReplyTileEnabled)
+    // 手机遥控端也能拨这个开关，这里跟着主进程的广播走，
+    // 否则设置页开着的时候手机改了，这个 Switch 会一直停在旧状态
+    return window.electronAPI.window.onReplyTileEnabledChanged(setReplyTileEnabled)
   }, [])
   const [backgroundImporting, setBackgroundImporting] = useState(false)
   const [backgroundError, setBackgroundError] = useState('')
