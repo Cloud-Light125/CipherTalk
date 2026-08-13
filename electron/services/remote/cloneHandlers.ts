@@ -10,6 +10,67 @@ const DEFAULT_PAGE_SIZE = 40
 const MAX_PAGE_SIZE = 100
 const PAGE_CACHE_TTL_MS = 30_000
 
+const REPLY_SUGGEST_CONFIG_KEY = 'replySuggestSessions'
+const REPLY_SUGGEST_STYLES = new Set(['natural', 'short', 'formal', 'humorous', 'warm', 'likeme'])
+const REPLY_SUGGEST_COUNTS = new Set([1, 2, 3, 4, 5])
+/** 磁贴窗口和全自动回复都依赖桌面平台能力（Win32/CGEvent），Linux 上没有 */
+const SUPPORTS_DESKTOP_ONLY = process.platform === 'win32' || process.platform === 'darwin'
+
+/** 与渲染端 src/pages/chat/replySuggest.ts 的同名函数保持一致（那边不能跨项目 import 到主进程） */
+type ReplySuggestSettings = {
+  enabled: boolean
+  style: string
+  count: number
+  deep: boolean
+  tile: boolean
+  autoSend: boolean
+}
+
+function normalizeReplySuggestSettings(raw: Record<string, unknown> | undefined): ReplySuggestSettings {
+  const style = String(raw?.style || '')
+  const count = Number(raw?.count)
+  return {
+    enabled: raw?.enabled === true,
+    style: REPLY_SUGGEST_STYLES.has(style) ? style : 'natural',
+    count: REPLY_SUGGEST_COUNTS.has(count) ? count : 3,
+    deep: raw?.deep === true,
+    tile: raw?.tile === true,
+    autoSend: raw?.autoSend === true,
+  }
+}
+
+function readSessionId(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') return ''
+  return String((payload as Record<string, unknown>).sessionId || '').trim()
+}
+
+function readSettingsMap(configService: ConfigService): Record<string, Record<string, unknown>> {
+  return (configService.get(REPLY_SUGGEST_CONFIG_KEY) ?? {}) as Record<string, Record<string, unknown>>
+}
+
+/** 只收白名单字段，手机端传什么都不会往 config 里塞野键 */
+function sanitizeReplySuggestPatch(raw: unknown): Partial<ReplySuggestSettings> {
+  if (!raw || typeof raw !== 'object') return {}
+  const input = raw as Record<string, unknown>
+  const patch: Partial<ReplySuggestSettings> = {}
+  for (const key of ['enabled', 'deep', 'tile', 'autoSend'] as const) {
+    if (typeof input[key] === 'boolean') patch[key] = input[key] as boolean
+  }
+  if (REPLY_SUGGEST_STYLES.has(String(input.style))) patch.style = String(input.style)
+  if (REPLY_SUGGEST_COUNTS.has(Number(input.count))) patch.count = Number(input.count)
+  return patch
+}
+
+/**
+ * 桌面 ChatHeader 里的开关联动搬到这里：全自动依赖建议生成+磁贴推送，
+ * 开了却不联动上游等于点了没反应。规则放主进程，两端行为一致。
+ */
+function applyDependencyRules(patch: Partial<ReplySuggestSettings>): Partial<ReplySuggestSettings> {
+  if (patch.autoSend === true) return { ...patch, enabled: true, tile: true }
+  if (patch.enabled === true) return { ...patch, tile: true }
+  return patch
+}
+
 type CloneContactSummary = {
   sessionId: string
   displayName: string
@@ -229,6 +290,100 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
     try {
       configService.set('replyTileEnabled', enabled === true)
       return { success: true, replyTileEnabled: enabled === true }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  // ===== 会话级回复建议设置（手机端「克隆好友设置」页，对应桌面 ChatHeader 的灯泡菜单）=====
+  agentRpcHandlers.set('clone:getSessionSettings', (_event, payload?: unknown) => {
+    try {
+      const sessionId = readSessionId(payload)
+      if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+      const map = readSettingsMap(configService)
+      return {
+        success: true,
+        settings: normalizeReplySuggestSettings(map[sessionId]),
+        // 磁贴/全自动依赖桌面平台能力，手机端据此隐藏开关而不是给个点了没用的
+        supportsTile: SUPPORTS_DESKTOP_ONLY,
+        supportsAutoSend: SUPPORTS_DESKTOP_ONLY,
+      }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  agentRpcHandlers.set('clone:setSessionSettings', (_event, payload?: unknown) => {
+    try {
+      const sessionId = readSessionId(payload)
+      if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+      const input = payload as Record<string, unknown>
+      const patch = sanitizeReplySuggestPatch(input.patch)
+      if (!Object.keys(patch).length) return { success: false, error: '没有可更新的设置' }
+
+      const map = readSettingsMap(configService)
+      const next = normalizeReplySuggestSettings({
+        ...normalizeReplySuggestSettings(map[sessionId]),
+        ...applyDependencyRules(patch),
+      })
+      configService.set(REPLY_SUGGEST_CONFIG_KEY, { ...map, [sessionId]: next })
+      return { success: true, settings: next }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  // ===== 文本/图片向量索引（对应桌面 ChatHeader 的向量化菜单）=====
+  agentRpcHandlers.set('clone:getVectorStatus', async (_event, payload?: unknown) => {
+    try {
+      const sessionId = readSessionId(payload)
+      if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+      const { getEmbeddingConfig } = await import('../ai/embeddingService')
+      const { messageVectorService } = await import('../search/messageVectorService')
+      const config = getEmbeddingConfig()
+      const store = messageVectorService.getSessionVectorStoreInfo(sessionId)
+      return {
+        success: true,
+        enabled: messageVectorService.isReady(config),
+        mediaEnabled: messageVectorService.isMediaReady(config),
+        count: store.count || 0,
+        mediaCount: store.mediaCount || 0,
+      }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  agentRpcHandlers.set('clone:buildVectors', async (event, payload?: unknown) => {
+    try {
+      const sessionId = readSessionId(payload)
+      if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+      const rawTarget = String((payload as Record<string, unknown>).target || 'all')
+      const target = rawTarget === 'text' || rawTarget === 'image' ? rawTarget : 'all'
+
+      const { getEmbeddingConfig } = await import('../ai/embeddingService')
+      const { messageVectorService } = await import('../search/messageVectorService')
+      const { refreshResolvedProxyUrl } = await import('../ai/proxyFetch')
+      const config = getEmbeddingConfig()
+      if (!messageVectorService.isReady(config)) {
+        return { success: false, error: '桌面端未启用嵌入模型（设置 → 嵌入）' }
+      }
+      if (target === 'image' && !messageVectorService.isMediaReady(config)) {
+        return { success: false, error: '桌面端未开启图片向量化（设置 → 嵌入）' }
+      }
+
+      await refreshResolvedProxyUrl()
+      const onProgress = (progress: unknown) => {
+        if (!event.sender.isDestroyed()) event.sender.send('embedding:buildProgress', progress)
+      }
+      if (target === 'all' || target === 'text') {
+        await messageVectorService.ensureSessionVectors(sessionId, config, undefined, onProgress)
+      }
+      if (target === 'image' || (target === 'all' && messageVectorService.isMediaReady(config))) {
+        await messageVectorService.ensureSessionMediaVectors(sessionId, config, undefined, onProgress)
+      }
+      const store = messageVectorService.getSessionVectorStoreInfo(sessionId)
+      return { success: true, count: store.count || 0, mediaCount: store.mediaCount || 0 }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
