@@ -16,9 +16,46 @@ import { agentRpcHandlers, type AgentRpcHandler } from '../../services/remote/ag
  * 供远程网关（手机遥控端）以同一套 handler 处理 RPC。handler 里只有 agent:run
  * 用到 event.sender（流式推送），远程调用时由网关伪造 sender 转发到自己的通道。
  */
+/**
+ * 手机遥控端切模型时只传 presetId——预设里的密钥不下发到手机，
+ * 这里按 id 从 config 取出来展开成完整覆盖。桌面端本来就传完整配置，不受影响。
+ */
+function expandPresetModelConfig(modelConfig: unknown): AgentProviderConfigOverride | null {
+  const override = modelConfig as (AgentProviderConfigOverride & { presetId?: string }) | null | undefined
+  const presetId = override?.presetId
+  if (!presetId) return null
+  // 只在真的带 presetId 时才开库，普通调用不付这个开销
+  const { ConfigService: Config } = require('../../services/config') as typeof import('../../services/config')
+  const cs = new Config()
+  try {
+    const preset = (cs.get('aiConfigPresets') || []).find((item) => item.id === presetId)
+    if (!preset) return null
+    return {
+      provider: preset.provider,
+      apiKey: preset.apiKey,
+      model: override?.model || preset.model,
+      baseURL: preset.baseURL,
+      protocol: preset.protocol as AgentProviderConfigOverride['protocol'],
+      reasoningEffort: override?.reasoningEffort,
+    }
+  } finally {
+    cs.close()
+  }
+}
+
 const handleAgent = (channel: string, listener: AgentRpcHandler): void => {
-  agentRpcHandlers.set(channel, listener)
-  ipcMain.handle(channel, listener as (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown)
+  // 统一在入口展开预设：agent:run / clone:chat / optimizePrompt 等所有带 modelConfig 的
+  // 通道都走这里，逐个 handler 去改容易漏
+  const wrapped: AgentRpcHandler = (event, ...args) => {
+    const payload = args[0]
+    if (payload && typeof payload === 'object' && 'modelConfig' in payload) {
+      const expanded = expandPresetModelConfig((payload as { modelConfig?: unknown }).modelConfig)
+      if (expanded) args[0] = { ...payload, modelConfig: expanded }
+    }
+    return listener(event, ...args)
+  }
+  agentRpcHandlers.set(channel, wrapped)
+  ipcMain.handle(channel, wrapped as (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown)
 }
 
 /** 进行中的 agent 运行：runId → AbortController，用于取消。 */
@@ -1158,6 +1195,46 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     try {
       const { synthesizeSpeech } = await import('../../services/ai/ttsService')
       return await synthesizeSpeech(String(payload?.text || ''), { useCache: true })
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  /**
+   * 手机遥控端右上角的模型切换：列的是和桌面端 Agent 页同一份「配置预设」。
+   * 预设是用户自己命名的一组配置（服务商+密钥+模型），显示名要用 preset.name——
+   * 之前列的是 catalog 里服务商的官方名，和桌面端对不上。
+   * 密钥不下发，手机端选中后只回传 presetId，由 handleAgent 展开。
+   */
+  handleAgent('agent:listPresets', async () => {
+    try {
+      const config = ctx.getConfigService()
+      if (!config) return { success: false, error: '配置服务不可用' }
+      const { getProviderDefinitions } = await import('../../services/ai/providers/catalog')
+      const definitions = await getProviderDefinitions()
+      const modelsOf = (providerId: string): string[] => {
+        const def = definitions.find((item) => item.id === providerId)
+        return def?.modelDetails?.map((item) => item.id) || def?.models || []
+      }
+      const presets = (config.get('aiConfigPresets') || [])
+        .filter((preset) => preset.id && preset.name)
+        .map((preset) => {
+          const models = modelsOf(preset.provider)
+          return {
+            id: preset.id,
+            name: preset.name,
+            provider: preset.provider,
+            currentModel: preset.model || '',
+            // 预设自带的模型可能不在 catalog 列表里（自定义服务商），补到最前面
+            models: preset.model && !models.includes(preset.model) ? [preset.model, ...models] : models,
+          }
+        })
+      return {
+        success: true,
+        presets,
+        // 桌面端 Agent 页的思考强度初值就是 high，手机端跟上，否则两端默认不一致
+        defaultReasoningEffort: 'high',
+      }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Chip, Spinner, toast } from '@heroui/react'
+import { ArrowDownToLine, CirclePlay, FileText, QrCode } from '@gravity-ui/icons'
 
 type RemoteDeviceSummary = {
   id: string
@@ -25,6 +26,12 @@ type RemoteInfo = {
 }
 
 const PHONE_ICON_SRC = './logo.png'
+
+const APP_LINKS = [
+  { label: '手机端密语安装包', url: 'https://miyuapp.aiqji.com/CipherTalk.ipa', icon: ArrowDownToLine },
+  { label: 'ipa 签名安装教程', url: 'https://api.wnqapp.com/urlsss/video', icon: CirclePlay },
+  { label: '爱思助手签名安装教程', url: 'https://www.i4.cn/news_detail_38195.html', icon: FileText },
+]
 
 /**
  * 设备连接弹窗里的「手机遥控」卡片：开关网关 + 展示配对二维码。
@@ -175,35 +182,35 @@ export function RemotePhoneCard() {
   const connected = info?.connected === true
   // 绑定关系和「当前是否在线」是两回事：手机切后台会断连，绑定还在
   const bound = (info?.deviceCount ?? 0) > 0
+  // 二维码占掉一整屏高度，所以固定左右分栏：左二维码（未解锁时是占位），右其余内容
+  const showQr = running && info?.hasPassword === true && !info.locked
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <div className="flex size-12 shrink-0 items-center justify-center p-1">
-          <img src={PHONE_ICON_SRC} alt="手机遥控" className="h-full w-full object-contain" />
+  // 左栏 = 二维码模块：密码是拿到二维码的前置步骤，所以设/解锁密码也放这
+  const qrPane = (
+    <div className="flex w-52 flex-col items-center gap-2">
+      {showQr ? (
+        <div className="relative flex size-44 items-center justify-center rounded-xl bg-white">
+          {info?.qrImage
+            ? <img src={info.qrImage} alt="手机配对二维码" className="size-44 rounded-xl" />
+            : <Spinner />}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-base font-semibold text-foreground">手机遥控</span>
-            <Chip size="sm" variant="soft" color={connected ? 'success' : undefined}>
-              {connected ? '已连接' : !running ? '未开启' : bound ? '已绑定' : '等待配对'}
-            </Chip>
-          </div>
-          <p className="mt-1 text-sm text-muted">
-            {connected
-              ? '手机已连接，可远程使用 AI 助手和克隆功能'
-              : !running
-                ? '开启后可用手机远程控制 AI 助手和克隆功能'
-                : bound
-                  // 手机切到后台会断开，但绑定关系还在，不需要重新扫码
-                  ? '手机不在线，回到 App 会自动重连'
-                  : '用手机 App 扫码配对，远程使用 AI 助手'}
-          </p>
+      ) : (
+        <div className="flex size-44 flex-col items-center justify-center rounded-xl border border-dashed border-default-300 text-default-400">
+          <QrCode width={48} height={48} />
         </div>
-      </div>
+      )}
 
-      {running && !info?.hasPassword && (
-        <div className="flex flex-col gap-2 rounded-lg bg-default-100 p-3">
+      {showQr ? (
+        <>
+          <p className="text-center text-xs text-muted">用密语手机 App 扫描二维码完成配对</p>
+          {!showCode && (
+            <Button size="sm" variant="ghost" onPress={() => setShowCode(true)}>
+              没法扫码？手动输入
+            </Button>
+          )}
+        </>
+      ) : running && !info?.hasPassword ? (
+        <div className="flex w-full flex-col gap-2 rounded-xl bg-default-100 p-3">
           <p className="text-sm text-foreground">先设置一个查看密码</p>
           <p className="text-xs text-muted">
             之后要新增手机、查看配对二维码都需要它。密码只存哈希，忘了只能重设。
@@ -226,10 +233,8 @@ export function RemotePhoneCard() {
           {pwError ? <p className="text-xs text-danger">{pwError}</p> : null}
           <Button size="sm" isDisabled={busy} onPress={() => void submitPassword()}>保存密码</Button>
         </div>
-      )}
-
-      {running && info?.locked && (
-        <div className="flex flex-col gap-2 rounded-lg bg-default-100 p-3">
+      ) : running && info?.locked ? (
+        <div className="flex w-full flex-col gap-2 rounded-xl bg-default-100 p-3">
           <p className="text-sm text-foreground">
             已绑定 {info.deviceCount} 台手机{connected ? '，当前在线' : '，手机不在线时也保持绑定'}
           </p>
@@ -247,35 +252,26 @@ export function RemotePhoneCard() {
             解锁查看二维码
           </Button>
         </div>
+      ) : (
+        <p className="text-center text-xs text-muted">开启后显示配对二维码</p>
       )}
+    </div>
+  )
 
-      {running && info?.hasPassword && !info.locked && (
-        <div className="flex flex-col items-center gap-3 py-1">
-          <div className="relative flex size-60 items-center justify-center rounded-xl bg-white">
-            {info?.qrImage
-              ? <img src={info.qrImage} alt="手机配对二维码" className="size-60 rounded-xl" />
-              : <Spinner />}
+  const rest = (
+    <>
+      {showQr && showCode && (
+        <div className="rounded-lg bg-default-100 p-3">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-xs text-muted">配对码</p>
+            <Button size="sm" variant="ghost" onPress={() => void copy(info?.pairingId, '配对码')}>复制</Button>
           </div>
-          <p className="text-sm text-muted">用密语手机 App 扫描二维码完成配对</p>
-
-          {showCode ? (
-            <div className="w-full rounded-lg bg-default-100 p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-xs text-muted">配对码</p>
-                <Button size="sm" variant="ghost" onPress={() => void copy(info?.pairingId, '配对码')}>复制</Button>
-              </div>
-              <p className="mb-3 break-all font-mono text-xs text-foreground">{info?.pairingId}</p>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-xs text-muted">身份指纹（必填，防信令服务器冒充）</p>
-                <Button size="sm" variant="ghost" onPress={() => void copy(info?.fingerprint, '身份指纹')}>复制</Button>
-              </div>
-              <p className="break-all font-mono text-xs text-foreground">{info?.fingerprint}</p>
-            </div>
-          ) : (
-            <Button size="sm" variant="ghost" onPress={() => setShowCode(true)}>
-              没法扫码？手动输入
-            </Button>
-          )}
+          <p className="mb-2 break-all font-mono text-xs text-foreground">{info?.pairingId}</p>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-xs text-muted">身份指纹（必填，防信令服务器冒充）</p>
+            <Button size="sm" variant="ghost" onPress={() => void copy(info?.fingerprint, '身份指纹')}>复制</Button>
+          </div>
+          <p className="break-all font-mono text-xs text-foreground">{info?.fingerprint}</p>
         </div>
       )}
 
@@ -312,7 +308,7 @@ export function RemotePhoneCard() {
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="mt-auto flex gap-2">
         <Button
           variant={running ? 'tertiary' : 'primary'}
           fullWidth
@@ -326,6 +322,53 @@ export function RemotePhoneCard() {
             换配对码
           </Button>
         )}
+      </div>
+    </>
+  )
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <div className="flex size-12 shrink-0 items-center justify-center p-1">
+          <img src={PHONE_ICON_SRC} alt="手机遥控" className="h-full w-full object-contain" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-base font-semibold text-foreground">手机遥控</span>
+            <Chip size="sm" variant="soft" color={connected ? 'success' : undefined}>
+              {connected ? '已连接' : !running ? '未开启' : bound ? '已绑定' : '等待配对'}
+            </Chip>
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            {connected
+              ? '手机已连接，可远程使用 AI 助手和克隆功能'
+              : !running
+                ? '开启后可用手机远程控制 AI 助手和克隆功能'
+                : bound
+                  // 手机切到后台会断开，但绑定关系还在，不需要重新扫码
+                  ? '手机不在线，回到 App 会自动重连'
+                  : '用手机 App 扫码配对，远程使用 AI 助手'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-4">
+        <div className="shrink-0">{qrPane}</div>
+        <div className="flex min-w-0 flex-1 flex-col gap-3">{rest}</div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-default-200 pt-3 text-xs">
+        {APP_LINKS.map((link) => (
+          <button
+            key={link.url}
+            type="button"
+            className="flex items-center gap-1 text-accent hover:underline"
+            onClick={() => void window.electronAPI.shell.openExternal(link.url)}
+          >
+            <link.icon width={14} height={14} />
+            {link.label}
+          </button>
+        ))}
       </div>
     </div>
   )
