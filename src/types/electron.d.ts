@@ -33,6 +33,7 @@ type RemoteDeviceSummary = {
   name: string
   pairedAt: number
   lastSeenAt: number
+  version?: string
 }
 
 /** 全自动回复队列的状态推送，与 electron/services/autoReplyService.ts 的 AutoSendStatus 对应。 */

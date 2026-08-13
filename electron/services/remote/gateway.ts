@@ -36,7 +36,7 @@ export type DeviceAuthResult = {
   reason?: string
 }
 
-export type DeviceAuthorizer = (input: { token?: string; name?: string }) => DeviceAuthResult
+export type DeviceAuthorizer = (input: { token?: string; name?: string; version?: string }) => DeviceAuthResult
 
 const STREAM_METHODS = new Set([
   'agent:run', 'clone:chat', 'clone:build', 'clone:buildSelf', 'clone:buildVectors', 'voice:start',
@@ -248,7 +248,7 @@ class RemoteGatewayService {
     if (method === 'POST' && url.pathname === '/device-auth') {
       const body = await this.readJson(req)
       const result = this.deviceAuthorizer
-        ? this.deviceAuthorizer({ token: String(body.token || ''), name: String(body.name || '') })
+        ? this.deviceAuthorizer({ token: String(body.token || ''), name: String(body.name || ''), version: String(body.version || '') })
         : { ok: false, reason: 'unavailable' }
       if (!result.ok) {
         this.logger?.warn('RemoteGateway', '手机设备鉴权被拒', { reason: result.reason })
@@ -968,7 +968,7 @@ async function handleHello(frame) {
     const res = await fetch('/device-auth?token=' + encodeURIComponent(token), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: frame.deviceToken || '', name: frame.deviceName || '' })
+      body: JSON.stringify({ token: frame.deviceToken || '', name: frame.deviceName || '', version: frame.deviceVersion || '' })
     })
     const data = await res.json()
     authorized = data.ok === true

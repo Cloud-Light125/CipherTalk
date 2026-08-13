@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Button, Chip, Spinner, toast } from '@heroui/react'
 import { ArrowDownToLine, CirclePlay, FileText, QrCode } from '@gravity-ui/icons'
+import { formatDisplayVersion } from '../lib/appVersion'
 
 type RemoteDeviceSummary = {
   id: string
   name: string
   pairedAt: number
   lastSeenAt: number
+  version?: string
 }
 
 type RemoteInfo = {
@@ -281,7 +283,12 @@ export function RemotePhoneCard() {
           {devices.map((device) => (
             <div key={device.id} className="flex items-center gap-2 rounded-lg bg-default-100 px-3 py-2">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-foreground">{device.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm text-foreground">{device.name}</p>
+                  {device.version && (
+                    <Chip size="sm" variant="soft">{formatDisplayVersion(device.version)}</Chip>
+                  )}
+                </div>
                 <p className="text-xs text-muted">
                   最近连接 {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString('zh-CN') : '—'}
                 </p>
