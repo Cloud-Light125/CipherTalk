@@ -38,7 +38,7 @@ export type DeviceAuthResult = {
 
 export type DeviceAuthorizer = (input: { token?: string; name?: string }) => DeviceAuthResult
 
-const STREAM_METHODS = new Set(['agent:run', 'clone:chat', 'clone:build'])
+const STREAM_METHODS = new Set(['agent:run', 'clone:chat', 'clone:build', 'voice:start'])
 
 class RemoteGatewayService {
   private server: http.Server | null = null
@@ -321,6 +321,12 @@ class RemoteGatewayService {
       const runId = (params[0] as { runId?: string } | undefined)?.runId
       const abort = agentRpcHandlers.get('agent:abort')
       if (runId && abort) void abort(this.createFakeEvent(() => true), runId)
+      // 实时通话同理：断开就挂断，别让豆包会话空转
+      if (rpcMethod === 'voice:start') {
+        const callId = (params[0] as { callId?: string } | undefined)?.callId
+        const stop = agentRpcHandlers.get('voice:stop')
+        if (callId && stop) void stop(this.createFakeEvent(() => true), { callId })
+      }
     })
 
     const fakeEvent = this.createFakeEvent(() => closed, (channel, payload) => {
@@ -494,6 +500,196 @@ let reportedConnected = false
 let authorized = false
 const pendingAborts = new Map()
 const partsBuf = new Map()
+
+// ===== 实时通话音频 =====
+// 手机端（Expo）没有裸 PCM 采集/播放能力，音频走 WebRTC 轨道，本页负责双向转换：
+// 入向：手机麦克风轨道 -> 降采样 16k PCM -> POST voice:sendAudio 喂给主进程豆包会话；
+// 出向：voice:start SSE 里的 audio 事件（24k PCM base64）-> WebAudio 调度 -> 出向轨道回手机。
+let audioCtx = null
+let playbackDest = null
+let playbackTrack = null
+let remoteMicTrack = null
+let micSink = null
+let voice = null
+
+function ensureAudioGraph() {
+  if (audioCtx) return
+  audioCtx = new AudioContext()
+  playbackDest = audioCtx.createMediaStreamDestination()
+  playbackTrack = playbackDest.stream.getAudioTracks()[0]
+}
+
+function b64ToInt16(b64) {
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return new Int16Array(bytes.buffer, 0, bytes.length >> 1)
+}
+
+function int16ToB64(samples) {
+  const bytes = new Uint8Array(samples.buffer, samples.byteOffset, samples.length * 2)
+  let s = ''
+  for (let i = 0; i < bytes.length; i += 8192) {
+    s += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + 8192, bytes.length)))
+  }
+  return btoa(s)
+}
+
+function rpcPost(method, payload) {
+  fetch('/rpc?token=' + encodeURIComponent(token), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ method: method, params: [payload] })
+  }).catch(() => {})
+}
+
+function voicePlay(b64, rate) {
+  if (!voice || !audioCtx) return
+  const pcm = b64ToInt16(b64)
+  if (!pcm.length) return
+  const buf = audioCtx.createBuffer(1, pcm.length, rate || 24000)
+  const data = buf.getChannelData(0)
+  for (let i = 0; i < pcm.length; i++) data[i] = pcm[i] / 32768
+  const src = audioCtx.createBufferSource()
+  src.buffer = buf
+  src.connect(playbackDest)
+  const v = voice
+  src.onended = () => { v.sources.delete(src) }
+  const at = Math.max(audioCtx.currentTime + 0.02, voice.nextTime)
+  if (voice.respStart === null) voice.respStart = at
+  src.start(at)
+  voice.nextTime = at + buf.duration
+  voice.scheduled += buf.duration
+  voice.sources.add(src)
+  void audioCtx.resume()
+}
+
+// 停掉正在播的回复，返回已播时长（voice:truncate 要用它对齐豆包的对话上下文）
+function voiceInterrupt() {
+  if (!voice || !audioCtx) return null
+  const elapsed = voice.respStart === null
+    ? 0
+    : Math.max(0, Math.min(voice.scheduled, audioCtx.currentTime - voice.respStart))
+  for (const src of Array.from(voice.sources)) {
+    src.onended = null
+    try { src.stop() } catch {}
+  }
+  voice.sources.clear()
+  voice.nextTime = audioCtx.currentTime + 0.04
+  const result = { replyId: voice.replyId, audioEndMs: Math.round(elapsed * 1000) }
+  voice.respStart = null
+  voice.scheduled = 0
+  return result
+}
+
+function voiceCaptureStart() {
+  if (!voice) return
+  if (!remoteMicTrack) {
+    log('通话缺少手机音频轨道（旧版 App？），对方将听不到你说话')
+    return
+  }
+  const stream = new MediaStream([remoteMicTrack])
+  // Chromium 老毛病：远端轨道不接一个媒体元素消费，WebAudio 里读到的就是静音
+  if (!micSink) {
+    micSink = new Audio()
+    micSink.muted = true
+  }
+  micSink.srcObject = stream
+  void micSink.play().catch(() => {})
+  const src = audioCtx.createMediaStreamSource(stream)
+  const proc = audioCtx.createScriptProcessor(2048, 1, 1)
+  const cap = { src, proc }
+  // 桶平均降采样到 16k，攒满 100ms（1600 样本）再发，别拿 50/s 的小包刷 /rpc
+  let buffered = new Float32Array(0)
+  let pos = 0
+  let queue = []
+  proc.onaudioprocess = (e) => {
+    const v = voice
+    if (!v || v.capture !== cap) return
+    const input = e.inputBuffer.getChannelData(0)
+    const data = new Float32Array(buffered.length + input.length)
+    data.set(buffered)
+    data.set(input, buffered.length)
+    const ratio = audioCtx.sampleRate / 16000
+    while (pos + ratio <= data.length) {
+      const start = Math.floor(pos)
+      const end = Math.max(start + 1, Math.min(data.length, Math.floor(pos + ratio)))
+      let sum = 0
+      for (let i = start; i < end; i++) sum += data[i]
+      const sample = sum / (end - start)
+      queue.push(Math.max(-32768, Math.min(32767, Math.round(sample * 32767))))
+      pos += ratio
+    }
+    const consumed = Math.floor(pos)
+    buffered = data.slice(consumed)
+    pos -= consumed
+    if (queue.length >= 1600) {
+      const chunk = Int16Array.from(queue)
+      queue = []
+      rpcPost('voice:sendAudio', { callId: v.callId, audioBase64: int16ToB64(chunk) })
+    }
+  }
+  src.connect(proc)
+  // ScriptProcessor 不接输出节点不会被驱动；输出缓冲保持全零，桌面扬声器不会出声
+  proc.connect(audioCtx.destination)
+  voice.capture = cap
+}
+
+function voiceCallStart(callId) {
+  ensureAudioGraph()
+  voiceCallStop('')
+  voice = {
+    callId,
+    dropAudio: false,
+    replyId: '',
+    nextTime: audioCtx.currentTime + 0.04,
+    respStart: null,
+    scheduled: 0,
+    sources: new Set(),
+    capture: null,
+  }
+  void audioCtx.resume()
+  voiceCaptureStart()
+  log('实时通话开始: ' + callId)
+}
+
+/** onlyCallId 非空时只停对应通话：旧请求的收尾不能误杀刚开的新通话 */
+function voiceCallStop(onlyCallId) {
+  if (!voice) return
+  if (onlyCallId && voice.callId !== onlyCallId) return
+  voiceInterrupt()
+  if (voice.capture) {
+    try { voice.capture.proc.disconnect() } catch {}
+    try { voice.capture.src.disconnect() } catch {}
+  }
+  log('实时通话结束: ' + voice.callId)
+  voice = null
+}
+
+// 通话事件本页消化的部分；返回 true 表示不再转发给手机（音频帧走轨道，不占 DataChannel）
+function handleVoiceEvent(data) {
+  const ev = data && data.event
+  if (!ev || !voice) return false
+  if (ev.type === 'audio') {
+    if (!voice.dropAudio) voicePlay(ev.audioBase64, ev.sampleRate)
+    return true
+  }
+  if (ev.type === 'speech-started') {
+    // 用户开口抢话：立刻停播，并告诉豆包截断到已播位置
+    const cut = voiceInterrupt()
+    voice.dropAudio = true
+    if (cut && cut.replyId && cut.audioEndMs > 0) {
+      rpcPost('voice:truncate', { callId: data.callId, replyId: cut.replyId, audioEndMs: cut.audioEndMs })
+    }
+  } else if (ev.type === 'tts-start') {
+    voice.dropAudio = false
+    if (ev.replyId && ev.replyId !== voice.replyId) voiceInterrupt()
+    if (ev.replyId) voice.replyId = ev.replyId
+    voice.respStart = null
+    voice.scheduled = 0
+  }
+  return false
+}
 
 function log(msg) {
   const el = document.getElementById('log')
@@ -686,6 +882,10 @@ async function onOffer(msg) {
       reportConnected(false)
     }
   }
+  nextPc.ontrack = (e) => {
+    if (pc !== nextPc) return
+    if (e.track && e.track.kind === 'audio') remoteMicTrack = e.track
+  }
   nextPc.ondatachannel = (e) => {
     if (pc !== nextPc) return
     const nextDc = e.channel
@@ -706,6 +906,19 @@ async function onOffer(msg) {
     nextDc.onmessage = (ev) => { if (dc === nextDc) onFrameRaw(String(ev.data)) }
   }
   await nextPc.setRemoteDescription({ type: 'offer', sdp: msg.sdp })
+  if (pc !== nextPc) return
+  // 手机端预留了音频收发器（实时通话用）：把 TTS 播放轨道挂上去再应答
+  try {
+    ensureAudioGraph()
+    const audioTx = nextPc.getTransceivers()
+      .find((t) => t.receiver && t.receiver.track && t.receiver.track.kind === 'audio')
+    if (audioTx) {
+      audioTx.direction = 'sendrecv'
+      await audioTx.sender.replaceTrack(playbackTrack)
+    }
+  } catch (err) {
+    log('音频轨道挂载失败: ' + err)
+  }
   if (pc !== nextPc) return
   const answer = await nextPc.createAnswer()
   await nextPc.setLocalDescription(answer)
@@ -768,6 +981,10 @@ async function handleHello(frame) {
 async function handleReq(frame) {
   const ctrl = new AbortController()
   pendingAborts.set(frame.id, ctrl)
+  const voiceCallId = frame.method === 'voice:start' && frame.params && frame.params[0]
+    ? String(frame.params[0].callId || '')
+    : ''
+  if (voiceCallId) voiceCallStart(voiceCallId)
   try {
     const res = await fetch('/rpc?token=' + encodeURIComponent(token), {
       method: 'POST',
@@ -796,13 +1013,17 @@ async function handleReq(frame) {
           else if (line.startsWith('data: ')) { try { data = JSON.parse(line.slice(6)) } catch {} }
         }
         if (event === 'result') sendFrame({ t: 'res', id: frame.id, data })
-        else if (event) sendFrame({ t: 'ev', event, payload: data })
+        else if (event) {
+          const consumed = voiceCallId && event === 'voice-realtime:event' && handleVoiceEvent(data)
+          if (!consumed) sendFrame({ t: 'ev', event, payload: data })
+        }
       }
     }
   } catch (e) {
     sendFrame({ t: 'res', id: frame.id, data: { success: false, error: String(e) } })
   } finally {
     pendingAborts.delete(frame.id)
+    if (voiceCallId) voiceCallStop(voiceCallId)
   }
 }
 
