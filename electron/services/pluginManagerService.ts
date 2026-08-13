@@ -27,6 +27,7 @@ export type PluginPermission =
   | 'notify:send'
   | 'window:create'
   | 'sns:read'
+  | 'favorites:read'
   | 'ai:use'
   | 'network'
 
@@ -34,7 +35,7 @@ export type PluginPermission =
 const KNOWN_PERMISSIONS = new Set<PluginPermission>([
   'sessions:read', 'contacts:read', 'messages:read', 'clipboard:write',
   'media:read', 'stt:use', 'search:use', 'stats:read', 'export:use',
-  'notify:send', 'window:create', 'sns:read', 'ai:use', 'network',
+  'notify:send', 'window:create', 'sns:read', 'favorites:read', 'ai:use', 'network',
 ])
 
 export const PLUGIN_API_VERSION = 1

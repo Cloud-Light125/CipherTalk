@@ -15,7 +15,7 @@ const zlib = require('zlib')
 const KNOWN_PERMISSIONS = [
   'sessions:read', 'contacts:read', 'messages:read', 'clipboard:write',
   'media:read', 'stt:use', 'search:use', 'stats:read', 'export:use',
-  'notify:send', 'window:create', 'sns:read', 'ai:use', 'network',
+  'notify:send', 'window:create', 'sns:read', 'favorites:read', 'ai:use', 'network',
 ]
 const API_VERSION = 1
 

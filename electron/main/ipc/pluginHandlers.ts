@@ -17,6 +17,7 @@ import { voiceTranscribeService } from '../../services/voiceTranscribeService'
 import { chatSearchIndexService } from '../../services/search/chatSearchIndexService'
 import { exportProcessService } from '../../services/exportProcessService'
 import { issueMediaUrl } from '../../services/pluginMediaService'
+import { findDbByName } from '../../services/dbStoragePaths'
 import {
   pluginManagerService,
   type InstalledPlugin,
@@ -190,6 +191,27 @@ function writeStorage(pluginId: string, data: Record<string, unknown>): void {
 }
 
 // ========= 方法路由表 =========
+
+/** 收藏 type 枚举的中文名（未知类型展示原始值） */
+const FAV_TYPE_NAMES: Record<number, string> = {
+  1: '文字/笔记', 2: '图片', 3: '语音', 4: '视频', 5: '文章/链接',
+  8: '文件', 14: '聊天记录/音频', 18: '位置/地图',
+}
+
+/** 从 favitem XML 提取单个标签文本：解 CDATA、反转义实体（含 &#x0A; 数字实体）、去掉嵌套 XML 尾巴 */
+function favXmlTag(content: string, tag: string): string {
+  const m = content.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'))
+  if (!m) return ''
+  const text = m[1]
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&#x([0-9a-f]+);/gi, (_s, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_s, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
+    .trim()
+  const cut = text.indexOf('<')
+  return (cut >= 0 ? text.slice(0, cut) : text).trim()
+}
 
 type ApiHandler = (plugin: InstalledPlugin, args: Record<string, unknown>) => Promise<unknown> | unknown
 
@@ -584,6 +606,45 @@ const apiRegistry: Record<string, { permission: PluginPermission | null; handler
         })),
         hasMore: (result.timeline ?? []).length >= limit,
       }
+    },
+  },
+
+  // ========= 三期：微信收藏（favorites:read，读 favorite/favorite.db 的 fav_db_item） =========
+  'favorites.list': {
+    permission: 'favorites:read',
+    timeoutMs: 30_000,
+    handler: async (_p, args) => {
+      const dbPath = findDbByName('favorite.db')
+      if (!dbPath) throw new Error('未找到 favorite.db：请确认已配置微信数据目录，或收藏库不存在')
+      const { dbAdapter } = await import('../../services/dbAdapter')
+      // favorite.db 与消息库同一套 SQLCipher 密钥，kind='message' + 指定路径即可解密只读查询
+      const rows = await dbAdapter.all<Record<string, unknown>>(
+        'message', dbPath,
+        'SELECT local_id, type, update_time, content, flag, source_id, fromusr FROM fav_db_item ORDER BY update_time DESC',
+      )
+      const limit = Math.min(Number(args.limit) || 5000, 5000)
+      const items = rows.slice(0, limit).map((row) => {
+        const type = Number(row.type || 0)
+        const content = String(row.content ?? '')
+        // type=5 文章标题在 <pagetitle>；普通收藏在 <title>；位置类在 <label>/<poiname>
+        const title = favXmlTag(content, 'title') || favXmlTag(content, 'pagetitle')
+          || favXmlTag(content, 'label') || favXmlTag(content, 'poiname')
+        return {
+          localId: Number(row.local_id || 0),
+          type,
+          typeName: FAV_TYPE_NAMES[type] || `type=${type}`,
+          updateTime: Number(row.update_time || 0),
+          fromUsr: String(row.fromusr ?? ''),
+          // 公众号/分享者显示名（<srcdisplayname>），比裸 wxid/gh_ 可读
+          sourceName: favXmlTag(content, 'srcdisplayname').slice(0, 100),
+          sourceId: String(row.source_id ?? ''),
+          flag: Number(row.flag || 0),
+          title: title.slice(0, 500),
+          desc: (favXmlTag(content, 'desc') || favXmlTag(content, 'pagedesc')).slice(0, 1000),
+          link: favXmlTag(content, 'link').slice(0, 2000),
+        }
+      })
+      return { dbPath, count: rows.length, truncated: rows.length > items.length, items }
     },
   },
 
