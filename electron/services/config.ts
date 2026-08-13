@@ -274,7 +274,7 @@ interface ConfigSchema {
   remoteSignalingUrl: string
   remotePairingId: string
   // 已配对手机：token 是长期凭据，吊销=从表里删掉；只在二维码弹窗打开时才允许新配对
-  remoteDevices: Array<{ id: string; name: string; token: string; pairedAt: number; lastSeenAt: number }>
+  remoteDevices: Array<{ id: string; name: string; token: string; pairedAt: number; lastSeenAt: number; version?: string }>
   // 查看配对二维码的密码，格式 scrypt$<saltHex>$<hashHex>。
   // 存哈希不存密文：只需要验证不需要还原，加密的话密钥也在本机、等于没锁
   remotePairingPasswordHash: string

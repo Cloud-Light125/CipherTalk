@@ -164,11 +164,11 @@ export function registerRemoteCloneHandlers(
                 lastContactTime: contact.lastContactTime || 0,
               }
             })
-            // 就按微信消息列表的顺序：最近聊过的在最上面。
-            // 曾经把已克隆的一律置顶，结果半年没聊的分身压在最前，
-            // 昨天刚聊过的好友反而要翻半天——克隆与否用列表里的标签区分就够了。
-            // 从没聊过的（没进会话表，时间为 0）沉底，组内按名字排，省得每次刷新顺序都在跳
+            // 已克隆的一组在上、未克隆的一组在下，两组内部都按桌面端
+            // 聊天列表同款顺序（lastContactTime 倒序，即 sortTimestamp）。
+            // 从没聊过的（没进会话表，时间为 0）沉在组尾，按名字排，省得每次刷新顺序都在跳
             .sort((a, b) => {
+              if (a.isCloned !== b.isCloned) return a.isCloned ? -1 : 1
               if (a.lastContactTime !== b.lastContactTime) {
                 return b.lastContactTime - a.lastContactTime
               }
