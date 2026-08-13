@@ -596,6 +596,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openSkillPreviewWindow: (skillName: string) => ipcRenderer.invoke('window:openSkillPreviewWindow', skillName) as Promise<boolean>,
     setReplyTileEnabled: (enabled: boolean) => ipcRenderer.invoke('window:setReplyTileEnabled', enabled) as Promise<boolean>,
     getReplyTileEnabled: () => ipcRenderer.invoke('window:getReplyTileEnabled') as Promise<boolean>,
+    /** 全局开关被别处改了（例如手机遥控端）时的通知，用来让设置页的开关跟着动 */
+    onReplyTileEnabledChanged: (callback: (enabled: boolean) => void): (() => void) => {
+      const listener = (_e: unknown, enabled: boolean) => callback(enabled === true)
+      ipcRenderer.on('reply-tile:enabledChanged', listener)
+      return () => ipcRenderer.removeListener('reply-tile:enabledChanged', listener)
+    },
     replyTileReady: () => ipcRenderer.send('window:replyTileReady'),
     replyTileRefresh: () => ipcRenderer.send('window:replyTileRefresh'),
     replyTile: {

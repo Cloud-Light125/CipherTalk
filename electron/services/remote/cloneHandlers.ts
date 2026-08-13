@@ -107,7 +107,25 @@ function normalizeInteger(value: unknown, fallback: number, max?: number): numbe
   return typeof max === 'number' ? Math.min(normalized, max) : normalized
 }
 
-export function registerRemoteCloneHandlers(configService: ConfigService): void {
+/**
+ * 主进程侧的能力，由 remoteControl 注入。
+ * cloneHandlers 自己不碰 electron 的窗口层，这样它能脱离 Electron 被单独加载。
+ */
+export type CloneRemoteHost = {
+  /** 磁贴窗口开关（形状与 windowManager 一致，可直接传它） */
+  setReplyTileEnabled: (enabled: boolean) => void
+  /**
+   * 广播配置变更给所有渲染窗口。
+   * configService.set() 自己不广播——`config:changed` 一直是各 IPC handler 手动发的，
+   * 远程改完不发的话，桌面端开着的聊天界面菜单和 ReplySuggestBar 会一直停在旧值。
+   */
+  broadcastConfigChange: (key: string, value: unknown) => void
+}
+
+export function registerRemoteCloneHandlers(
+  configService: ConfigService,
+  host: CloneRemoteHost,
+): void {
   agentRpcHandlers.set('clone:listPersonas', async (_event, options?: unknown) => {
     try {
       const pageOptions = options && typeof options === 'object'
@@ -286,10 +304,15 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
     }
   })
 
-  agentRpcHandlers.set('clone:setTileEnabled', (_event, enabled: unknown) => {
+  agentRpcHandlers.set('clone:setTileEnabled', async (_event, enabled: unknown) => {
     try {
-      configService.set('replyTileEnabled', enabled === true)
-      return { success: true, replyTileEnabled: enabled === true }
+      const on = enabled === true
+      configService.set('replyTileEnabled', on)
+      // 光写 config 是不够的：窗口和后台生成服务得一起起来，
+      // 否则手机上拨了开关，还要去桌面端再点一次才真的生效
+      const { applyReplyTileEnabled } = await import('../replyTileService')
+      applyReplyTileEnabled(host, on)
+      return { success: true, replyTileEnabled: on }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
@@ -313,7 +336,7 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
     }
   })
 
-  agentRpcHandlers.set('clone:setSessionSettings', (_event, payload?: unknown) => {
+  agentRpcHandlers.set('clone:setSessionSettings', async (_event, payload?: unknown) => {
     try {
       const sessionId = readSessionId(payload)
       if (!sessionId) return { success: false, error: '缺少联系人 ID' }
@@ -326,7 +349,15 @@ export function registerRemoteCloneHandlers(configService: ConfigService): void 
         ...normalizeReplySuggestSettings(map[sessionId]),
         ...applyDependencyRules(patch),
       })
-      configService.set(REPLY_SUGGEST_CONFIG_KEY, { ...map, [sessionId]: next })
+      const nextMap = { ...map, [sessionId]: next }
+      configService.set(REPLY_SUGGEST_CONFIG_KEY, nextMap)
+      // 配置落盘后再重算参与列表，和桌面端 ChatHeader 改开关后调 replyTileRefresh 是同一件事；
+      // 不做的话这个会话要等下一次数据库变动才会进/出磁贴
+      const { replyTileService } = await import('../replyTileService')
+      void replyTileService.refresh()
+      // 桌面端聊天界面的灯泡菜单和 ReplySuggestBar 都订阅了 config:changed，
+      // 不广播的话它们会一直显示手机改动之前的值
+      host.broadcastConfigChange(REPLY_SUGGEST_CONFIG_KEY, nextMap)
       return { success: true, settings: next }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }

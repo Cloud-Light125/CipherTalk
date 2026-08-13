@@ -690,6 +690,8 @@ export interface ElectronAPI {
     onImageListUpdate: (callback: (data: { imageList: ImageListItem[], currentIndex: number }) => void) => () => void
     setReplyTileEnabled: (enabled: boolean) => Promise<boolean>
     getReplyTileEnabled: () => Promise<boolean>
+    /** 全局开关被别处改了（例如手机遥控端）时的通知；返回取消订阅函数 */
+    onReplyTileEnabledChanged: (callback: (enabled: boolean) => void) => () => void
     replyTileReady: () => void
     replyTileRefresh: () => void
     replyTile: {

@@ -217,7 +217,10 @@ export async function startRemoteControl(ctx: MainProcessContext): Promise<{ suc
     configService.set('remotePairingId', pairingId)
   }
 
-  registerRemoteCloneHandlers(configService)
+  registerRemoteCloneHandlers(configService, {
+    setReplyTileEnabled: (enabled) => ctx.getWindowManager().setReplyTileEnabled(enabled),
+    broadcastConfigChange: (key, value) => ctx.broadcastToWindows('config:changed', { key, value }),
+  })
   registerRemoteWechatHandlers(configService)
   registerRemoteVoiceHandlers()
   remoteGatewayService.setLogger(ctx.getLogService())
