@@ -364,6 +364,78 @@ export function registerRemoteCloneHandlers(
     }
   })
 
+  // ===== 我的自画像（对应桌面 ChatHeader 的「克隆我自己 / 删除我的自画像」）=====
+  // 自画像按联系人隔离存成 self: 前缀——我对每个人的说话方式不一样，不共享。
+  // 「风格=像我」的回复建议就是靠它，没有它只能退回最近发言的 few-shot 兜底。
+  agentRpcHandlers.set('clone:getSelfPersona', async (_event, payload?: unknown) => {
+    try {
+      const sessionId = readSessionId(payload)
+      if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+      const { personaStore } = await import('../agent/persona/personaStore')
+      const persona = personaStore.get(`self:${sessionId}`)
+      return {
+        success: true,
+        exists: Boolean(persona),
+        updatedAt: persona?.updatedAt || 0,
+      }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  agentRpcHandlers.set('clone:buildSelf', async (event, payload?: unknown) => {
+    const sessionId = readSessionId(payload)
+    if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+    const input = (payload || {}) as Record<string, unknown>
+    const displayName = String(input.displayName || '').trim() || sessionId
+    // 和克隆好友共用一把在途锁，键上带 self: 前缀，两者互不阻塞
+    const lockKey = `self:${sessionId}`
+    if (buildInFlight.has(lockKey)) {
+      return { success: false, inProgress: true, error: '正在生成自画像' }
+    }
+
+    buildInFlight.add(lockKey)
+    try {
+      const { buildPersonaFromSession } = await import('../agent/persona/personaBuildService')
+      const result = await buildPersonaFromSession({
+        sessionId,
+        displayName,
+        role: 'self',
+        onProgress: (progress) => {
+          // 进度事件里的 sessionId 已经是 self: 前缀，手机端据此过滤
+          if (!event.sender.isDestroyed()) event.sender.send('persona:buildProgress', progress)
+        },
+      })
+      return result.success
+        ? { success: true }
+        : { success: false, error: result.error || '生成自画像失败' }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
+    } finally {
+      buildInFlight.delete(lockKey)
+    }
+  })
+
+  agentRpcHandlers.set('clone:deleteSelf', async (_event, payload?: unknown) => {
+    try {
+      const sessionId = readSessionId(payload)
+      if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+      const storageKey = `self:${sessionId}`
+      const { personaStore } = await import('../agent/persona/personaStore')
+      const removed = personaStore.remove(storageKey)
+      // 问答对索引和导演笔记一并清掉，和桌面端 persona:delete 保持一致；失败不影响画像删除
+      try {
+        const { personaPairStore } = await import('../agent/persona/personaPairStore')
+        personaPairStore.remove(storageKey)
+        const { personaNotesStore } = await import('../agent/persona/personaNotesStore')
+        personaNotesStore.remove(storageKey)
+      } catch { /* 派生数据清理失败不阻断 */ }
+      return { success: removed }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   // ===== 文本/图片向量索引（对应桌面 ChatHeader 的向量化菜单）=====
   agentRpcHandlers.set('clone:getVectorStatus', async (_event, payload?: unknown) => {
     try {
