@@ -38,10 +38,12 @@ export async function getContacts(state: ChatServiceState): Promise<{ success: b
       }
 
       if (sessionTableName) {
+        // SELECT *：显式列名在微信 4.x 会话表上会 no such column 整条炸掉，
+        // 被下面的 catch 吞掉后所有人时间都是 0，排序就全乱了（sessionList 同款容错）
         const sessionRows = await dbAdapter.all<any>(
           'session',
           '',
-          `SELECT username, user_name, userName, sort_timestamp, sortTimestamp FROM ${sessionTableName}`
+          `SELECT * FROM ${sessionTableName}`
         )
 
         for (const row of sessionRows) {

@@ -1018,13 +1018,34 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     }
   })
 
-  handleAgent('agent:loadConversation', async (_event, id: number) => {
+  handleAgent('agent:loadConversation', async (
+    _event,
+    id: number,
+    // 手机遥控端分页用：长对话整段过 DataChannel 首开太慢，只取尾部一窗。
+    // 切片在这里做而不是 SQL——DB 是本地读不是瓶颈，省的是序列化+传输
+    options?: { tailLimit?: number; beforeMessageId?: string },
+  ) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
       const conversation = agentConversationStore.load(Number(id))
-      return conversation
-        ? { success: true, conversation: stripInternalTurnContextFromConversation(conversation) }
-        : { success: false, error: 'AI 对话不存在' }
+      if (!conversation) return { success: false, error: 'AI 对话不存在' }
+      const stripped = stripInternalTurnContextFromConversation(conversation)
+      const tailLimit = Number(options?.tailLimit)
+      if (!Number.isFinite(tailLimit) || tailLimit <= 0) {
+        return { success: true, conversation: stripped }
+      }
+      let messages = stripped.messages
+      const beforeId = String(options?.beforeMessageId || '')
+      if (beforeId) {
+        const index = messages.findIndex((message) => message.id === beforeId)
+        if (index >= 0) messages = messages.slice(0, index)
+      }
+      const page = messages.slice(-tailLimit)
+      return {
+        success: true,
+        conversation: { ...stripped, messages: page },
+        hasMore: messages.length > page.length,
+      }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
@@ -1120,6 +1141,11 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
     baseUpdatedAt?: number
     mergeIfStale?: boolean
     originClientId?: string | null
+    /**
+     * 手机遥控端分页加载时的边界：手机只持有该消息 id 起的尾部窗口，
+     * 保存时把库里这之前的未加载前缀拼回去，否则全量替换会把老历史清掉
+     */
+    keepBeforeMessageId?: string
   }) => {
     try {
       const { agentConversationStore } = await import('../../services/agent/conversationStore')
@@ -1131,9 +1157,17 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
       const hasVersion = Number.isFinite(baseUpdatedAt) && baseUpdatedAt > 0
       const isStale = hasVersion && Number(loadedBeforeSave.updatedAt || 0) > baseUpdatedAt
       const shouldMergeIfStale = payload.mergeIfStale !== false
-      const incomingMessages = isStale && shouldMergeIfStale
+      let incomingMessages = isStale && shouldMergeIfStale
         ? mergeUiMessagesById(loadedBeforeSave.messages, payload.messages || [])
         : (payload.messages || [])
+      // stale 合并已含全量库内消息，前缀自然保住；只有普通替换路径需要手动拼
+      const keepBefore = String(payload.keepBeforeMessageId || '')
+      if (keepBefore && !(isStale && shouldMergeIfStale)) {
+        const boundary = loadedBeforeSave.messages.findIndex((message) => message.id === keepBefore)
+        if (boundary > 0) {
+          incomingMessages = [...loadedBeforeSave.messages.slice(0, boundary), ...incomingMessages]
+        }
+      }
       const nextMessages = preserveInternalTurnContextMessages(loadedBeforeSave.messages, incomingMessages)
       const originClientId = payload.originClientId ?? null
 
