@@ -16,7 +16,6 @@ export type AiSettingField = {
   type: 'text' | 'password' | 'number' | 'switch' | 'select'
   options?: Array<{ value: string; label: string }>
   placeholder?: string
-  help?: string
 }
 
 export type AiServiceId = 'tts' | 'embedding' | 'rerank' | 'imageGen'
@@ -49,11 +48,12 @@ function ttsFields(provider: string): AiSettingField[] {
     { key: 'speed', label: '语速', type: 'number', placeholder: '1.0' },
     { key: 'instructions', label: '声音风格提示', type: 'text', placeholder: '可留空' },
   ]
-  // 豆包的实时通话（克隆好友打电话）走另一套凭据，和普通合成的 apiKey 不是一个东西
+  // 豆包的实时通话（克隆好友打电话）走另一套凭据，和普通合成的 apiKey 不是一个东西。
+  // 用途写进标题——菜单只显示标题，不带小字说明
   if (provider === 'volcengine') {
     base.push(
-      { key: 'realtimeAppId', label: 'Realtime App ID', type: 'text', help: '克隆好友打电话用' },
-      { key: 'realtimeAccessKey', label: 'Realtime Access Key', type: 'password', help: '克隆好友打电话用' },
+      { key: 'realtimeAppId', label: '通话 App ID', type: 'text' },
+      { key: 'realtimeAccessKey', label: '通话 Access Key', type: 'password' },
     )
   }
   return base
