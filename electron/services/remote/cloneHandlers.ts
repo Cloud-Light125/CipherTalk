@@ -164,10 +164,16 @@ export function registerRemoteCloneHandlers(
                 lastContactTime: contact.lastContactTime || 0,
               }
             })
-            // 已克隆的排前面，组内按最近联系时间倒序（和消息列表一个顺序）
-            .sort((a, b) =>
-              Number(b.isCloned) - Number(a.isCloned)
-              || b.lastContactTime - a.lastContactTime),
+            // 就按微信消息列表的顺序：最近聊过的在最上面。
+            // 曾经把已克隆的一律置顶，结果半年没聊的分身压在最前，
+            // 昨天刚聊过的好友反而要翻半天——克隆与否用列表里的标签区分就够了。
+            // 从没聊过的（没进会话表，时间为 0）沉底，组内按名字排，省得每次刷新顺序都在跳
+            .sort((a, b) => {
+              if (a.lastContactTime !== b.lastContactTime) {
+                return b.lastContactTime - a.lastContactTime
+              }
+              return a.displayName.localeCompare(b.displayName, 'zh-CN')
+            }),
           builtAt: Date.now(),
         }
       }
@@ -359,6 +365,78 @@ export function registerRemoteCloneHandlers(
       // 不广播的话它们会一直显示手机改动之前的值
       host.broadcastConfigChange(REPLY_SUGGEST_CONFIG_KEY, nextMap)
       return { success: true, settings: next }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  // ===== 我的自画像（对应桌面 ChatHeader 的「克隆我自己 / 删除我的自画像」）=====
+  // 自画像按联系人隔离存成 self: 前缀——我对每个人的说话方式不一样，不共享。
+  // 「风格=像我」的回复建议就是靠它，没有它只能退回最近发言的 few-shot 兜底。
+  agentRpcHandlers.set('clone:getSelfPersona', async (_event, payload?: unknown) => {
+    try {
+      const sessionId = readSessionId(payload)
+      if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+      const { personaStore } = await import('../agent/persona/personaStore')
+      const persona = personaStore.get(`self:${sessionId}`)
+      return {
+        success: true,
+        exists: Boolean(persona),
+        updatedAt: persona?.updatedAt || 0,
+      }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  agentRpcHandlers.set('clone:buildSelf', async (event, payload?: unknown) => {
+    const sessionId = readSessionId(payload)
+    if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+    const input = (payload || {}) as Record<string, unknown>
+    const displayName = String(input.displayName || '').trim() || sessionId
+    // 和克隆好友共用一把在途锁，键上带 self: 前缀，两者互不阻塞
+    const lockKey = `self:${sessionId}`
+    if (buildInFlight.has(lockKey)) {
+      return { success: false, inProgress: true, error: '正在生成自画像' }
+    }
+
+    buildInFlight.add(lockKey)
+    try {
+      const { buildPersonaFromSession } = await import('../agent/persona/personaBuildService')
+      const result = await buildPersonaFromSession({
+        sessionId,
+        displayName,
+        role: 'self',
+        onProgress: (progress) => {
+          // 进度事件里的 sessionId 已经是 self: 前缀，手机端据此过滤
+          if (!event.sender.isDestroyed()) event.sender.send('persona:buildProgress', progress)
+        },
+      })
+      return result.success
+        ? { success: true }
+        : { success: false, error: result.error || '生成自画像失败' }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) }
+    } finally {
+      buildInFlight.delete(lockKey)
+    }
+  })
+
+  agentRpcHandlers.set('clone:deleteSelf', async (_event, payload?: unknown) => {
+    try {
+      const sessionId = readSessionId(payload)
+      if (!sessionId) return { success: false, error: '缺少联系人 ID' }
+      const storageKey = `self:${sessionId}`
+      const { personaStore } = await import('../agent/persona/personaStore')
+      const removed = personaStore.remove(storageKey)
+      // 问答对索引和导演笔记一并清掉，和桌面端 persona:delete 保持一致；失败不影响画像删除
+      try {
+        const { personaPairStore } = await import('../agent/persona/personaPairStore')
+        personaPairStore.remove(storageKey)
+        const { personaNotesStore } = await import('../agent/persona/personaNotesStore')
+        personaNotesStore.remove(storageKey)
+      } catch { /* 派生数据清理失败不阻断 */ }
+      return { success: removed }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }

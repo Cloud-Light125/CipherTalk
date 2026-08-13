@@ -588,6 +588,9 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
   const [callMuted, setCallMuted] = useState(false)
   const [callLevel, setCallLevel] = useState(0)
   const [callLiveText, setCallLiveText] = useState('')
+  /** callTranscriptRef 的可渲染副本：通话浮层盖住了聊天流，转录得在浮层里自己显示 */
+  const [callTranscript, setCallTranscript] = useState<PersonaCallTranscriptTurn[]>([])
+  const [callLiveRole, setCallLiveRole] = useState<'user' | 'assistant'>('user')
   const [callDuration, setCallDuration] = useState(0)
   const [callStartedAt, setCallStartedAt] = useState(0)
   const callIdRef = useRef('')
@@ -598,6 +601,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
   const callReplyTextRef = useRef('')
   const callReplyIdRef = useRef('')
   const callTranscriptRef = useRef<PersonaCallTranscriptTurn[]>([])
+  const callTranscriptScrollRef = useRef<HTMLDivElement>(null)
   const callStartedAtRef = useRef(0)
   const callRecordFinalizedRef = useRef(false)
   const callDropAudioRef = useRef(false)
@@ -1425,6 +1429,12 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
     armFlushTimer()
   }
 
+  // 转录有新内容就贴底，和聊天流一个手感
+  useEffect(() => {
+    const node = callTranscriptScrollRef.current
+    if (node) node.scrollTop = node.scrollHeight
+  }, [callTranscript, callLiveText])
+
   const appendRealtimeMessage = (role: 'user' | 'assistant', rawText: string) => {
     const text = rawText.trim()
     if (!text) return
@@ -1439,6 +1449,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
       at,
     }
     callTranscriptRef.current = [...transcript, turn]
+    setCallTranscript(callTranscriptRef.current)
     setMessages((previous) => [
       ...previous,
       createRealtimeMessage(role, text, callIdRef.current, at),
@@ -1492,6 +1503,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
     setCallMuted(false)
     setCallLevel(0)
     setCallLiveText('')
+    setCallTranscript([])
     setCallStartedAt(0)
     if (notifyMain && callId) await window.electronAPI.voiceRealtime.stop(callId).catch(() => undefined)
   }
@@ -1514,6 +1526,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
       case 'asr':
         callAsrTextRef.current = event.text
         setCallLiveText(event.text)
+        setCallLiveRole('user')
         setCallPhase('user-speaking')
         break
       case 'asr-ended':
@@ -1532,6 +1545,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
               ? current
               : `${current}${incoming}`
           setCallLiveText(callReplyTextRef.current)
+          setCallLiveRole('assistant')
         }
         if (event.replyId) callReplyIdRef.current = event.replyId
         setCallPhase('thinking')
@@ -1556,6 +1570,7 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
         break
       case 'tts-ended':
         callDropAudioRef.current = false
+        // 不动字幕：回复在 chat-ended already 定稿进转录了
         setCallPhase('listening')
         break
       case 'error':
@@ -2194,21 +2209,54 @@ export default function PersonaChatPage({ sessionId: sessionIdProp, embedded = f
         return (
           <div className="absolute inset-0 z-50 flex flex-col items-center bg-background/96 px-6 py-10 backdrop-blur-xl">
             <div className="text-sm tabular-nums text-muted">{callStartedAt ? formatCallDuration(callDuration) : '正在建立安全连接'}</div>
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
-              <PersonaAvatar name={displayName} avatarUrl={avatarUrl} size={104} />
-              <div className="text-xl font-semibold text-foreground">{displayName || sessionId}</div>
+            <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-3 pt-4">
+              <PersonaAvatar name={displayName} avatarUrl={avatarUrl} size={72} />
+              <div className="text-lg font-semibold text-foreground">{displayName || sessionId}</div>
               <div className="flex h-6 items-center gap-2 text-sm text-muted">{meta.icon}<span>{meta.label}</span></div>
-              <div className="flex h-9 items-center gap-1" aria-hidden="true">
+              <div className="flex h-7 items-center gap-1" aria-hidden="true">
                 {[0.45, 0.7, 1, 0.65, 0.4].map((weight, index) => (
                   <span
                     key={index}
                     className="w-1 rounded-full bg-accent transition-[height,opacity] duration-75"
-                    style={{ height: `${Math.max(4, Math.round(callLevel * weight * 32))}px`, opacity: callMuted ? 0.25 : 0.55 + weight * 0.35 }}
+                    style={{ height: `${Math.max(4, Math.round(callLevel * weight * 26))}px`, opacity: callMuted ? 0.25 : 0.55 + weight * 0.35 }}
                   />
                 ))}
               </div>
-              <div className="h-10 max-w-md text-center text-sm leading-5 text-muted">
-                {callLiveText || ' '}
+              {/* 通话转录：浮层盖住了聊天流，只显示"当前一句"的话，说完就被下个事件清掉，
+                  整通电话等于什么都看不到。这里把定稿的每一轮都留着，滚动查看 */}
+              <div
+                ref={callTranscriptScrollRef}
+                className="flex min-h-0 w-full max-w-lg flex-1 flex-col gap-2 overflow-y-auto px-1 py-2"
+              >
+                {callTranscript.length === 0 && !callLiveText ? (
+                  <div className="pt-6 text-center text-sm text-muted">说点什么，对话会显示在这里</div>
+                ) : null}
+                {callTranscript.map((turn) => (
+                  <div key={turn.id} className={turn.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-6 ${
+                        turn.role === 'user'
+                          ? 'bg-accent-soft text-accent-soft-foreground'
+                          : 'bg-surface text-foreground'
+                      }`}
+                    >
+                      {turn.text}
+                    </div>
+                  </div>
+                ))}
+                {callLiveText ? (
+                  <div className={callLiveRole === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-6 opacity-65 ${
+                        callLiveRole === 'user'
+                          ? 'bg-accent-soft text-accent-soft-foreground'
+                          : 'bg-surface text-foreground'
+                      }`}
+                    >
+                      {callLiveText}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
             <div className="flex h-20 items-center gap-8">
