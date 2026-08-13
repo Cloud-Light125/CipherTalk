@@ -164,10 +164,16 @@ export function registerRemoteCloneHandlers(
                 lastContactTime: contact.lastContactTime || 0,
               }
             })
-            // 已克隆的排前面，组内按最近联系时间倒序（和消息列表一个顺序）
-            .sort((a, b) =>
-              Number(b.isCloned) - Number(a.isCloned)
-              || b.lastContactTime - a.lastContactTime),
+            // 就按微信消息列表的顺序：最近聊过的在最上面。
+            // 曾经把已克隆的一律置顶，结果半年没聊的分身压在最前，
+            // 昨天刚聊过的好友反而要翻半天——克隆与否用列表里的标签区分就够了。
+            // 从没聊过的（没进会话表，时间为 0）沉底，组内按名字排，省得每次刷新顺序都在跳
+            .sort((a, b) => {
+              if (a.lastContactTime !== b.lastContactTime) {
+                return b.lastContactTime - a.lastContactTime
+              }
+              return a.displayName.localeCompare(b.displayName, 'zh-CN')
+            }),
           builtAt: Date.now(),
         }
       }
