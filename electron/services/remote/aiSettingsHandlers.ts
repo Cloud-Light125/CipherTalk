@@ -370,6 +370,22 @@ export function registerRemoteAiSettingsHandlers(configService: ConfigService): 
     }
   })
 
+  /** 使用手机端当前表单值合成试听，不要求先保存。 */
+  agentRpcHandlers.set('ai:previewTts', async (_event, payload?: unknown) => {
+    try {
+      const input = (payload || {}) as { config?: unknown }
+      if (!input.config || typeof input.config !== 'object') {
+        return { success: false, error: '缺少语音合成配置' }
+      }
+      const { testTtsConfig } = await import('../ai/ttsService')
+      const { refreshResolvedProxyUrl } = await import('../ai/proxyFetch')
+      await refreshResolvedProxyUrl()
+      return await testTtsConfig(input.config as never)
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   /**
    * 主对话模型的默认值。
    * agent:listProviders 只读，会话里的模型切换也只是单次覆盖——
