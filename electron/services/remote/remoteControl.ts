@@ -229,7 +229,7 @@ export async function startRemoteControl(ctx: MainProcessContext): Promise<{ suc
   })
   registerRemoteWechatHandlers(configService)
   registerRemoteVoiceHandlers()
-  registerRemoteAiSettingsHandlers()
+  registerRemoteAiSettingsHandlers(configService)
   remoteGatewayService.setLogger(ctx.getLogService())
   remoteGatewayService.setConnectionListener((connected) => {
     ctx.broadcastToWindows('deviceConnect:remote:status', { connected })

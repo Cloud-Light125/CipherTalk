@@ -1245,26 +1245,47 @@ export function registerAiHandlers(ctx: MainProcessContext): void {
       if (!config) return { success: false, error: '配置服务不可用' }
       const { getProviderDefinitions } = await import('../../services/ai/providers/catalog')
       const definitions = await getProviderDefinitions()
+      const storedPresets = (config.get('aiConfigPresets') || [])
+        .filter((preset) => preset.id && preset.name)
+      const currentProvider = config.getAICurrentProvider()
+      const currentConfig = config.getAIProviderConfig(currentProvider)
+      const normalizeText = (value: unknown) => String(value || '').trim()
+      const normalizeBaseURL = (value: unknown) => normalizeText(value).replace(/\/+$/, '')
+      const matchesCurrentConnection = (preset: typeof storedPresets[number]) => Boolean(currentConfig)
+        && preset.provider === currentProvider
+        && normalizeText(preset.apiKey) === normalizeText(currentConfig?.apiKey)
+        && normalizeBaseURL(preset.baseURL) === normalizeBaseURL(currentConfig?.baseURL)
+        && normalizeText(preset.protocol) === normalizeText(currentConfig?.protocol)
+      const configuredActivePresetId = normalizeText(config.get('aiActiveConfigPresetId'))
+      const configuredActivePreset = storedPresets.find((preset) => preset.id === configuredActivePresetId)
+      const matchingPreset = storedPresets.find((preset) => matchesCurrentConnection(preset)
+        && normalizeText(preset.model) === normalizeText(currentConfig?.model))
+      const currentPresetId = configuredActivePreset && matchesCurrentConnection(configuredActivePreset)
+        ? configuredActivePreset.id
+        : matchingPreset?.id || ''
       const modelsOf = (providerId: string): string[] => {
         const def = definitions.find((item) => item.id === providerId)
         return def?.modelDetails?.map((item) => item.id) || def?.models || []
       }
-      const presets = (config.get('aiConfigPresets') || [])
-        .filter((preset) => preset.id && preset.name)
+      const presets = storedPresets
         .map((preset) => {
           const models = modelsOf(preset.provider)
+          const currentModel = preset.id === currentPresetId
+            ? currentConfig?.model || preset.model || ''
+            : preset.model || ''
           return {
             id: preset.id,
             name: preset.name,
             provider: preset.provider,
-            currentModel: preset.model || '',
+            currentModel,
             // 预设自带的模型可能不在 catalog 列表里（自定义服务商），补到最前面
-            models: preset.model && !models.includes(preset.model) ? [preset.model, ...models] : models,
+            models: currentModel && !models.includes(currentModel) ? [currentModel, ...models] : models,
           }
         })
       return {
         success: true,
         presets,
+        currentPresetId,
         // 桌面端 Agent 页的思考强度初值就是 high，手机端跟上，否则两端默认不一致
         defaultReasoningEffort: 'high',
       }
