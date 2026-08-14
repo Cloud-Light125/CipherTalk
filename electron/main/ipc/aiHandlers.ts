@@ -3,7 +3,7 @@ import { createHash } from 'crypto'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import type { UIMessage } from 'ai'
-import type { ConfigService } from '../../services/config'
+import { ConfigService } from '../../services/config'
 import type { MainProcessContext } from '../context'
 import type { AgentPromptOptimizeContextMessage, AgentProviderConfig, AgentProviderConfigOverride, AgentReasoningEffort, AgentScope, AgentSkillContextItem, AgentToolProfile, AgentUploadedMediaContext } from '../../services/agent/types'
 import type { CodeWorkspaceRef } from '../../services/agent/codeWorkspaceTypes'
@@ -25,8 +25,7 @@ function expandPresetModelConfig(modelConfig: unknown): AgentProviderConfigOverr
   const presetId = override?.presetId
   if (!presetId) return null
   // 只在真的带 presetId 时才开库，普通调用不付这个开销
-  const { ConfigService: Config } = require('../../services/config') as typeof import('../../services/config')
-  const cs = new Config()
+  const cs = new ConfigService()
   try {
     const preset = (cs.get('aiConfigPresets') || []).find((item) => item.id === presetId)
     if (!preset) return null
