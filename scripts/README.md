@@ -97,12 +97,11 @@ Windows 依赖产物为：
 
 macOS 依赖产物为：
 
-- `CipherTalk-x.y.z-Setup.dmg`（手动安装）
-- `CipherTalk-x.y.z-Setup.zip`（自动更新）
+- `CipherTalk-x.y.z-Setup.dmg`（手动安装和应用内更新）
 - `latest-mac.yml`
 
-macOS 的 `electron-updater` `MacUpdater` 只接受 ZIP 更新包，不能把 DMG
-写入 `latest-mac.yml` 的更新文件项；发布流程会同时上传 DMG 和 ZIP，清单只指向 ZIP。
+macOS 客户端使用自定义下载流程读取 `latest-mac.yml`。下载并校验 DMG 后，
+客户端会打开 DMG 并退出，由用户在系统安装窗口中完成替换安装。
 
 工作流会在构建与发布阶段校验安装包、更新包和对应清单的哈希是否一致，避免元数据与真实文件不匹配。
 

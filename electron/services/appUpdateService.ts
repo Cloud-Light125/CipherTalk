@@ -4,6 +4,7 @@ import { autoUpdater } from 'electron-updater'
 const GITHUB_OWNER = 'ILoveBingLu'
 const GITHUB_REPO = 'CipherTalk'
 const GITHUB_FORCE_UPDATE_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download/force-update.json`
+const GITHUB_MAC_UPDATE_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download/latest-mac.yml`
 const R2_UPDATE_BASE_URL = 'https://miyuapp.aiqji.com'
 
 export type ForceUpdateReason = 'minimum-version' | 'blocked-version'
@@ -35,6 +36,9 @@ export interface AppUpdateInfo {
   checkedAt: number
   updateSource: AppUpdateSource
   policySource: AppUpdateSource
+  downloadUrl?: string
+  sha512?: string
+  fileSize?: number
   diagnostics?: UpdateDiagnostics
 }
 
@@ -63,6 +67,16 @@ type UpdateLookupResult = {
   releaseNotes: string
   hasUpdate: boolean
   source: AppUpdateSource
+  downloadUrl?: string
+  sha512?: string
+  fileSize?: number
+}
+
+type MacUpdateManifest = {
+  version: string
+  artifactName: string
+  sha512: string
+  size?: number
 }
 
 function isNewerVersion(version1: string, version2: string): boolean {
@@ -135,6 +149,36 @@ async function resolveForceUpdateManifest(): Promise<ManifestLookupResult> {
   }
 
   return { manifest: null, source: 'none' }
+}
+
+function stripYamlScalar(value: string): string {
+  const trimmed = value.trim()
+  if (
+    (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+  ) {
+    return trimmed.slice(1, -1)
+  }
+  return trimmed
+}
+
+function parseMacUpdateManifest(content: string): MacUpdateManifest | null {
+  const version = content.match(/^version:\s*(.+)$/m)?.[1]
+  const artifactName = content.match(/^\s*-\s+url:\s*(.+)$/m)?.[1]
+  const sha512 = content.match(/^\s+sha512:\s*(.+)$/m)?.[1]
+  const sizeValue = content.match(/^\s+size:\s*(\d+)$/m)?.[1]
+
+  if (!version || !artifactName || !sha512) return null
+
+  const parsed = {
+    version: stripYamlScalar(version),
+    artifactName: stripYamlScalar(artifactName),
+    sha512: stripYamlScalar(sha512),
+    size: sizeValue ? Number(sizeValue) : undefined
+  }
+
+  if (!parsed.artifactName.toLowerCase().endsWith('.dmg')) return null
+  return parsed
 }
 
 function configureUpdaterFeed(source: UpdateFeedSource): void {
@@ -248,6 +292,10 @@ class AppUpdateService {
   }
 
   private async checkUpdaterSource(source: UpdateFeedSource, currentVersion: string): Promise<UpdateLookupResult | null> {
+    if (process.platform === 'darwin') {
+      return this.checkMacUpdaterSource(source, currentVersion)
+    }
+
     configureUpdaterFeed(source)
     const result = await autoUpdater.checkForUpdates()
     if (!result?.updateInfo?.version) {
@@ -264,12 +312,50 @@ class AppUpdateService {
     }
   }
 
+  private async checkMacUpdaterSource(source: UpdateFeedSource, currentVersion: string): Promise<UpdateLookupResult> {
+    const manifestUrl = source === 'r2'
+      ? `${R2_UPDATE_BASE_URL.replace(/\/+$/, '')}/latest-mac.yml`
+      : GITHUB_MAC_UPDATE_URL
+    const response = await fetch(`${manifestUrl}?t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { Accept: 'text/yaml, text/plain' }
+    })
+
+    if (!response.ok) {
+      throw new Error(`获取 macOS 更新清单失败: HTTP ${response.status}`)
+    }
+
+    const manifest = parseMacUpdateManifest(await response.text())
+    if (!manifest) {
+      throw new Error('macOS 更新清单无效或未指向 DMG')
+    }
+
+    const downloadUrl = new URL(manifest.artifactName, manifestUrl).toString()
+    if (!downloadUrl.startsWith('https://')) {
+      throw new Error('macOS 更新包地址必须使用 HTTPS')
+    }
+
+    const hasUpdate = isNewerVersion(manifest.version, currentVersion)
+    return {
+      latestVersion: manifest.version,
+      releaseNotes: '',
+      hasUpdate,
+      source: hasUpdate ? source : 'none',
+      downloadUrl: hasUpdate ? downloadUrl : undefined,
+      sha512: hasUpdate ? manifest.sha512 : undefined,
+      fileSize: hasUpdate ? manifest.size : undefined
+    }
+  }
+
   async checkForUpdates(): Promise<AppUpdateInfo> {
     const currentVersion = app.getVersion()
     let latestVersion: string | undefined
     let releaseNotes = ''
     let hasUpdate = false
     let updateSource: AppUpdateSource = 'none'
+    let downloadUrl: string | undefined
+    let sha512: string | undefined
+    let fileSize: number | undefined
 
     this.resetDiagnostics()
     this.updateDiagnostics({
@@ -299,6 +385,9 @@ class AppUpdateService {
         releaseNotes = result.releaseNotes
         hasUpdate = result.hasUpdate
         updateSource = result.source
+        downloadUrl = result.downloadUrl
+        sha512 = result.sha512
+        fileSize = result.fileSize
         this.updateDiagnostics({
           phase: hasUpdate ? 'available' : 'idle',
           targetVersion: latestVersion,
@@ -345,7 +434,10 @@ class AppUpdateService {
       minimumSupportedVersion: manifest?.minimumSupportedVersion,
       reason,
       updateSource,
-      policySource
+      policySource,
+      downloadUrl,
+      sha512,
+      fileSize
     })
 
     this.lastInfo = info

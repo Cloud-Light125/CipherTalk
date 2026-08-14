@@ -175,10 +175,7 @@
     },
     "mac": {
       "icon": "public/icon.icns",
-      "target": [
-        "dmg",
-        "zip"
-      ],
+      "target": "dmg",
       "category": "public.app-category.utilities",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
