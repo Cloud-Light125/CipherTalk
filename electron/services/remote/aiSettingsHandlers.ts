@@ -182,11 +182,17 @@ const IMAGE_GEN_FIELDS: AiSettingField[] = [
   { key: 'timeoutMs', label: '超时（毫秒）', type: 'number', placeholder: '120000' },
 ]
 
-async function loadServiceConfig(service: AiServiceId): Promise<Record<string, unknown>> {
+async function loadServiceConfig(
+  service: AiServiceId,
+  ttsProvider?: unknown,
+): Promise<Record<string, unknown>> {
   if (service === 'tts') {
     const { getTtsConfig } = await import('../ai/ttsService')
     const config = getTtsConfig() as Record<string, unknown>
-    const provider = String(config.activeProvider || 'xiaomi')
+    const requestedProvider = String(ttsProvider || '')
+    const provider = TTS_PROVIDERS.some((item) => item.value === requestedProvider)
+      ? requestedProvider
+      : String(config.activeProvider || 'xiaomi')
     const providers = (config.providers || {}) as Record<string, Record<string, unknown>>
     // 表单是平铺的，把当前服务商那份摊上来；写回时 saveTtsConfig 认这种平铺 patch
     return { ...config, ...(providers[provider] || {}), activeProvider: provider }
@@ -282,9 +288,10 @@ export function registerRemoteAiSettingsHandlers(configService: ConfigService): 
   /** 单个服务的完整配置 + 字段定义，手机端照着渲染表单 */
   agentRpcHandlers.set('ai:getServiceConfig', async (_event, payload?: unknown) => {
     try {
-      const service = (payload as { service?: unknown })?.service
+      const input = (payload || {}) as { service?: unknown; ttsProvider?: unknown }
+      const service = input.service
       if (!isAiServiceId(service)) return { success: false, error: '未知的服务' }
-      const config = await loadServiceConfig(service)
+      const config = await loadServiceConfig(service, input.ttsProvider)
       return {
         success: true,
         name: SERVICES.find((item) => item.id === service)?.name || service,
