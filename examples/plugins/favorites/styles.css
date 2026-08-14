@@ -1,0 +1,71 @@
+.fv-wrap {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.fv-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fv-grow { flex: 1; min-width: 180px; }
+
+.fv-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fv-stats:empty { display: none; }
+
+.fv-stat {
+  border: 1px solid var(--border, #ddd);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.fv-stat b { font-size: 16px; color: var(--accent); }
+
+.fv-stat.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+.fv-table { flex: 1; min-height: 200px; }
+
+/* 固定布局：列宽按占比分配，随窗口宽度自适应，不写死像素 */
+.fv-table table { table-layout: fixed; width: 100%; }
+
+.fv-table th:nth-child(1), .fv-table td:nth-child(1) { width: 46px; text-align: center; }
+.fv-table th:nth-child(2), .fv-table td:nth-child(2) { width: 108px; }
+.fv-table th:nth-child(3), .fv-table td:nth-child(3) { width: 126px; }
+.fv-table th:nth-child(4), .fv-table td:nth-child(4) { width: 33%; }
+.fv-table th:nth-child(5), .fv-table td:nth-child(5) { width: 29%; }
+.fv-table th:nth-child(6), .fv-table td:nth-child(6) { width: 13%; }
+
+/* 长文本单行省略，hover 看全文（title 属性），窗口多窄都不破版 */
+.fv-title, .fv-desc, .fv-link {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fv-table td:nth-child(6) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.fv-nowrap { white-space: nowrap; }
+
+.fv-type { white-space: nowrap; color: var(--accent); font-weight: 600; }
+
+.fv-dim { opacity: .6; }

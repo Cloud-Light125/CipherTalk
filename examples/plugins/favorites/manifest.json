@@ -1,0 +1,22 @@
+{
+  "id": "com.ciphertalk.example.favorites",
+  "name": "收藏查询导出",
+  "version": "1.1.0",
+  "description": "查询微信收藏库（favorite.db）：按类型/关键词筛选全部收藏，统计概览，一键导出 Markdown / HTML / CSV",
+  "apiVersion": 1,
+  "author": {
+    "name": "CipherTalk 社区"
+  },
+  "permissions": [
+    "favorites:read",
+    "clipboard:write"
+  ],
+  "contributes": {
+    "sidebarMenus": [
+      { "id": "main", "label": "收藏导出", "icon": "star", "view": "index" }
+    ],
+    "views": {
+      "index": { "entry": "index.html" }
+    }
+  }
+}
