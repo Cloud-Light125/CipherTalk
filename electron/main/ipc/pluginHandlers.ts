@@ -17,6 +17,7 @@ import { voiceTranscribeService } from '../../services/voiceTranscribeService'
 import { chatSearchIndexService } from '../../services/search/chatSearchIndexService'
 import { exportProcessService } from '../../services/exportProcessService'
 import { issueMediaUrl } from '../../services/pluginMediaService'
+import { findDbByName } from '../../services/dbStoragePaths'
 import {
   pluginManagerService,
   type InstalledPlugin,
@@ -190,6 +191,34 @@ function writeStorage(pluginId: string, data: Record<string, unknown>): void {
 }
 
 // ========= 方法路由表 =========
+
+/** 收藏 type 枚举的中文名（未知类型展示原始值） */
+const FAV_TYPE_NAMES: Record<number, string> = {
+  1: '文字/笔记', 2: '图片', 3: '语音', 4: '视频', 5: '文章/链接',
+  8: '文件', 14: '聊天记录/音频', 18: '位置/地图',
+}
+
+/** 数字实体转字符；越界码位原样保留（fromCodePoint 对 >0x10FFFF 会抛 RangeError） */
+function favCodePoint(raw: string, cp: number): string {
+  return cp >= 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : raw
+}
+
+/** 从 favitem XML 提取单个标签文本：解 CDATA、剥嵌套标签、反转义实体（含 &#x0A; 数字实体） */
+function favXmlTag(content: string, tag: string): string {
+  const m = content.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'))
+  if (!m) return ''
+  // CDATA 是字面文本：内部既无实体也无子标签，直接取，否则标题里的尖括号会被当标签剥掉
+  const cdata = m[1].match(/<!\[CDATA\[([\s\S]*?)\]\]>/)
+  if (cdata) return cdata[1].trim()
+  // 先剥嵌套标签再反转义：此刻的 `<` 必是子标签，正文里的尖括号还是 &lt; 形态
+  const cut = m[1].indexOf('<')
+  return (cut >= 0 ? m[1].slice(0, cut) : m[1])
+    .replace(/&#x([0-9a-f]+);/gi, (s, hex) => favCodePoint(s, parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (s, dec) => favCodePoint(s, parseInt(dec, 10)))
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
+    .trim()
+}
 
 type ApiHandler = (plugin: InstalledPlugin, args: Record<string, unknown>) => Promise<unknown> | unknown
 
@@ -584,6 +613,59 @@ const apiRegistry: Record<string, { permission: PluginPermission | null; handler
         })),
         hasMore: (result.timeline ?? []).length >= limit,
       }
+    },
+  },
+
+  // ========= 三期：微信收藏（favorites:read，读 favorite/favorite.db 的 fav_db_item） =========
+  // ponytail: 形状未定型的未公开 API —— 暂不写入 PLUGIN_DEV_GUIDE 与 SDK 类型，
+  // 第三方不会调，参数/字段随时可改；定型后再补文档和 api.favorites.*
+  'favorites.list': {
+    permission: 'favorites:read',
+    timeoutMs: 30_000,
+    handler: async (_p, args) => {
+      const dbPath = findDbByName('favorite.db')
+      if (!dbPath) throw new Error('未找到 favorite.db：请确认已配置微信数据目录，或收藏库不存在')
+      const { dbAdapter } = await import('../../services/dbAdapter')
+      const limit = Math.min(Number(args.limit) || 200, MAX_QUERY_LIMIT)
+      const offset = Math.max(Number(args.offset) || 0, 0)
+      // 只有明确给了数字才筛类型：'' / null / undefined 都是「全部」（Number('') 是 0，会误筛 type=0）
+      const t = args.type === '' || args.type === null || args.type === undefined ? NaN : Number(args.type)
+      const typeArgs = Number.isFinite(t) ? [t] : []
+      const where = typeArgs.length ? ' WHERE type = ?' : ''
+      // favorite.db 与消息库同一套 SQLCipher 密钥，kind='message' + 指定路径即可解密只读查询
+      const total = await dbAdapter.get<{ n: number }>(
+        'message', dbPath, `SELECT COUNT(*) AS n FROM fav_db_item${where}`, typeArgs,
+      )
+      // content 是整段 favitem XML，必须让 SQLite 分页，别整表拉过桥再丢
+      const rows = await dbAdapter.all<Record<string, unknown>>(
+        'message', dbPath,
+        `SELECT local_id, type, update_time, content, flag, source_id, fromusr FROM fav_db_item${where}`
+          + ' ORDER BY update_time DESC LIMIT ? OFFSET ?',
+        [...typeArgs, limit, offset],
+      )
+      const items = rows.map((row) => {
+        const type = Number(row.type || 0)
+        const content = String(row.content ?? '')
+        // type=5 文章标题在 <pagetitle>；普通收藏在 <title>；位置类在 <label>/<poiname>
+        const title = favXmlTag(content, 'title') || favXmlTag(content, 'pagetitle')
+          || favXmlTag(content, 'label') || favXmlTag(content, 'poiname')
+        return {
+          localId: Number(row.local_id || 0),
+          type,
+          typeName: FAV_TYPE_NAMES[type] || `type=${type}`,
+          updateTime: Number(row.update_time || 0),
+          fromUsr: String(row.fromusr ?? ''),
+          // 公众号/分享者显示名（<srcdisplayname>），比裸 wxid/gh_ 可读
+          sourceName: favXmlTag(content, 'srcdisplayname').slice(0, 100),
+          sourceId: String(row.source_id ?? ''),
+          flag: Number(row.flag || 0),
+          title: title.slice(0, 500),
+          desc: (favXmlTag(content, 'desc') || favXmlTag(content, 'pagedesc')).slice(0, 1000),
+          link: favXmlTag(content, 'link').slice(0, 2000),
+        }
+      })
+      const count = Number(total?.n || 0)
+      return { dbPath, count, offset, truncated: offset + items.length < count, items }
     },
   },
 

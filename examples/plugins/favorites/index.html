@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>收藏查询导出</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="fv-wrap">
+    <h3 class="ct-title">微信收藏查询导出</h3>
+    <p class="ct-hint">读取 favorite.db · 按类型/关键词筛选 · 导出 Markdown / HTML / CSV（读取前请先关闭微信）</p>
+
+    <div class="fv-row">
+      <button class="ct-btn ct-btn-primary" id="btnLoad">加载收藏</button>
+      <input class="ct-input fv-grow" id="kw" placeholder="关键词过滤（匹配标题 / 摘要 / 链接 / 来源）" />
+      <select class="ct-select" id="typeFilter">
+        <option value="">全部类型</option>
+      </select>
+      <span class="ct-hint" id="sumHint">尚未加载</span>
+    </div>
+
+    <div class="fv-stats" id="stats"></div>
+
+    <div class="fv-row">
+      <span class="ct-hint" id="exportHint"></span>
+      <button class="ct-btn" id="btnMd" disabled>导出 Markdown</button>
+      <button class="ct-btn" id="btnHtml" disabled>导出 HTML</button>
+      <button class="ct-btn ct-btn-ghost" id="btnCsv" disabled>下载 CSV</button>
+      <button class="ct-btn ct-btn-ghost" id="btnCopy" disabled>复制 CSV</button>
+    </div>
+
+    <div class="ct-table-wrap ct-scroll fv-table">
+      <table class="ct-table">
+        <thead><tr><th>#</th><th>类型</th><th>时间</th><th>标题 / 摘要</th><th>链接</th><th>来源</th></tr></thead>
+        <tbody id="tbFav"></tbody>
+      </table>
+    </div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -8,6 +8,24 @@
  * 按用户明确要求做成「完整镜像桌面端」：apiKey 等密钥可读可写。
  * 代价是配对手机等同一份密钥副本，止血手段是设置页里的解除配对/吊销设备。
  */
+import {
+  ALIYUN_QWEN_TTS_MODELS,
+  ALIYUN_QWEN_TTS_VOICES,
+} from '../../../src/lib/aliyunQwenTtsCatalog'
+import {
+  STEPFUN_TTS_MODELS,
+  STEPFUN_TTS_VOICES,
+} from '../../../src/lib/stepfunTtsCatalog'
+import {
+  VOLCENGINE_TTS_RESOURCES,
+  VOLCENGINE_TTS_SUPPORTED_ENDPOINTS,
+  VOLCENGINE_TTS_VOICES,
+} from '../../../src/lib/volcengineTtsCatalog'
+import {
+  XIAOMI_MIMO_TTS_MODELS,
+  XIAOMI_MIMO_TTS_VOICES,
+} from '../../../src/lib/xiaomiMimoTtsCatalog'
+import type { ConfigService } from '../config'
 import { agentRpcHandlers } from './agentRpcRegistry'
 
 export type AiSettingField = {
@@ -39,23 +57,97 @@ function connectionFields(options: {
   ]
 }
 
-function ttsFields(provider: string): AiSettingField[] {
+function selectOptions(
+  items: Array<{ id: string; label: string }>,
+  currentValue: unknown,
+): Array<{ value: string; label: string }> {
+  const options = items.map((item) => ({ value: item.id, label: item.label }))
+  const current = String(currentValue || '').trim()
+  if (current && !options.some((item) => item.value === current)) {
+    options.unshift({ value: current, label: current })
+  }
+  return options
+}
+
+function ttsFields(provider: string, config: Record<string, unknown>): AiSettingField[] {
   const base: AiSettingField[] = [
     { key: 'enabled', label: '启用语音合成', type: 'switch' },
     { key: 'activeProvider', label: '服务商', type: 'select', options: TTS_PROVIDERS },
-    ...connectionFields({ modelPlaceholder: '如 tts-1' }),
-    { key: 'voice', label: '音色', type: 'text', placeholder: '服务商的音色 ID' },
-    { key: 'speed', label: '语速', type: 'number', placeholder: '1.0' },
-    { key: 'instructions', label: '声音风格提示', type: 'text', placeholder: '可留空' },
+    {
+      key: 'apiKey',
+      label: provider === 'volcengine' ? 'TTS / 声音复刻 API Key' : 'API Key',
+      type: 'password',
+      placeholder: '留空表示不修改',
+    },
   ]
-  // 豆包的实时通话（克隆好友打电话）走另一套凭据，和普通合成的 apiKey 不是一个东西。
-  // 用途写进标题——菜单只显示标题，不带小字说明
+
   if (provider === 'volcengine') {
+    base.push(
+      {
+        key: 'baseURL',
+        label: '接口地址',
+        type: 'select',
+        options: selectOptions(
+          VOLCENGINE_TTS_SUPPORTED_ENDPOINTS.map((item) => ({ id: item.url, label: item.label })),
+          config.baseURL,
+        ),
+      },
+      {
+        key: 'model',
+        label: '模型',
+        type: 'select',
+        options: selectOptions(VOLCENGINE_TTS_RESOURCES, config.model),
+      },
+    )
+    const resourceId = String(config.model || '')
+    const voices = VOLCENGINE_TTS_VOICES.filter((item) => item.resourceIds.includes(resourceId))
+    base.push(voices.length > 0
+      ? { key: 'voice', label: '音色', type: 'select', options: selectOptions(voices, config.voice) }
+      : { key: 'voice', label: 'Speaker ID', type: 'text', placeholder: '声音复刻返回的 Speaker ID' })
+    // 豆包实时通话走另一套凭据，和普通合成的 apiKey 不是一个东西。
     base.push(
       { key: 'realtimeAppId', label: '通话 App ID', type: 'text' },
       { key: 'realtimeAccessKey', label: '通话 Access Key', type: 'password' },
     )
+  } else if (provider === 'aliyun-qwen') {
+    base.push(
+      { key: 'baseURL', label: '接口地址', type: 'text', placeholder: 'wss://…' },
+      { key: 'model', label: '模型', type: 'select', options: selectOptions(ALIYUN_QWEN_TTS_MODELS, config.model) },
+    )
+    const model = ALIYUN_QWEN_TTS_MODELS.find((item) => item.id === config.model)
+    base.push(model?.kind === 'voice-clone'
+      ? { key: 'voice', label: '复刻 voice', type: 'text', placeholder: '声音复刻返回的 voice' }
+      : { key: 'voice', label: '音色', type: 'select', options: selectOptions(ALIYUN_QWEN_TTS_VOICES, config.voice) })
+  } else if (provider === 'stepfun') {
+    base.push(
+      { key: 'baseURL', label: '接口地址', type: 'text', placeholder: 'https://…' },
+      { key: 'model', label: '模型', type: 'select', options: selectOptions(STEPFUN_TTS_MODELS, config.model) },
+      { key: 'voice', label: '音色', type: 'select', options: selectOptions(STEPFUN_TTS_VOICES, config.voice) },
+    )
+  } else if (provider === 'xiaomi') {
+    base.push(
+      { key: 'baseURL', label: '接口地址', type: 'text', placeholder: 'https://…' },
+      { key: 'model', label: '模型', type: 'select', options: selectOptions(XIAOMI_MIMO_TTS_MODELS, config.model) },
+    )
+    const model = XIAOMI_MIMO_TTS_MODELS.find((item) => item.id === config.model)
+    base.push(model?.kind === 'preset'
+      ? { key: 'voice', label: '音色', type: 'select', options: selectOptions(XIAOMI_MIMO_TTS_VOICES, config.voice) }
+      : {
+          key: 'voice',
+          label: model?.kind === 'voice-clone' ? '音色样本' : '音色',
+          type: 'text',
+          placeholder: model?.kind === 'voice-clone' ? '音频 Base64 Data URL' : '音色设计模型无需填写',
+        })
+  } else {
+    base.push(
+      ...connectionFields({ modelPlaceholder: '如 tts-1' }).slice(1),
+      { key: 'voice', label: '音色', type: 'text', placeholder: '服务商的音色 ID' },
+    )
   }
+  base.push(
+    { key: 'speed', label: '语速', type: 'number', placeholder: '1.0' },
+    { key: 'instructions', label: '声音风格提示', type: 'text', placeholder: '可留空' },
+  )
   return base
 }
 
@@ -90,11 +182,17 @@ const IMAGE_GEN_FIELDS: AiSettingField[] = [
   { key: 'timeoutMs', label: '超时（毫秒）', type: 'number', placeholder: '120000' },
 ]
 
-async function loadServiceConfig(service: AiServiceId): Promise<Record<string, unknown>> {
+async function loadServiceConfig(
+  service: AiServiceId,
+  ttsProvider?: unknown,
+): Promise<Record<string, unknown>> {
   if (service === 'tts') {
     const { getTtsConfig } = await import('../ai/ttsService')
     const config = getTtsConfig() as Record<string, unknown>
-    const provider = String(config.activeProvider || 'xiaomi')
+    const requestedProvider = String(ttsProvider || '')
+    const provider = TTS_PROVIDERS.some((item) => item.value === requestedProvider)
+      ? requestedProvider
+      : String(config.activeProvider || 'xiaomi')
     const providers = (config.providers || {}) as Record<string, Record<string, unknown>>
     // 表单是平铺的，把当前服务商那份摊上来；写回时 saveTtsConfig 认这种平铺 patch
     return { ...config, ...(providers[provider] || {}), activeProvider: provider }
@@ -137,7 +235,7 @@ async function saveServiceConfig(
 }
 
 function fieldsFor(service: AiServiceId, config: Record<string, unknown>): AiSettingField[] {
-  if (service === 'tts') return ttsFields(String(config.activeProvider || ''))
+  if (service === 'tts') return ttsFields(String(config.activeProvider || ''), config)
   if (service === 'embedding') return EMBEDDING_FIELDS
   if (service === 'rerank') return RERANK_FIELDS
   return IMAGE_GEN_FIELDS
@@ -167,7 +265,7 @@ function isAiServiceId(value: unknown): value is AiServiceId {
   return value === 'tts' || value === 'embedding' || value === 'rerank' || value === 'imageGen'
 }
 
-export function registerRemoteAiSettingsHandlers(): void {
+export function registerRemoteAiSettingsHandlers(configService: ConfigService): void {
   /** 概览：四个服务的状态一次拿回，避免手机端连开四个往返 */
   agentRpcHandlers.set('ai:listServices', async () => {
     try {
@@ -190,9 +288,10 @@ export function registerRemoteAiSettingsHandlers(): void {
   /** 单个服务的完整配置 + 字段定义，手机端照着渲染表单 */
   agentRpcHandlers.set('ai:getServiceConfig', async (_event, payload?: unknown) => {
     try {
-      const service = (payload as { service?: unknown })?.service
+      const input = (payload || {}) as { service?: unknown; ttsProvider?: unknown }
+      const service = input.service
       if (!isAiServiceId(service)) return { success: false, error: '未知的服务' }
-      const config = await loadServiceConfig(service)
+      const config = await loadServiceConfig(service, input.ttsProvider)
       return {
         success: true,
         name: SERVICES.find((item) => item.id === service)?.name || service,
@@ -271,29 +370,72 @@ export function registerRemoteAiSettingsHandlers(): void {
     }
   })
 
+  /** 使用手机端当前表单值合成试听，不要求先保存。 */
+  agentRpcHandlers.set('ai:previewTts', async (_event, payload?: unknown) => {
+    try {
+      const input = (payload || {}) as { config?: unknown }
+      if (!input.config || typeof input.config !== 'object') {
+        return { success: false, error: '缺少语音合成配置' }
+      }
+      const { testTtsConfig } = await import('../ai/ttsService')
+      const { refreshResolvedProxyUrl } = await import('../ai/proxyFetch')
+      await refreshResolvedProxyUrl()
+      return await testTtsConfig(input.config as never)
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   /**
    * 主对话模型的默认值。
    * agent:listProviders 只读，会话里的模型切换也只是单次覆盖——
    * 这里才是把某个服务商/模型设成全局默认。
    */
+  agentRpcHandlers.set('ai:setDefaultPreset', async (_event, payload?: unknown) => {
+    try {
+      const input = (payload || {}) as { presetId?: unknown; model?: unknown }
+      const presetId = String(input.presetId || '').trim()
+      const preset = (configService.get('aiConfigPresets') || []).find((item) => item.id === presetId)
+      if (!preset) return { success: false, error: '配置预设不存在，请先在电脑端添加' }
+
+      const model = String(input.model || '').trim() || preset.model
+      const providerConfig = {
+        apiKey: preset.apiKey,
+        model,
+        baseURL: preset.baseURL,
+        protocol: preset.protocol,
+      } as Parameters<ConfigService['setAIProviderConfigAndActivate']>[1]
+      configService.setAIProviderConfigAndActivate(preset.provider, providerConfig)
+      configService.set('aiActiveConfigPresetId', preset.id)
+      return {
+        success: true,
+        presetId: preset.id,
+        name: preset.name,
+        provider: preset.provider,
+        model,
+      }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
   agentRpcHandlers.set('ai:setDefaultProvider', async (_event, payload?: unknown) => {
     try {
       const input = (payload || {}) as { provider?: unknown; model?: unknown; reasoningEffort?: unknown }
       const provider = String(input.provider || '').trim()
       if (!provider) return { success: false, error: '缺少服务商' }
 
-      const { ConfigService } = await import('../config')
-      const config = new ConfigService()
-      const existing = config.getAllAIProviderConfigs()?.[provider]
+      const existing = configService.getAllAIProviderConfigs()?.[provider]
       if (!existing?.apiKey) {
         return { success: false, error: '该服务商还没有配置密钥，请先在电脑端添加' }
       }
       const model = String(input.model || '').trim() || existing.model
-      config.setAIProviderConfigAndActivate(provider, { ...existing, model })
+      configService.setAIProviderConfigAndActivate(provider, { ...existing, model })
+      configService.set('aiActiveConfigPresetId', '')
       if (typeof input.reasoningEffort === 'string') {
-        const all = config.getAllAIProviderConfigs() || {}
+        const all = configService.getAllAIProviderConfigs() || {}
         const next = { ...(all[provider] || {}), reasoningEffort: input.reasoningEffort }
-        config.set('aiProviders', { ...all, [provider]: next } as never)
+        configService.set('aiProviders', { ...all, [provider]: next } as never)
       }
       return { success: true, provider, model }
     } catch (e) {

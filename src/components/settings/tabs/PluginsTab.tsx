@@ -20,6 +20,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   'notify:send': '发送系统通知',
   'window:create': '打开独立窗口',
   'sns:read': '读取朋友圈',
+  'favorites:read': '读取微信收藏',
   'ai:use': '调用 AI 能力',
   'network': '访问网络（数据可能被发送到外部）',
 }
