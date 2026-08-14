@@ -36,6 +36,11 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 }
 
+/** 只放行 http(s)：收藏 XML 里的 link 是别人分享进来的，javascript: 之类不能进 href */
+function safeHref(link) {
+  return /^https?:\/\//i.test(String(link || '')) ? String(link) : ''
+}
+
 function mdCell(s) {
   return String(s ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 }
@@ -78,6 +83,7 @@ function stamp() {
 
 // ============ 加载 ============
 
+const PAGE_SIZE = 2000  // 宿主 favorites.list 单页上限
 let allItems = []       // 宿主返回的全部收藏（updateTime 降序）
 let activeType = ''     // 类型筛选（''=全部）
 
@@ -89,13 +95,20 @@ async function loadFavorites() {
     if (!caps.includes('favorites.list')) {
       throw new Error('当前宿主版本不支持 favorites.list，请升级 CipherTalk 后重试')
     }
-    const result = await api.invoke('favorites.list', {})
-    allItems = result.items || []
+    // 宿主按页返回（单页上限 2000），翻到 truncated=false 为止；20 页保底防死循环
+    const items = []
+    let last = {}
+    for (let page = 0; page < 20; page++) {
+      last = await api.invoke('favorites.list', { limit: PAGE_SIZE, offset: page * PAGE_SIZE })
+      items.push(...(last.items || []))
+      if (!last.truncated) break
+    }
+    allItems = items
     buildTypeFilter()
     renderStats()
     renderTable()
-    const extra = result.truncated ? '（超出上限，已截断）' : ''
-    $('sumHint').textContent = `共 ${allItems.length} 条收藏${extra} · 库：${result.dbPath || ''}`
+    const extra = last.truncated ? '（超出上限，已截断）' : ''
+    $('sumHint').textContent = `共 ${allItems.length} 条收藏${extra} · 库：${last.dbPath || ''}`
   } catch (e) {
     allItems = []
     renderStats()
@@ -168,11 +181,12 @@ $('kw').addEventListener('input', renderTable)
 
 function renderTable() {
   const rows = filteredItems()
-  const n = allItems.length
+  const n = rows.length
   $('tbFav').innerHTML = rows.map((it, i) => {
-    // 不在 JS 里截断：超长由 CSS 省略号处理（列宽随窗口自适应），hover 显示全文
+    // 插件 iframe 的 sandbox 没有 allow-popups，target=_blank 打不开，就别装成链接；
+    // 要点开去导出的 HTML 里点。不在 JS 里截断：超长交给 CSS 省略号，hover 看全文
     const linkCell = it.link
-      ? `<a class="fv-link" href="${esc(it.link)}" target="_blank" rel="noopener" title="${esc(it.link)}">${esc(it.link)}</a>`
+      ? `<span class="fv-link" title="${esc(it.link)}">${esc(it.link)}</span>`
       : '<span class="fv-dim">—</span>'
     const title = displayTitle(it)
     const descPart = it.desc && it.desc !== it.title
@@ -220,7 +234,7 @@ function buildMarkdown() {
   const sections = [...byYear.entries()].map(([year, list]) => {
     const body = list.map(({ it, no }) =>
       `| ${no} | ${typeInfo(it.type).name} | ${fmtTime(it.updateTime)} | ${mdCell(displayTitle(it)).slice(0, 80)} | ` +
-      (it.link ? `[链接](${it.link.replace(/\)/g, '%29')})` : '—') + ' |').join('\n')
+      (safeHref(it.link) ? `[链接](${safeHref(it.link).replace(/\)/g, '%29')})` : '—') + ' |').join('\n')
     return `### ${year} 年\n\n| # | 类型 | 时间 | 标题 | 链接 |\n|:-:|:----:|:----:|------|:----:|\n${body}`
   }).join('\n\n')
 
@@ -269,7 +283,7 @@ function buildHtml() {
     <td class="type">${typeLabel(it.type)}</td>
     <td>${fmtTime(it.updateTime)}</td>
     <td>${esc(displayTitle(it))}${it.desc && it.desc !== it.title ? `<div class="dim">${esc(it.desc.slice(0, 160))}</div>` : ''}</td>
-    <td>${it.link ? `<a href="${esc(it.link)}" target="_blank">链接</a>` : '—'}</td>
+    <td>${safeHref(it.link) ? `<a href="${esc(safeHref(it.link))}" target="_blank" rel="noopener">链接</a>` : '—'}</td>
     <td class="dim">${esc(displaySource(it) || '—')}</td>
   </tr>`).join('')
 
