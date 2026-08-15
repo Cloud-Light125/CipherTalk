@@ -1,6 +1,6 @@
 {
   "name": "ciphertalk",
-  "version": "2026.814.0",
+  "version": "2026.814.1",
   "description": "密语 - 微信聊天记录查看工具",
   "author": "ILoveBingLu",
   "license": "CC-BY-NC-SA-4.0",
@@ -175,10 +175,7 @@
     },
     "mac": {
       "icon": "public/icon.icns",
-      "target": [
-        "dmg",
-        "zip"
-      ],
+      "target": "dmg",
       "category": "public.app-category.utilities",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,

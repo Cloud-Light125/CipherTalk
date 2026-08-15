@@ -13,8 +13,7 @@ const targetMap = {
     manifestName: 'latest.yml'
   },
   mac: {
-    // electron-updater 的 MacUpdater 只接受 ZIP 更新包；DMG 仍作为手动安装包发布。
-    artifactName: `CipherTalk-${pkg.version}-Setup.zip`,
+    artifactName: `CipherTalk-${pkg.version}-Setup.dmg`,
     manifestName: 'latest-mac.yml'
   }
 }

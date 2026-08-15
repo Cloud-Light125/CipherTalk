@@ -1,4 +1,10 @@
-import { ipcMain } from 'electron'
+import { createHash } from 'node:crypto'
+import { createWriteStream } from 'node:fs'
+import { mkdir, rename, rm } from 'node:fs/promises'
+import path from 'node:path'
+import { Readable, Transform } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import { app, ipcMain, shell } from 'electron'
 import { autoUpdater, type ProgressInfo } from 'electron-updater'
 import { appUpdateService } from '../../services/appUpdateService'
 import type { MainProcessContext } from '../context'
@@ -35,6 +41,25 @@ export function registerAppUpdateHandlers(ctx: MainProcessContext): void {
     if (process.env.VITE_DEV_SERVER_URL) {
       await simulateDownloadProgress(ctx, targetVersion)
       ctx.setIsInstallingUpdate(false)
+      return
+    }
+
+    if (process.platform === 'darwin') {
+      try {
+        await downloadAndOpenMacDmg(ctx, targetVersion)
+      } catch (error) {
+        ctx.setIsInstallingUpdate(false)
+        appUpdateService.updateDiagnostics({
+          phase: 'failed',
+          lastError: String(error),
+          lastEvent: '下载或打开 macOS 更新包失败'
+        })
+        ctx.getLogService()?.error('AppUpdate', '下载或打开 macOS 更新包失败', {
+          targetVersion,
+          error: String(error)
+        })
+        throw error
+      }
       return
     }
 
@@ -104,6 +129,122 @@ export function registerAppUpdateHandlers(ctx: MainProcessContext): void {
     }
   })
 
+}
+
+async function downloadAndOpenMacDmg(ctx: MainProcessContext, targetVersion?: string): Promise<void> {
+  const updateInfo = appUpdateService.getCachedUpdateInfo()
+  if (!updateInfo?.downloadUrl || !updateInfo.sha512) {
+    throw new Error('缺少 macOS DMG 更新地址或校验信息，请重新检查更新')
+  }
+
+  const downloadUrl = new URL(updateInfo.downloadUrl)
+  if (downloadUrl.protocol !== 'https:' || !downloadUrl.pathname.toLowerCase().endsWith('.dmg')) {
+    throw new Error('macOS 更新包地址无效')
+  }
+
+  const safeVersion = (targetVersion || 'latest').replace(/[^0-9A-Za-z._-]/g, '_')
+  const downloadDir = path.join(app.getPath('temp'), 'ciphertalk-updates')
+  const finalPath = path.join(downloadDir, `CipherTalk-${safeVersion}-Setup.dmg`)
+  const partialPath = `${finalPath}.download`
+  await mkdir(downloadDir, { recursive: true })
+  await rm(partialPath, { force: true })
+
+  try {
+    const response = await fetch(downloadUrl, {
+      cache: 'no-store',
+      redirect: 'follow'
+    })
+    if (!response.ok || !response.body) {
+      throw new Error(`下载 macOS 更新包失败: HTTP ${response.status}`)
+    }
+
+    const headerSize = Number(response.headers.get('content-length'))
+    const total = Number.isFinite(headerSize) && headerSize > 0
+      ? headerSize
+      : updateInfo.fileSize || 0
+    const hash = createHash('sha512')
+    const startedAt = Date.now()
+    let lastProgressAt = 0
+    let transferred = 0
+
+    const progressStream = new Transform({
+      transform(chunk: Buffer, _encoding, callback) {
+        transferred += chunk.length
+        hash.update(chunk)
+        const now = Date.now()
+        if (now - lastProgressAt < 200 && (total <= 0 || transferred < total)) {
+          callback(null, chunk)
+          return
+        }
+        lastProgressAt = now
+        const percent = total > 0 ? Math.min(100, (transferred / total) * 100) : 0
+        const elapsedSeconds = Math.max((now - startedAt) / 1000, 0.001)
+        const payload = {
+          percent,
+          transferred,
+          total,
+          bytesPerSecond: Math.round(transferred / elapsedSeconds)
+        }
+        ctx.broadcastToWindows('app:downloadProgress', payload)
+        appUpdateService.updateDiagnostics({
+          phase: 'downloading',
+          strategy: 'full',
+          progressPercent: percent,
+          downloadedBytes: transferred,
+          totalBytes: total || undefined,
+          lastEvent: total > 0 ? `下载中 ${percent.toFixed(1)}%` : '正在下载 DMG 更新包'
+        })
+        callback(null, chunk)
+      }
+    })
+
+    await pipeline(
+      Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]),
+      progressStream,
+      createWriteStream(partialPath)
+    )
+
+    const actualSha512 = hash.digest('base64')
+    if (actualSha512 !== updateInfo.sha512) {
+      throw new Error('macOS 更新包校验失败，请重新下载')
+    }
+
+    await rm(finalPath, { force: true })
+    await rename(partialPath, finalPath)
+    ctx.broadcastToWindows('app:downloadProgress', {
+      percent: 100,
+      transferred,
+      total: total || transferred,
+      bytesPerSecond: 0
+    })
+    appUpdateService.updateDiagnostics({
+      phase: 'downloaded',
+      strategy: 'full',
+      progressPercent: 100,
+      downloadedBytes: transferred,
+      totalBytes: total || transferred,
+      lastEvent: 'DMG 更新包下载完成，准备打开'
+    })
+
+    const openError = await shell.openPath(finalPath)
+    if (openError) {
+      throw new Error(`无法打开 macOS 更新包: ${openError}`)
+    }
+
+    ctx.getLogService()?.info('AppUpdate', 'DMG 更新包已打开，正在退出应用', {
+      targetVersion,
+      filePath: finalPath
+    })
+    appUpdateService.updateDiagnostics({
+      phase: 'installing',
+      lastEvent: 'DMG 更新包已打开，正在退出应用'
+    })
+    ctx.appWithQuitFlag.isQuitting = true
+    app.quit()
+  } catch (error) {
+    await rm(partialPath, { force: true }).catch(() => undefined)
+    throw error
+  }
 }
 
 /**
