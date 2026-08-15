@@ -4,6 +4,10 @@
 #   - 上游被清空        → 文件数量骤减，跳过并报警
 #   - 上游重写历史      → 无共同祖先，跳过并报警
 #   - 正常更新          → 打安全点 tag 后 merge
+#
+# 注意：GITHUB_TOKEN 没有更新 .github/workflows/* 的 workflows 权限。
+# 若上游合并会改动 workflow，请在 fork 的 Settings → Secrets and variables →
+# Actions 中配置 FORK_SYNC_PAT（classic PAT 至少需要 repo + workflow scope）。
 
 name: Safe Fork Sync
 
@@ -29,12 +33,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # PAT 存在时让 checkout 的凭据也用于后续 git push。
+          token: ${{ secrets.FORK_SYNC_PAT || secrets.GITHUB_TOKEN }}
 
       - name: 解析上游仓库
         id: up
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.FORK_SYNC_PAT || secrets.GITHUB_TOKEN }}
         run: |
           parent=$(gh api "repos/${{ github.repository }}" --jq '.parent.full_name // empty')
 
@@ -69,7 +74,7 @@ jobs:
         if: steps.up.outputs.skip != 'true' && steps.fetch.outputs.skip != 'true'
         id: guard
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.FORK_SYNC_PAT || secrets.GITHUB_TOKEN }}
         run: |
           cur=$(git ls-tree -r --name-only HEAD | wc -l)
           up=$(git ls-tree -r --name-only "upstream/${{ steps.up.outputs.branch }}" | wc -l)
@@ -107,7 +112,7 @@ jobs:
         if: steps.up.outputs.skip != 'true' && steps.fetch.outputs.skip != 'true' && steps.guard.outputs.skip != 'true'
         id: history_guard
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.FORK_SYNC_PAT || secrets.GITHUB_TOKEN }}
         run: |
 
           if ! git merge-base HEAD "upstream/${{ steps.up.outputs.branch }}" >/dev/null; then
@@ -149,6 +154,8 @@ jobs:
           steps.guard.outputs.skip != 'true' &&
           steps.history_guard.outputs.skip != 'true'
 
+        env:
+          FORK_SYNC_PAT: ${{ secrets.FORK_SYNC_PAT }}
         run: |
 
           git config user.name "github-actions[bot]"
@@ -163,7 +170,18 @@ jobs:
 
 
           # 合并上游
+          before_merge=$(git rev-parse HEAD)
+
           if git merge --no-edit "upstream/${{ steps.up.outputs.branch }}"; then
+
+            # 没有 workflow 权限的 GITHUB_TOKEN 无法推送这类合并；在本地
+            # 明确报错并保留已推送的安全点，避免远端拒绝信息误导排查。
+            changed_workflows=$(git diff --name-only "$before_merge" HEAD -- '.github/workflows/*')
+            if [ -n "$changed_workflows" ] && [ -z "$FORK_SYNC_PAT" ]; then
+              echo "::error::合并改动了 workflow 文件，但未配置 FORK_SYNC_PAT。请创建带 repo + workflow scope 的 PAT，并保存为仓库 secret FORK_SYNC_PAT。"
+              printf '改动的 workflow 文件：\n%s\n' "$changed_workflows"
+              exit 1
+            fi
 
             git push origin HEAD
 
