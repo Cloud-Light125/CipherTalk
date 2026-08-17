@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync, rmSync, mkdirSync
 import { basename, isAbsolute, join, relative, resolve } from 'path'
 import AdmZip from 'adm-zip'
 import type { AgentSkillContextItem } from './agent/types'
+import { isSkillAvailableToInAppAgent } from './agent/skillPolicy'
 
 type AdmZipFull = InstanceType<typeof AdmZip> & {
   getEntries(): Array<{ entryName: string }>
@@ -524,7 +525,7 @@ export class SkillManagerService {
   }
 
   getAllSkillsForAgentPrompt(totalBudget = DEFAULT_AGENT_ALL_SKILL_BUDGET): AgentSkillContextItem[] {
-    const docs = this.getSkillDocuments()
+    const docs = this.getSkillDocuments().filter(skill => isSkillAvailableToInAppAgent(skill.name))
     if (docs.length === 0) return []
     const full = packSkillDocuments(docs, Number.MAX_SAFE_INTEGER)
     const fullLength = full.reduce((sum, item) => sum + item.content.length, 0)
@@ -535,7 +536,7 @@ export class SkillManagerService {
   }
 
   selectSkillsForAgentPrompt(query: string, totalBudget = DEFAULT_SELECTED_SKILL_BUDGET): AgentSkillContextItem[] {
-    const docs = this.getSkillDocuments()
+    const docs = this.getSkillDocuments().filter(skill => isSkillAvailableToInAppAgent(skill.name))
     if (docs.length === 0) return []
     const tokens = tokenizeSkillQuery(query)
     if (tokens.length === 0) return []

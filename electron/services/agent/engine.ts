@@ -92,6 +92,7 @@ export function buildAgentInstructions(
   const promptParts = buildAgentPromptParts(input.scope, input.skills, {
     includeWechatOutbound: input.outputMode === 'wechat',
     includeWechatReplyMedia: input.allowWechatReplyMedia === true,
+    planMode: input.planMode === true,
   })
   const historyManagedTurnContext = input.turnContextMode === 'history'
   const dynamicSystem = [

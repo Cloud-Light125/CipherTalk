@@ -249,6 +249,7 @@ async function buildDeepSeekHistoryTurnContext(opts: {
   const promptParts = prompts.buildAgentPromptParts(opts.scope, opts.skills, {
     includeWechatOutbound: opts.includeWechatOutbound === true,
     includeWechatReplyMedia: opts.includeWechatReplyMedia === true,
+    planMode: opts.planMode,
   })
   const toolsDisabled = opts.toolsDisabled === true
   const cachedMemoryContext = runtimeCache.getCachedStartupMemory(opts.scope)
