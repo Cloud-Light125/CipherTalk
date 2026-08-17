@@ -146,10 +146,13 @@ const WECHAT_REPLY_MEDIA_PROMPT = `
 - 任何主动任务、定时任务、关键词触发都不得调用这些工具给微信发消息。`
 
 const BASE_PROMPT = [ROLE_PROMPT, VOICE_PROMPT, TOOL_PROMPT, ROUTING_PROMPT, EVIDENCE_PROMPT, MEMORY_PROMPT].join('\n')
+const PLAN_BASE_PROMPT = [ROLE_PROMPT, VOICE_PROMPT].join('\n')
 
 interface AgentPromptOptions {
   includeWechatOutbound?: boolean
   includeWechatReplyMedia?: boolean
+  /** 计划轮不注入执行阶段工具目录，避免模型调用本轮未注册的工具。 */
+  planMode?: boolean
 }
 
 /** 厂商原生联网搜索可用时追加。 */
@@ -200,8 +203,8 @@ export function buildCanvasPrompt(context: AgentCanvasRunContext): string {
 export const PLAN_MODE_PROMPT = `
 # 计划模式（已开启）
 用户开启了"计划模式"，本轮你只制定执行计划，不给出最终结论：
-- 先理解问题。当前计划轮只开放 list_contacts / list_groups 这类轻量解析工具；确有必要才调用它们把对象写具体。
-- 不要在本轮做实质分析，不要检索聊天原文、读时间线、统计、联网、查询 MCP、写记忆或调用 delegate_analysis；这些只能放到点击"开始执行"后的执行阶段。
+- 先理解问题。当前运行时实际只开放 list_contacts / list_groups 这类轻量解析工具；确有必要才调用它们把对象写具体。
+- 计划里可以写明执行阶段准备使用的工具，但本轮绝不能提前调用未注册的工具。不要在本轮做实质分析、检索聊天原文、读时间线、统计、联网、查询 MCP、写记忆或委托子助手；这些只能放到点击"开始执行"后的执行阶段。
 - 如果本轮已开启代码工作区，计划轮只允许使用 code_workspace_status / code_list_files / code_read_file / code_get_dev_server_logs / code_get_browser_diagnostics 做只读项目检查；严禁写文件、删除文件、运行命令或启动 dev server。
 - 自行判断"执行阶段"是否需要 delegate_analysis：长时间跨度、多会话、大量消息归纳/复盘等重任务预计需要；精确查询、计数排行、小范围核对通常不需要。计划阶段只判断和说明，不要提前执行子助手分析。
 - 用简洁的 Markdown 有序列表给出执行计划：每一步写清"打算用哪个工具、查什么范围、想得到什么"；必要时点出难点或需要用户先确认的地方。
@@ -226,11 +229,16 @@ function buildSkillPrompt(skills: AgentSkillContextItem[] = []): string {
 ${blocks.join('\n\n')}`
 }
 
-function buildScopePrompt(scope: AgentScope): string {
+function buildScopePrompt(scope: AgentScope, planMode = false): string {
   if (scope.kind !== 'session') return ''
 
   const who = scope.displayName ? `${scope.displayName}（${scope.sessionId}）` : scope.sessionId
   const isGroup = scope.sessionId.endsWith('@chatroom')
+  if (planMode) {
+    return `
+# 当前已锁定对象
+用户用 @ 把本次提问限定在${isGroup ? '群' : '联系人'} ${who}。执行计划应围绕这个对象制定，不需要再调用工具解析其身份；本轮仍只制定计划，不读取该对象的聊天内容。`
+  }
   return `
 # 当前已锁定对象
 用户用 @ 把本次提问限定在${isGroup ? '群' : '联系人'} ${who}。除非用户在问题里明确点名别人，否则：
@@ -277,14 +285,15 @@ function buildCurrentTimePrompt(now = new Date()): string {
 }
 
 export function buildAgentPromptParts(scope: AgentScope, skills: AgentSkillContextItem[] = [], options: AgentPromptOptions = {}): AgentPromptParts {
+  const planMode = options.planMode === true
   return {
     cacheableSystem: [
-      BASE_PROMPT,
+      planMode ? PLAN_BASE_PROMPT : BASE_PROMPT,
       options.includeWechatOutbound ? WECHAT_OUTBOUND_PROMPT : '',
       options.includeWechatReplyMedia ? STICKER_PROMPT : '',
       options.includeWechatReplyMedia ? WECHAT_REPLY_MEDIA_PROMPT : '',
     ].filter(Boolean).join('\n'),
-    dynamicSystem: buildScopePrompt(scope),
+    dynamicSystem: buildScopePrompt(scope, planMode),
     // 每轮必变的内容（当前时间精确到秒、按问题挑选的技能）。放进 system 前缀会让
     // 服务商 prompt cache 每轮全 miss（DeepSeek 带 tools 时前缀中段一变即 0 命中，已实测），
     // 由 engine 注入到消息尾部而不是 instructions。
