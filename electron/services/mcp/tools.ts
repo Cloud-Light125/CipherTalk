@@ -87,8 +87,9 @@ export function registerCipherTalkMcpTools(server: any) {
         exportImages: z.boolean().optional(),
         exportVideos: z.boolean().optional(),
         exportEmojis: z.boolean().optional(),
-        exportVoices: z.boolean().optional()
-      }).optional().describe('Required explicit media export selections.'),
+        exportVoices: z.boolean().optional(),
+        exportFiles: z.boolean().optional()
+      }).optional().describe('Required explicit media export selections (avatars/images/videos/emojis/voices). exportFiles (document attachments) is optional and defaults to false.'),
       outputDir: z.string().trim().min(1).optional().describe('Optional output directory. If omitted, the configured default export path will be used when available.'),
       validateOnly: z.boolean().optional().describe('When true, only validate completeness and return missing fields without exporting.')
     }

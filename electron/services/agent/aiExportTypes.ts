@@ -11,6 +11,8 @@ export interface AiExportMediaOptions {
   exportVideos: boolean
   exportEmojis: boolean
   exportVoices: boolean
+  /** 文件附件（PDF/Word 等），可选，默认 false */
+  exportFiles?: boolean
 }
 
 export type AiExportMissingField =

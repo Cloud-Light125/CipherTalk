@@ -44,6 +44,7 @@ export function normalizeAiExportMediaOptions(value: Partial<AiExportMediaOption
     exportVideos: value.exportVideos as boolean,
     exportEmojis: value.exportEmojis as boolean,
     exportVoices: value.exportVoices as boolean,
+    exportFiles: value.exportFiles === true,
   }
 }
 

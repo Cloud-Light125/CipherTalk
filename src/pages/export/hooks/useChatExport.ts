@@ -52,7 +52,8 @@ export function useChatExport(shared: ExportShared) {
     exportImages: false,
     exportVideos: false,
     exportEmojis: false,
-    exportVoices: false
+    exportVoices: false,
+    exportFiles: false
   })
 
   // 加载聊天会话
@@ -143,7 +144,8 @@ export function useChatExport(shared: ExportShared) {
         exportImages: options.exportImages,
         exportVideos: options.exportVideos,
         exportEmojis: options.exportEmojis,
-        exportVoices: options.exportVoices
+        exportVoices: options.exportVoices,
+        exportFiles: options.exportFiles
       }
 
       if (options.format === 'chatlab' || options.format === 'chatlab-jsonl' || options.format === 'json' || options.format === 'excel' || options.format === 'html' || options.format === 'sql') {

@@ -25,6 +25,7 @@ export default function ExportProgressModal({
         options.exportVideos && '含视频',
         options.exportEmojis && '含表情',
         options.exportVoices && '含语音',
+        options.exportFiles && '含文件',
         options.exportAvatars && '含头像'
       ].filter(Boolean) as string[])
     : []

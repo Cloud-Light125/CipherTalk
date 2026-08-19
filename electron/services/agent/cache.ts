@@ -2,6 +2,7 @@ import { createHash } from 'crypto'
 import type { ProviderOptions, SystemModelMessage } from '@ai-sdk/provider-utils'
 import type { ToolSet } from 'ai'
 import { isArkBaseURL } from './arkContextFetch'
+import { isNvidiaInferenceBaseURL } from './promptCacheCompat'
 import type { AgentReasoningEffort, AgentRunInput } from './types'
 
 export interface AgentPromptParts {
@@ -146,7 +147,10 @@ export function buildProviderOptions(input: AgentRunInput, promptCacheKey: strin
     } else {
       // @ai-sdk/openai-compatible 只校验 camelCase 标准项；厂商扩展字段要用请求体原名透传。
       // 这里恢复 AI SDK 6 时代 OpenAI-compatible 服务常用的 prompt_cache_key 行为。
-      option.prompt_cache_key = promptCacheKey
+      // 英伟达推理接口（nvidia.com）不认该字段，命中时跳过注入，避免 400。见 issue #353。
+      if (!isNvidiaInferenceBaseURL(input.providerConfig.baseURL)) {
+        option.prompt_cache_key = promptCacheKey
+      }
     }
     if (Object.keys(option).length > 0) {
       const keys = new Set(['openai'])
@@ -228,6 +232,14 @@ export function buildProviderCacheStatus(input: AgentRunInput, promptCacheKey: s
     }
   }
   if (input.providerConfig.providerKind === 'openai-compatible') {
+    if (isNvidiaInferenceBaseURL(input.providerConfig.baseURL)) {
+      return {
+        ...base,
+        promptCacheEnabled: false,
+        promptCacheProvider: 'none',
+        reason: '英伟达推理接口不支持 prompt_cache_key（带上会 400），已跳过注入。',
+      }
+    }
     if (isArkBaseURL(input.providerConfig.baseURL)) {
       return {
         ...base,

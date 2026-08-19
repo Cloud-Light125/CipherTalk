@@ -14,6 +14,7 @@ import { CODEX_SUBSCRIPTION_DUMMY_API_KEY, createCodexSubscriptionFetch, getCode
 import { withOpenAICompatibleStreamSanitizer } from '../ai/openaiCompatibleStreamSanitizer'
 import { withGoogleExplicitCache } from './googleCacheFetch'
 import { isArkBaseURL, withArkContextCache } from './arkContextFetch'
+import { injectOpenAICompatiblePromptCacheKey } from './promptCacheCompat'
 import type { AgentProviderConfig } from './types'
 
 export type AgentLanguageModelOptions = {
@@ -100,11 +101,6 @@ function withAnthropicSanitizer(baseFetch: typeof globalThis.fetch | undefined):
   }) as typeof globalThis.fetch
 }
 
-function injectOpenAICompatiblePromptCacheKey(args: Record<string, any>, promptCacheKey?: string): Record<string, any> {
-  if (!promptCacheKey || args.prompt_cache_key) return args
-  return { ...args, prompt_cache_key: promptCacheKey }
-}
-
 export function createLanguageModel(config: AgentProviderConfig, options: AgentLanguageModelOptions = {}): LanguageModel {
   const { providerKind, name, apiKey, baseURL, model, headers, proxyUrl } = config
   const fetch = createProxyFetch(proxyUrl)
@@ -141,7 +137,7 @@ export function createLanguageModel(config: AgentProviderConfig, options: AgentL
     includeUsage: true,
     // 火山方舟端点：system 前缀自动走 context 缓存，见 arkContextFetch.ts
     fetch: withOpenAICompatibleStreamSanitizer(compatibleFetch),
-    transformRequestBody: (args) => injectOpenAICompatiblePromptCacheKey(args, options.promptCacheKey),
+    transformRequestBody: (args) => injectOpenAICompatiblePromptCacheKey(args, options.promptCacheKey, baseURL),
   }).chatModel(model)
 }
 
