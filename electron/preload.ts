@@ -857,6 +857,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('chat:pickRandomMomentFromIndex'),
     getDatesWithMessages: (sessionId: string, year: number, month: number) =>
       ipcRenderer.invoke('chat:getDatesWithMessages', sessionId, year, month),
+    getRedEnvelopeStatuses: (sessionId: string) =>
+      ipcRenderer.invoke('chat:getRedEnvelopeStatuses', sessionId),
     onSessionsUpdated: (callback: (sessions: any[]) => void) => {
       const listener = (_: any, sessions: any[]) => callback(sessions)
       ipcRenderer.on('chat:sessions-updated', listener)

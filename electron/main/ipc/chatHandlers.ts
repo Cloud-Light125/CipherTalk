@@ -390,6 +390,10 @@ export function registerChatHandlers(ctx: MainProcessContext): void {
     return result
   })
 
+  ipcMain.handle('chat:getRedEnvelopeStatuses', async (_, sessionId: string) => {
+    return chatService.getRedEnvelopeStatuses(sessionId)
+  })
+
   // 朋友圈相关
 
 }

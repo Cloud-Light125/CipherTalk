@@ -1,5 +1,40 @@
+import { useEffect, useState } from 'react'
 import type { Message } from '../../../../types/models'
 import MessageContent from '../../../../components/MessageContent'
+
+const PLACEHOLDER_RE = /\$([A-Za-z0-9_@.-]+)\$/g
+const nameCache = new Map<string, Promise<string>>()
+
+function resolveName(username: string): Promise<string> {
+  let hit = nameCache.get(username)
+  if (!hit) {
+    hit = (window.electronAPI?.chat?.getContactAvatar?.(username) ?? Promise.resolve(null))
+      .then((info) => info?.displayName || username)
+      .catch(() => username)
+    nameCache.set(username, hit)
+  }
+  return hit
+}
+
+/** 系统消息里的 `$wxid$` 占位（如"你领取了$wxid_xxx$的红包"）替换为昵称 */
+function useResolvedSystemText(text: string): string {
+  const [resolved, setResolved] = useState(text)
+  useEffect(() => {
+    const usernames = [...new Set([...text.matchAll(PLACEHOLDER_RE)].map((m) => m[1]))]
+    if (usernames.length === 0) {
+      setResolved(text)
+      return
+    }
+    let cancelled = false
+    Promise.all(usernames.map((u) => resolveName(u).then((name) => [u, name] as const))).then((pairs) => {
+      if (cancelled) return
+      const map = new Map(pairs)
+      setResolved(text.replace(PLACEHOLDER_RE, (_, u: string) => map.get(u) || u))
+    })
+    return () => { cancelled = true }
+  }, [text])
+  return resolved
+}
 
 interface SystemBubbleProps {
   message: Message
@@ -29,9 +64,11 @@ function SystemBubble({ message }: SystemBubbleProps) {
     }
   }
 
+  const displayText = useResolvedSystemText(systemText)
+
   return (
     <div className="message-bubble system">
-      <div className="bubble-content"><MessageContent content={systemText} /></div>
+      <div className="bubble-content"><MessageContent content={displayText} /></div>
     </div>
   )
 }
