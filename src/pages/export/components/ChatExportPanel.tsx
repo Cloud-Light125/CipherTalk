@@ -1,4 +1,4 @@
-import { ArrowsRotateLeft, FaceSmile, Microphone, Person, Persons, Picture, Video } from '@gravity-ui/icons'
+import { ArrowsRotateLeft, FaceSmile, FileText, Microphone, Person, Persons, Picture, Video } from '@gravity-ui/icons'
 import { ScrollShadow, Button, Tabs, Chip, Typography } from '@heroui/react'
 import DateRangePicker from '../../../components/DateRangePicker'
 import type { ExportOptions, SessionTypeFilter } from '../types'
@@ -22,7 +22,8 @@ const exportToggles: { key: keyof ExportOptions; label: string; icon: typeof Pic
   { key: 'exportImages', label: '导出图片', icon: Picture },
   { key: 'exportVideos', label: '导出视频', icon: Video },
   { key: 'exportEmojis', label: '导出表情包', icon: FaceSmile },
-  { key: 'exportVoices', label: '导出语音', icon: Microphone }
+  { key: 'exportVoices', label: '导出语音', icon: Microphone },
+  { key: 'exportFiles', label: '导出文件', icon: FileText }
 ]
 
 export default function ChatExportPanel({ chat, shared }: ChatExportPanelProps) {

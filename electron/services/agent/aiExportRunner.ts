@@ -38,6 +38,7 @@ const aiExportArgsSchema = z.object({
     exportVideos: z.boolean().optional(),
     exportEmojis: z.boolean().optional(),
     exportVoices: z.boolean().optional(),
+    exportFiles: z.boolean().optional(),
   }).optional(),
   outputDir: z.string().trim().min(1).optional(),
   validateOnly: z.boolean().optional(),
@@ -322,12 +323,13 @@ function buildExportOptions(format: AiExportFormat, dateRange: { start: number; 
   return {
     format,
     dateRange,
-    exportMedia: mediaOptions.exportImages || mediaOptions.exportVideos || mediaOptions.exportEmojis || mediaOptions.exportVoices,
+    exportMedia: mediaOptions.exportImages || mediaOptions.exportVideos || mediaOptions.exportEmojis || mediaOptions.exportVoices || Boolean(mediaOptions.exportFiles),
     exportAvatars: mediaOptions.exportAvatars,
     exportImages: mediaOptions.exportImages,
     exportVideos: mediaOptions.exportVideos,
     exportEmojis: mediaOptions.exportEmojis,
     exportVoices: mediaOptions.exportVoices,
+    exportFiles: mediaOptions.exportFiles === true,
   }
 }
 

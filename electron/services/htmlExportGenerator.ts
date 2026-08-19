@@ -905,9 +905,15 @@ a > .wx-card:hover { opacity: 0.85; }
       return recHtml;
     }
 
-    /* 文件 */
+    /* 文件：已导出时格式为 "[文件] files/xxx 原文件名"，路径无空格；未导出时为 "[文件] 原文件名" */
     var fileMatch = content.match(/^\\[\\u6587\\u4EF6\\]\\s+(.+)$/);
-    if (fileMatch) return '<div class="wx-card"><div class="wx-card-left">\\u{1F4C4}</div><div class="wx-card-right"><div class="wx-card-title">'+esc(fileMatch[1])+'</div><div class="wx-card-footer">\\u{1F4CE} \\u6587\\u4EF6</div></div></div>';
+    if (fileMatch) {
+      var fileExported = fileMatch[1].match(/^(files\\/[^\\s]+)(?:\\s+([\\s\\S]+))?$/);
+      var fileTitle = fileExported ? (fileExported[2] || fileExported[1].split('/').pop()) : fileMatch[1];
+      var fileHtml = '<div class="wx-card"><div class="wx-card-left">\\u{1F4C4}</div><div class="wx-card-right"><div class="wx-card-title">'+esc(fileTitle)+'</div><div class="wx-card-footer">\\u{1F4CE} \\u6587\\u4EF6'+(fileExported ? ' \\u00B7 \\u70B9\\u51FB\\u6253\\u5F00' : '')+'</div></div></div>';
+      if (fileExported) fileHtml = '<a href="'+esc(fileExported[1])+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">' + fileHtml + '</a>';
+      return fileHtml;
+    }
 
     /* 位置 - 提取坐标生成地图链接 */
     var locMatch = content.match(/^\\[\\u4F4D\\u7F6E\\]\\s+(.+)$/);

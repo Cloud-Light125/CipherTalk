@@ -271,6 +271,7 @@ export interface McpExportMediaOptions {
   exportVideos: boolean
   exportEmojis: boolean
   exportVoices: boolean
+  exportFiles?: boolean
 }
 
 export type McpExportMissingField =

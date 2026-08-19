@@ -39,7 +39,7 @@ export const exportChat = tool({
   description:
     '自动化导出一个聊天会话。先用 validateOnly=true 校验参数；参数齐全但 confirmed 不是 true 时只返回 requiresConfirmation=true，不写文件。' +
     '用户明确最终确认后，才用 confirmed=true 执行导出。支持格式 chatlab、chatlab-jsonl、json、html、excel、sql；不支持 txt。' +
-    'mediaOptions 必须显式给出 exportAvatars、exportImages、exportVideos、exportEmojis、exportVoices 五个布尔值。',
+    'mediaOptions 必须显式给出 exportAvatars、exportImages、exportVideos、exportEmojis、exportVoices 五个布尔值；exportFiles（文件附件）可选，默认 false。',
   inputSchema: z.object({
     sessionId: z.string().optional().describe('会话 username。若没有明确 username，可改用 query 做模糊解析。'),
     query: z.string().optional().describe('联系人名、群名或关键词，用于模糊解析唯一会话。'),
@@ -54,7 +54,8 @@ export const exportChat = tool({
       exportVideos: z.boolean().optional(),
       exportEmojis: z.boolean().optional(),
       exportVoices: z.boolean().optional(),
-    }).optional().describe('必须显式包含头像、图片、视频、表情、语音五项布尔值。'),
+      exportFiles: z.boolean().optional(),
+    }).optional().describe('必须显式包含头像、图片、视频、表情、语音五项布尔值；exportFiles 可选，导出 PDF/Word 等文件附件。'),
     outputDir: z.string().optional().describe('导出目录；不传则使用设置里的 exportPath。'),
     validateOnly: z.boolean().optional().describe('只校验/解析，不导出。'),
     confirmed: z.boolean().optional().describe('用户已最终确认时才传 true。'),

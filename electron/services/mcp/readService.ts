@@ -94,7 +94,8 @@ const exportChatArgsSchema = z.object({
     exportImages: z.boolean().optional(),
     exportVideos: z.boolean().optional(),
     exportEmojis: z.boolean().optional(),
-    exportVoices: z.boolean().optional()
+    exportVoices: z.boolean().optional(),
+    exportFiles: z.boolean().optional()
   }).optional(),
   outputDir: z.string().trim().min(1).optional(),
   validateOnly: z.boolean().optional()
@@ -908,7 +909,7 @@ function buildPredictedExportPath(
       : format === 'html'
         ? '.html'
         : '.json'
-  const hasMedia = mediaOptions.exportImages || mediaOptions.exportVideos || mediaOptions.exportEmojis || mediaOptions.exportVoices
+  const hasMedia = mediaOptions.exportImages || mediaOptions.exportVideos || mediaOptions.exportEmojis || mediaOptions.exportVoices || Boolean(mediaOptions.exportFiles)
   const sessionOutputDir = hasMedia ? join(outputDir, safeName) : outputDir
   return join(sessionOutputDir, `${safeName}${ext}`)
 }
@@ -925,7 +926,8 @@ function toExportServiceOptions(
     exportImages: mediaOptions.exportImages,
     exportVideos: mediaOptions.exportVideos,
     exportEmojis: mediaOptions.exportEmojis,
-    exportVoices: mediaOptions.exportVoices
+    exportVoices: mediaOptions.exportVoices,
+    exportFiles: mediaOptions.exportFiles === true
   }
 }
 
