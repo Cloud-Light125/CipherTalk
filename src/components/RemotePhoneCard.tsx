@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button, Chip, Spinner, toast } from '@heroui/react'
 import { ArrowDownToLine, CirclePlay, FileText, QrCode } from '@gravity-ui/icons'
 import { formatDisplayVersion } from '../lib/appVersion'
+import { RemotePushCard } from './RemotePushCard'
 
 type RemoteDeviceSummary = {
   id: string
@@ -363,6 +364,8 @@ export function RemotePhoneCard() {
         <div className="shrink-0">{qrPane}</div>
         <div className="flex min-w-0 flex-1 flex-col gap-3">{rest}</div>
       </div>
+
+      {running && <RemotePushCard />}
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-default-200 pt-3 text-xs">
         {APP_LINKS.map((link) => (

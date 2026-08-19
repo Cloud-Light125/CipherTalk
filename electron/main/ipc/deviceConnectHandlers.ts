@@ -70,6 +70,66 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
     return { success: true, info: await getRemoteControlInfo(ctx) }
   })
 
+  // 推送凭据：.p8 私钥内容只进不出，读接口只回「配没配」和 Key/Team ID，
+  // 免得渲染层或日志里出现私钥全文
+  ipcMain.handle('deviceConnect:remote:getPushConfig', () => {
+    const configService = ctx.getConfigService()
+    return {
+      success: true,
+      configured: Boolean(
+        configService?.get('remoteApnsKeyP8')
+        && configService?.get('remoteApnsKeyId')
+        && configService?.get('remoteApnsTeamId')
+      ),
+      keyId: String(configService?.get('remoteApnsKeyId') || ''),
+      teamId: String(configService?.get('remoteApnsTeamId') || ''),
+      deviceCount: (configService?.get('remoteDevices') ?? []).filter((device) => device.pushToken).length,
+    }
+  })
+
+  ipcMain.handle('deviceConnect:remote:setPushConfig', (_event, payload: {
+    keyP8?: string
+    keyId?: string
+    teamId?: string
+  }) => {
+    const configService = ctx.getConfigService()
+    if (!configService) return { success: false, error: '配置服务未就绪' }
+    const keyP8 = String(payload?.keyP8 ?? '').trim()
+    const keyId = String(payload?.keyId ?? '').trim()
+    const teamId = String(payload?.teamId ?? '').trim()
+    // keyP8 传空串表示「不改」，避免每次保存都要用户重新粘一遍私钥
+    if (keyP8) {
+      if (!keyP8.includes('BEGIN PRIVATE KEY')) {
+        return { success: false, error: '这不像 .p8 私钥内容，应包含 BEGIN PRIVATE KEY' }
+      }
+      configService.set('remoteApnsKeyP8', keyP8)
+    }
+    configService.set('remoteApnsKeyId', keyId)
+    configService.set('remoteApnsTeamId', teamId)
+    return { success: true }
+  })
+
+  ipcMain.handle('deviceConnect:remote:clearPushConfig', () => {
+    const configService = ctx.getConfigService()
+    if (!configService) return { success: false, error: '配置服务未就绪' }
+    configService.set('remoteApnsKeyP8', '')
+    configService.set('remoteApnsKeyId', '')
+    configService.set('remoteApnsTeamId', '')
+    // 凭据没了，留着手机上报的推送令牌也没意义
+    configService.set(
+      'remoteDevices',
+      (configService.get('remoteDevices') ?? []).map(({ pushToken: _t, pushPlatform: _p, pushBundleId: _b, ...rest }) => rest)
+    )
+    return { success: true }
+  })
+
+  ipcMain.handle('deviceConnect:remote:testPush', async () => {
+    const { pushToRemoteDevices, hasPushTargets } = await import('../../services/remote/pushHandlers')
+    if (!hasPushTargets()) return { success: false, error: '还没有手机登记推送，请先在手机上打开通知开关' }
+    await pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。' })
+    return { success: true }
+  })
+
   ipcMain.handle('deviceConnect:wechat:getStatus', () => weixinBotService.getStatus())
 
   ipcMain.handle('deviceConnect:wechat:connect', () => weixinBotService.startConnect())

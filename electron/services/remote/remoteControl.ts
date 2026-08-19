@@ -11,6 +11,8 @@ import { registerRemoteCloneHandlers } from './cloneHandlers'
 import { registerRemoteWechatHandlers } from './wechatHandlers'
 import { registerRemoteVoiceHandlers } from './voiceHandlers'
 import { registerRemoteAiSettingsHandlers } from './aiSettingsHandlers'
+import { registerRemotePushHandlers } from './pushHandlers'
+import { registerRemoteTranscribeHandlers } from './transcribeHandlers'
 
 const DEFAULT_SIGNALING_URL = 'wss://ctapp.aiqji.com'
 
@@ -230,6 +232,8 @@ export async function startRemoteControl(ctx: MainProcessContext): Promise<{ suc
   registerRemoteWechatHandlers(configService)
   registerRemoteVoiceHandlers()
   registerRemoteAiSettingsHandlers(configService)
+  registerRemotePushHandlers(configService, ctx.getLogService())
+  registerRemoteTranscribeHandlers()
   remoteGatewayService.setLogger(ctx.getLogService())
   remoteGatewayService.setConnectionListener((connected) => {
     ctx.broadcastToWindows('deviceConnect:remote:status', { connected })

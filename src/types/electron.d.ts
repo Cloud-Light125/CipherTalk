@@ -783,6 +783,10 @@ export interface ElectronAPI {
       hasPassword: () => Promise<{ success: boolean; hasPassword: boolean }>
       setPassword: (payload: { password: string; currentPassword?: string }) => Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>
       unlock: (password: string) => Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>
+      getPushConfig: () => Promise<{ success: boolean; configured: boolean; keyId: string; teamId: string; deviceCount: number }>
+      setPushConfig: (payload: { keyP8?: string; keyId?: string; teamId?: string }) => Promise<{ success: boolean; error?: string }>
+      clearPushConfig: () => Promise<{ success: boolean; error?: string }>
+      testPush: () => Promise<{ success: boolean; error?: string }>
       onStatus: (callback: (payload: { connected: boolean }) => void) => () => void
     }
   }
