@@ -232,6 +232,14 @@ export function buildProviderCacheStatus(input: AgentRunInput, promptCacheKey: s
     }
   }
   if (input.providerConfig.providerKind === 'openai-compatible') {
+    if (isNvidiaInferenceBaseURL(input.providerConfig.baseURL)) {
+      return {
+        ...base,
+        promptCacheEnabled: false,
+        promptCacheProvider: 'none',
+        reason: '英伟达推理接口不支持 prompt_cache_key（带上会 400），已跳过注入。',
+      }
+    }
     if (isArkBaseURL(input.providerConfig.baseURL)) {
       return {
         ...base,

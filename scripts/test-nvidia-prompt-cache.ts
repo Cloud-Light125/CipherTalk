@@ -9,6 +9,11 @@ assert.equal(isNvidiaInferenceBaseURL('https://api.openai.com/v1'), false, 'Open
 assert.equal(isNvidiaInferenceBaseURL('https://api.deepseek.com'), false, 'DeepSeek 不应判为英伟达')
 assert.equal(isNvidiaInferenceBaseURL('https://ark.cn/v1'), false, '火山方舟不应被误判为英伟达（方舟需保留 prompt_cache_key）')
 assert.equal(isNvidiaInferenceBaseURL(undefined), false, '无 baseURL 不应判为英伟达')
+assert.equal(isNvidiaInferenceBaseURL('https://integrate.api.nvidia.com:443/v1'), true, '带端口的英伟达地址也应判为英伟达')
+assert.equal(isNvidiaInferenceBaseURL('HTTPS://INTEGRATE.API.NVIDIA.COM/v1'), true, '大写域名也应判为英伟达')
+assert.equal(isNvidiaInferenceBaseURL('https://notnvidia.com/v1'), false, 'notnvidia.com 不应误判')
+assert.equal(isNvidiaInferenceBaseURL('https://example.com/nvidia.com/v1'), false, '路径里出现 nvidia.com 不应误判')
+assert.equal(isNvidiaInferenceBaseURL('not a url'), false, '非法 URL 不应判为英伟达')
 
 // ---- injectOpenAICompatiblePromptCacheKey：NVIDIA 必须跳过，其它端点保留 ----
 const baseArgs = { model: 'x', messages: [] }

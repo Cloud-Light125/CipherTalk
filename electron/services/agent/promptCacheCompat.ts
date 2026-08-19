@@ -15,7 +15,13 @@
 
 /** 判断 baseURL 是否属于英伟达推理接口。 */
 export function isNvidiaInferenceBaseURL(baseURL?: string): boolean {
-  return !!baseURL && /(^|\.)nvidia\.com(\/|$)/i.test(baseURL)
+  if (!baseURL) return false
+  try {
+    const host = new URL(baseURL).hostname.toLowerCase()
+    return host === 'nvidia.com' || host.endsWith('.nvidia.com')
+  } catch {
+    return false
+  }
 }
 
 /**
