@@ -42,6 +42,26 @@ const STREAM_METHODS = new Set([
   'agent:run', 'clone:chat', 'clone:build', 'clone:buildSelf', 'clone:buildVectors', 'voice:start',
 ])
 
+/**
+ * 手机断开后仍然值得跑完的方法。
+ * 活儿本来就在电脑上跑，手机锁屏/切后台只是「没人看着」——砍掉等于白烧一次 token，
+ * 用户回来还什么都没有。断开后继续跑，跑完由 detachedRunHandler 落库并推送通知。
+ * 实时通话不在此列：那是双向音频，没人在线就真的没意义了。
+ */
+const DETACHABLE_METHODS = new Set(['agent:run', 'clone:chat'])
+
+/** 单次运行最多缓存多少个 chunk 用于重建回复，纯粹是防异常输入撑爆内存 */
+const MAX_DETACHED_CHUNKS = 50_000
+
+export type DetachedRun = {
+  method: string
+  params: unknown[]
+  /** 整段运行收到的 agent:chunk，用来在电脑端把这条回复重建出来 */
+  chunks: unknown[]
+}
+
+export type DetachedRunHandler = (run: DetachedRun) => void
+
 class RemoteGatewayService {
   private server: http.Server | null = null
   private readonly connections = new Set<Socket>()
@@ -52,6 +72,8 @@ class RemoteGatewayService {
   private dtlsFingerprint = ''
   /** 设备授权回调：由 remoteControl 注入（需要读写 config，gateway 本身不碰 electron） */
   private deviceAuthorizer: DeviceAuthorizer | null = null
+  /** 手机断开后跑完的运行交给它落库 + 推送；没注入就退回「断开即中止」的老行为 */
+  private detachedRunHandler: DetachedRunHandler | null = null
   /** 桥接页实际收集到的候选类型，用来诊断「局域网能连、流量连不上」 */
   private candidateKinds: string[] = []
   private startedAt = 0
@@ -92,6 +114,10 @@ class RemoteGatewayService {
 
   setDeviceAuthorizer(authorizer: DeviceAuthorizer | null): void {
     this.deviceAuthorizer = authorizer
+  }
+
+  setDetachedRunHandler(handler: DetachedRunHandler | null): void {
+    this.detachedRunHandler = handler
   }
 
   getCandidateKinds(): string[] {
@@ -311,6 +337,10 @@ class RemoteGatewayService {
 
     // 流式方法（agent:run）：handler 经 event.sender.send 推的事件原样转为 SSE
     let closed = false
+    // detached：手机断了但任务继续跑。此时 SSE 已经没了，chunk 只进缓冲区
+    let detached = false
+    const detachable = DETACHABLE_METHODS.has(rpcMethod) && Boolean(this.detachedRunHandler)
+    const chunks: unknown[] = []
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-store',
@@ -319,11 +349,17 @@ class RemoteGatewayService {
     res.on('close', () => {
       if (closed) return
       closed = true
-      // 手机端断开（锁屏/切后台）时中止运行，避免空跑
+      if (detachable) {
+        // 手机不在了不代表活儿该停——继续跑完，结果落库再推送通知。
+        // 用户主动点停止走的是 agent:abort，那条路不受影响
+        detached = true
+        this.logger?.info('RemoteGateway', '手机已断开，任务转入后台继续运行', { method: rpcMethod })
+        return
+      }
       const runId = (params[0] as { runId?: string } | undefined)?.runId
       const abort = agentRpcHandlers.get('agent:abort')
       if (runId && abort) void abort(this.createFakeEvent(() => true), runId)
-      // 实时通话同理：断开就挂断，别让豆包会话空转
+      // 实时通话是双向音频，没人在线就真没意义了，断开即挂断
       if (rpcMethod === 'voice:start') {
         const callId = (params[0] as { callId?: string } | undefined)?.callId
         const stop = agentRpcHandlers.get('voice:stop')
@@ -331,7 +367,12 @@ class RemoteGatewayService {
       }
     })
 
-    const fakeEvent = this.createFakeEvent(() => closed, (channel, payload) => {
+    // detached 期间必须回 false：handler 里是 `if (!sender.isDestroyed()) send(...)`，
+    // 说「已销毁」它就不再吐 chunk 了，那就重建不出这条回复
+    const fakeEvent = this.createFakeEvent(() => closed && !detached, (channel, payload) => {
+      if (detachable && channel === 'agent:chunk' && chunks.length < MAX_DETACHED_CHUNKS) {
+        chunks.push((payload as { chunk?: unknown } | undefined)?.chunk)
+      }
       if (!closed) this.sendSse(res, channel, payload)
     })
     try {
@@ -342,6 +383,7 @@ class RemoteGatewayService {
     } finally {
       closed = true
       res.end()
+      if (detached) this.detachedRunHandler?.({ method: rpcMethod, params, chunks })
     }
   }
 
