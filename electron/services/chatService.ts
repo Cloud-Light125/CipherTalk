@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events'
 import { ChatServiceState } from './chat/state'
 import { wcdbService } from './wcdbService'
+import { getRedEnvelopeStatuses, type RedEnvelopeStatus } from './chat/redEnvelopeQueries'
 import type { StatsPartialError } from './statsConstants'
 import type {
   ChatSession,
@@ -474,6 +475,11 @@ class ChatService extends EventEmitter {
     month: number
   ): Promise<{ success: boolean; dates?: string[]; error?: string }> {
     return getDatesWithMessages(this.state, sessionId, year, month)
+  }
+
+  /** 会话内红包的本地状态（general.db redEnvelopeTable），无金额与领取人列表 */
+  async getRedEnvelopeStatuses(sessionId: string): Promise<RedEnvelopeStatus[]> {
+    return getRedEnvelopeStatuses(sessionId)
   }
 
   async getContact(username: string): Promise<Contact | null> {

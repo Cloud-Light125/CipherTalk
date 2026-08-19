@@ -1301,6 +1301,14 @@ export interface ElectronAPI {
       dates?: string[]
       error?: string
     }>
+    /** 会话内红包的本地状态（receiveStatus 2 = 我已领取）；无金额与领取人列表 */
+    getRedEnvelopeStatuses: (sessionId: string) => Promise<Array<{
+      sendId: string
+      senderUsername: string
+      hbStatus: number
+      hbType: number
+      receiveStatus: number
+    }>>
     onSessionsUpdated: (callback: (sessions: ChatSession[]) => void) => () => void
   }
   // 朋友圈相关

@@ -3,6 +3,7 @@ import { Comment, FileText, FileZipper, Handset, Link, MapPin, Person, Play, Vid
 import MessageContent from '../../../../components/MessageContent'
 import { ChannelVideoCard, LinkSource, LinkThumb, MiniProgramThumb } from './AppMessageCards'
 import { emojiDataUrlCache } from './mediaState'
+import { useRedEnvelopeStatus } from '../../hooks/useRedEnvelopeStatus'
 import type { ChatSession, Message } from '../../../../types/models'
 
 interface TextBubbleProps {
@@ -17,6 +18,42 @@ interface TextBubbleProps {
  * 处理：表情包、AppMessage（链接/文件/转账/红包/礼物/音乐/视频号/小程序等）、
  * 名片、位置、通话、以及普通文本消息
  */
+/**
+ * 红包卡片。本地 general.db 只记录「我领没领」，金额与领取人列表只在服务端，
+ * 所以这里最多显示：祝福语 · 共 N 个 · 已领取/未领取。
+ */
+function HongbaoCard({ message, sessionId, greeting, sendId, totalNum, onContextMenu }: {
+  message: Message
+  sessionId: string
+  greeting: string
+  sendId: string
+  totalNum: number
+  onContextMenu?: TextBubbleProps['onContextMenu']
+}) {
+  const status = useRedEnvelopeStatus(sessionId, sendId || undefined)
+  const parts = ['微信红包']
+  if (totalNum > 1) parts.push(`共 ${totalNum} 个`)
+  // 自己发的红包本地只知道"自己领没领"，对方领没领不知道，所以只对收到的红包标"未领取"
+  if (status?.receiveStatus === 2) parts.push('已领取')
+  else if (status && message.isSend !== 1) parts.push('未领取')
+  return (
+    <div className="hongbao-message" onContextMenu={onContextMenu ? (e) => onContextMenu(e, message) : undefined}>
+      <div className="hongbao-icon">
+        <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+          <rect x="4" y="6" width="32" height="28" rx="4" fill="white" fillOpacity="0.3" />
+          <rect x="4" y="6" width="32" height="14" rx="4" fill="white" fillOpacity="0.2" />
+          <circle cx="20" cy="20" r="6" fill="white" fillOpacity="0.4" />
+          <text x="20" y="24" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">¥</text>
+        </svg>
+      </div>
+      <div className="hongbao-info">
+        <div className="hongbao-greeting">{greeting || '恭喜发财，大吉大利'}</div>
+        <div className="hongbao-label">{parts.join(' · ')}</div>
+      </div>
+    </div>
+  )
+}
+
 function TextBubble({ message, session, isSent, onContextMenu }: TextBubbleProps) {
   const isEmoji = message.localType === 47
 
@@ -371,21 +408,18 @@ function TextBubble({ message, session, isSent, onContextMenu }: TextBubbleProps
         const parser = new DOMParser()
         const doc = parser.parseFromString(xmlStr, 'text/xml')
         const greeting = doc.querySelector('receivertitle')?.textContent || doc.querySelector('sendertitle')?.textContent || ''
+        const nativeUrl = doc.querySelector('nativeurl')?.textContent || ''
+        const sendId = /[?&]sendid=(\d+)/.exec(nativeUrl)?.[1] || doc.querySelector('paymsgid')?.textContent || ''
+        const totalNum = Number(/[?&]total_num=(\d+)/.exec(nativeUrl)?.[1] || 0)
         return (
-          <div className="hongbao-message" onContextMenu={onContextMenu ? (e) => onContextMenu(e, message) : undefined}>
-            <div className="hongbao-icon">
-              <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
-                <rect x="4" y="6" width="32" height="28" rx="4" fill="white" fillOpacity="0.3" />
-                <rect x="4" y="6" width="32" height="14" rx="4" fill="white" fillOpacity="0.2" />
-                <circle cx="20" cy="20" r="6" fill="white" fillOpacity="0.4" />
-                <text x="20" y="24" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold">¥</text>
-              </svg>
-            </div>
-            <div className="hongbao-info">
-              <div className="hongbao-greeting">{greeting || '恭喜发财，大吉大利'}</div>
-              <div className="hongbao-label">微信红包</div>
-            </div>
-          </div>
+          <HongbaoCard
+            message={message}
+            sessionId={session.username}
+            greeting={greeting}
+            sendId={sendId}
+            totalNum={totalNum}
+            onContextMenu={onContextMenu}
+          />
         )
       } catch {
         return (

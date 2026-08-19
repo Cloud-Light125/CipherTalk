@@ -724,6 +724,8 @@ class ExportService {
     cleaned = cleaned.replace(/\d+\s*$/, '')
     // 清理多余空白
     cleaned = cleaned.replace(/\s+/g, ' ').trim()
+    // `$wxid$` 占位（如"你领取了$wxid_xxx$的红包"）：成员信息此前已按发送者预热进缓存，命中就换成昵称
+    cleaned = cleaned.replace(/\$([A-Za-z0-9_@.-]+)\$/g, (_, username: string) => this.contactInfoCache.get(username)?.displayName || username)
     return cleaned || '[系统消息]'
   }
 
