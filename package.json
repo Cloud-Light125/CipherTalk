@@ -5,6 +5,16 @@
   "author": "ILoveBingLu",
   "license": "CC-BY-NC-SA-4.0",
   "main": "dist-electron/main.js",
+  "allowScripts": {
+    "electron": true,
+    "better-sqlite3": true,
+    "esbuild": true,
+    "sharp": true,
+    "ffmpeg-static": true,
+    "koffi": true,
+    "fsevents": true,
+    "@parcel/watcher": true
+  },
   "scripts": {
     "dev": "node scripts/clean-dist-electron.cjs && vite",
     "icon:mac": "bash scripts/build-macos-icon.sh",

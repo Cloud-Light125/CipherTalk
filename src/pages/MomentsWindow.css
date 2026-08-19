@@ -487,16 +487,31 @@
   bottom: 4px;
   width: 5px;
   z-index: 20;
-  pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
+  cursor: default;
+  touch-action: none;
 }
 .moments-overlay-scrollbar-thumb {
+  position: relative;
   width: 100%;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.35);
+  touch-action: none;
+  user-select: none;
+}
+/* 扩大命中区域，视觉宽度不变 */
+.moments-overlay-scrollbar::before,
+.moments-overlay-scrollbar-thumb::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  right: -4px;
 }
 .moments-content-wrapper:hover + .moments-overlay-scrollbar,
+.moments-overlay-scrollbar:hover,
 .moments-overlay-scrollbar.scrolling {
   opacity: 1;
 }
