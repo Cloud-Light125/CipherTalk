@@ -986,6 +986,56 @@ function MomentsWindow() {
     }
   }
 
+  // 覆盖层滚动条：拖动滑块 / 点击轨道。轨道几何与 updateOverlayScrollbar 保持一致（trackHeight = clientHeight - 8）。
+  const dragStateRef = useRef<{ startY: number; startScrollTop: number } | null>(null)
+
+  const handleThumbPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current
+    if (!container || e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    dragStateRef.current = { startY: e.clientY, startScrollTop: container.scrollTop }
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setOverlayScrollbar((current) => ({ ...current, scrolling: true }))
+  }
+
+  const handleThumbPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current
+    const drag = dragStateRef.current
+    if (!container || !drag) return
+    const { clientHeight, scrollHeight } = container
+    const trackHeight = Math.max(0, clientHeight - 8)
+    const maxThumbTop = trackHeight - overlayScrollbar.thumbHeight
+    if (maxThumbTop <= 0) return
+    const ratio = (scrollHeight - clientHeight) / maxThumbTop
+    container.scrollTop = drag.startScrollTop + (e.clientY - drag.startY) * ratio
+  }
+
+  const handleThumbPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragStateRef.current) return
+    dragStateRef.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    if (scrollIdleTimerRef.current) window.clearTimeout(scrollIdleTimerRef.current)
+    scrollIdleTimerRef.current = window.setTimeout(() => {
+      setOverlayScrollbar((current) => ({ ...current, scrolling: false }))
+    }, 1200)
+  }
+
+  const handleTrackPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current
+    if (!container || e.button !== 0 || e.target !== e.currentTarget) return
+    e.preventDefault()
+    const { clientHeight, scrollHeight } = container
+    const trackHeight = Math.max(0, clientHeight - 8)
+    const maxThumbTop = trackHeight - overlayScrollbar.thumbHeight
+    if (maxThumbTop <= 0) return
+    const offsetY = e.clientY - e.currentTarget.getBoundingClientRect().top
+    const targetThumbTop = Math.min(maxThumbTop, Math.max(0, offsetY - overlayScrollbar.thumbHeight / 2))
+    container.scrollTop = (targetThumbTop / maxThumbTop) * (scrollHeight - clientHeight)
+  }
+
   // virtua 的 startMargin：滚动内容顶部到虚拟列表起点的距离（头图 + feed padding + 更新提示条）。
   // 用零高 marker 实测，头图有无、窗口尺寸变化都能跟上。
   const startMarkerRef = useRef<HTMLDivElement>(null)
@@ -2134,13 +2184,20 @@ document.querySelectorAll('.vi video').forEach(function(v) {
             </div>
           </div>
           {overlayScrollbar.show && (
-            <div className={`moments-overlay-scrollbar${overlayScrollbar.scrolling ? ' scrolling' : ''}`}>
+            <div
+              className={`moments-overlay-scrollbar${overlayScrollbar.scrolling ? ' scrolling' : ''}`}
+              onPointerDown={handleTrackPointerDown}
+            >
               <div
                 className="moments-overlay-scrollbar-thumb"
                 style={{
                   height: overlayScrollbar.thumbHeight,
                   transform: `translateY(${overlayScrollbar.thumbTop}px)`
                 }}
+                onPointerDown={handleThumbPointerDown}
+                onPointerMove={handleThumbPointerMove}
+                onPointerUp={handleThumbPointerUp}
+                onPointerCancel={handleThumbPointerUp}
               />
             </div>
           )}
