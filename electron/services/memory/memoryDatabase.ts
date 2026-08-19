@@ -1619,6 +1619,14 @@ export class MemoryDatabase {
     return file
   }
 
+  /** 记录某日定时日记生成失败一次，返回该日累计失败次数（换日期则从 1 重新计）。 */
+  recordDiaryFailure(date: string): number {
+    const meta = this.readMeta()
+    const count = meta.diaryFailureDate === date ? (Number(meta.diaryFailureCount) || 0) + 1 : 1
+    this.writeMeta({ diaryFailureDate: date, diaryFailureCount: count })
+    return count
+  }
+
   getDailyConsolidationTarget(timestamp = nowMs(), summaryHour = 2): string | null {
     const hour = new Date(timestamp).getHours()
     if (hour < normalizeDiarySummaryHour(summaryHour)) return null
@@ -1657,8 +1665,8 @@ export class MemoryDatabase {
     ].join('\n')
     writeFileSync(file, text.endsWith('\n') ? text : `${text}\n`, 'utf8')
     if (options?.finalize !== false) {
-      // 封盘时一并标记窗口版本号，完成 24h 滑动窗口迁移。
-      this.writeMeta({ diaryWindowVersion: '2', lastConsolidatedDate: date, lastConsolidatedAt: new Date().toISOString() })
+      // 封盘时一并标记窗口版本号，完成 24h 滑动窗口迁移；同时清掉该日的失败计数。
+      this.writeMeta({ diaryWindowVersion: '2', lastConsolidatedDate: date, lastConsolidatedAt: new Date().toISOString(), diaryFailureDate: '', diaryFailureCount: '' })
     }
     this.syncDerivedMarkdown()
   }

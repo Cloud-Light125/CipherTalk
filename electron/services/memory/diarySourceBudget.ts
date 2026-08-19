@@ -5,32 +5,34 @@ export type DiarySourceSections = {
   unreadMessages: string
 }
 
-export const DIARY_MAX_OUTPUT_TOKENS = 4_096
+/** 为日记正文输出预留的 token（只用于预算计算，不作为请求的 maxOutputTokens：推理模型的思考 token 也计入输出上限）。 */
+const DIARY_OUTPUT_TOKEN_RESERVE = 4_096
 const DIARY_PROMPT_TOKEN_RESERVE = 4_096
-const UNKNOWN_MODEL_CONTEXT_WINDOW = 32_768
+/** 未知模型按 128K 处理，与 aiCompaction.ts 的 DEFAULT_CONTEXT_WINDOW 一致；默认/自定义服务商拿不到 contextWindow。 */
+const UNKNOWN_MODEL_CONTEXT_WINDOW = 128_000
 
-function utf8ByteLength(value: string): number {
-  return Buffer.byteLength(value, 'utf8')
+function codePointLength(value: string): number {
+  let count = 0
+  for (const _ of value) count += 1
+  return count
 }
 
-function sliceUtf8Bytes(value: string, byteLimit: number): string {
-  if (byteLimit <= 0 || !value) return ''
-  if (utf8ByteLength(value) <= byteLimit) return value
-
-  let bytes = 0
+function sliceCodePoints(value: string, limit: number): string {
+  if (limit <= 0 || !value) return ''
+  let count = 0
   let output = ''
   for (const character of value) {
-    const characterBytes = utf8ByteLength(character)
-    if (bytes + characterBytes > byteLimit) break
+    if (count >= limit) break
     output += character
-    bytes += characterBytes
+    count += 1
   }
   return output
 }
 
 /**
- * 不同供应商的 tokenizer 不统一，因此不猜测“中文字符/token”比例。
- * UTF-8 字节数作为 token 数的保守上界来分配素材；截断也按字节执行，单位始终一致。
+ * 不同供应商的 tokenizer 不统一。日记素材以中文为主，按「1 个 Unicode 字符 ≈ 1 token」估算：
+ * 对中文是略保守的上界，对英文则明显保守，但不会高估而撑爆上下文。
+ * 分配与截断都按 code point 计数，单位一致、不会切坏代理对。
  */
 export function fitDiarySourceSections(
   sections: DiarySourceSections,
@@ -40,12 +42,12 @@ export function fitDiarySourceSections(
   const safeContextWindow = Number.isFinite(contextWindow) && Number(contextWindow) > 0
     ? Math.floor(Number(contextWindow))
     : UNKNOWN_MODEL_CONTEXT_WINDOW
-  const sourceBudgetBytes = Math.max(
+  const sourceBudget = Math.max(
     0,
     safeContextWindow
-      - DIARY_MAX_OUTPUT_TOKENS
+      - DIARY_OUTPUT_TOKEN_RESERVE
       - DIARY_PROMPT_TOKEN_RESERVE
-      - utf8ByteLength(additionalPrompt),
+      - codePointLength(additionalPrompt),
   )
   const entries = [
     { key: 'dayMessages' as const, weight: 5 },
@@ -59,7 +61,7 @@ export function fitDiarySourceSections(
     bookmarks: '',
     unreadMessages: '',
   }
-  let remaining = sourceBudgetBytes
+  let remaining = sourceBudget
   let pending = entries.filter(({ key }) => sections[key].length > 0)
 
   while (remaining > 0 && pending.length > 0) {
@@ -75,12 +77,12 @@ export function fitDiarySourceSections(
         nextPending.push(entry)
         continue
       }
-      // UTF-8 单个 Unicode 字符最多 4 字节；至少给一个字符可落下的份额，避免小余额停滞。
-      const share = Math.max(4, Math.floor((remaining * entry.weight) / totalWeight))
-      const addition = sliceUtf8Bytes(rest, Math.min(share, capacity))
-      const additionBytes = utf8ByteLength(addition)
+      // 至少给一个字符的份额，避免小余额停滞。
+      const share = Math.max(1, Math.floor((remaining * entry.weight) / totalWeight))
+      const addition = sliceCodePoints(rest, Math.min(share, capacity))
+      const additionLength = codePointLength(addition)
       output[entry.key] += addition
-      consumed += additionBytes
+      consumed += additionLength
       if (addition.length < rest.length) nextPending.push(entry)
     }
     if (consumed === 0) break
@@ -91,12 +93,19 @@ export function fitDiarySourceSections(
   return output
 }
 
-export function diarySourceByteLength(sections: DiarySourceSections): number {
-  return Object.values(sections).reduce((sum, value) => sum + utf8ByteLength(value), 0)
+export function diarySourceLength(sections: DiarySourceSections): number {
+  return Object.values(sections).reduce((sum, value) => sum + codePointLength(value), 0)
 }
 
+/**
+ * 判断模型输出是否是一篇完整的日记：有一级标题、有「记忆线索」段且段内至少一个条目。
+ * 对模型常见的格式漂移保持宽容：```markdown 围栏、标题前的引语、`### 记忆线索：`、`*`/`1.` 列表。
+ */
 export function isCompleteDiaryMarkdown(text: string): boolean {
-  const trimmed = text.trim()
-  const clueSection = trimmed.match(/^##\s+记忆线索\s*$([\s\S]*)/m)?.[1] || ''
-  return /^#\s+.+/.test(trimmed) && /^\s*-\s+\S+/m.test(clueSection)
+  const trimmed = text.trim().replace(/^```[a-zA-Z]*\s*\n/, '').replace(/\n```\s*$/, '').trim()
+  const titleMatch = trimmed.match(/^#\s+\S/m)
+  const clueMatch = trimmed.match(/^#{2,3}\s*记忆线索[^\n]*\n?([\s\S]*)/m)
+  if (!titleMatch || !clueMatch) return false
+  if ((titleMatch.index ?? 0) > (clueMatch.index ?? 0)) return false
+  return /^\s*(?:[-*•]|\d+[.、)])\s*\S/m.test(clueMatch[1])
 }
