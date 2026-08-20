@@ -370,7 +370,13 @@ class RemoteGatewayService {
     // detached 期间必须回 false：handler 里是 `if (!sender.isDestroyed()) send(...)`，
     // 说「已销毁」它就不再吐 chunk 了，那就重建不出这条回复
     const fakeEvent = this.createFakeEvent(() => closed && !detached, (channel, payload) => {
-      if (detachable && channel === 'agent:chunk' && chunks.length < MAX_DETACHED_CHUNKS) {
+      // agent:run 走 agent:chunk，clone:chat 走 persona:chunk——两个都要收，
+      // 早先只认 agent:chunk，克隆对话断线跑完后重建出空内容，通知就静默丢了
+      if (
+        detachable
+        && (channel === 'agent:chunk' || channel === 'persona:chunk')
+        && chunks.length < MAX_DETACHED_CHUNKS
+      ) {
         chunks.push((payload as { chunk?: unknown } | undefined)?.chunk)
       }
       if (!closed) this.sendSse(res, channel, payload)
