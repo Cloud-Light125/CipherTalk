@@ -888,7 +888,8 @@ async function initCert() {
 
 function connectSignaling() {
   if (!signalingUrl || !room) { log('缺少 signaling/room 参数'); return }
-  const wsUrl = signalingUrl.replace(/\\/+$/, '') + '/ws?room=' + encodeURIComponent(room)
+  // role=desktop：信令房间按角色占位，重连时顶掉自己的僵尸连接而不是把手机挤掉
+  const wsUrl = signalingUrl.replace(/\\/+$/, '') + '/ws?room=' + encodeURIComponent(room) + '&role=desktop'
   ws = new WebSocket(wsUrl)
   ws.onopen = () => log('信令已连接: ' + wsUrl)
   ws.onmessage = (e) => {
