@@ -546,6 +546,7 @@ const ICE_SERVERS = [
 const PART_SIZE = 16000
 
 let ws = null, pc = null, dc = null
+let disconnectTimer = null
 let pidSeq = 1
 let reportedConnected = false
 let authorized = false
@@ -929,9 +930,28 @@ async function onOffer(msg) {
     if (pc !== nextPc) return
     log('RTC 状态: ' + nextPc.connectionState)
     if (nextPc.connectionState === 'connected' && dc?.readyState === 'open') {
+      if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null }
       reportConnected(true)
     } else if (nextPc.connectionState === 'failed' || nextPc.connectionState === 'disconnected' || nextPc.connectionState === 'closed') {
       reportConnected(false)
+      // 必须在这里就掐断在途请求：iOS 挂起 App 不发 close 帧，DataChannel 的
+      // onclose 可能几分钟都不来。SSE 不断开，gateway 就一直以为手机还在，
+      // 断线续跑（转后台跑完→落库→推送）整条链路都不会触发。
+      // disconnected 可能是换网瞬断，缓 3 秒确认没恢复再掐；failed/closed 直接掐。
+      if (nextPc.connectionState === 'disconnected') {
+        if (!disconnectTimer) {
+          disconnectTimer = setTimeout(() => {
+            disconnectTimer = null
+            if (pc === nextPc && nextPc.connectionState !== 'connected') {
+              log('连接中断未恢复，中止在途请求')
+              abortAll()
+            }
+          }, 3000)
+        }
+      } else {
+        log('连接已终止，中止在途请求')
+        abortAll()
+      }
     }
   }
   nextPc.ontrack = (e) => {
