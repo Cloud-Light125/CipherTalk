@@ -25,7 +25,12 @@ export type BarkMessage = {
   body: string
   /** 手机端路由，如 /chat/12；转成 ciphertalk:// 深链放进 url 参数 */
   route?: string
+  /** 通知分组：同组的通知在通知中心折叠到一起，如「微信消息」「AI 助手」 */
+  group?: string
 }
+
+/** 通知图标，由信令 Worker 伺服（iOS 15+ 生效）；本项目自己的域名，不引入新的第三方 */
+const ICON_URL = 'https://ctapp.aiqji.com/icon.png'
 
 function deepLink(route?: string): string | undefined {
   if (!route || !route.startsWith('/')) return undefined
@@ -56,11 +61,13 @@ export async function sendBarkMessage(
   const base = config.url.trim().replace(/\/+$/, '')
   if (!/^https?:\/\//.test(base)) return { ok: false, reason: '未配置 Bark 推送地址' }
 
-  // 这些参数要么整体加密、要么整体明文；group 固定成密语，手机上通知归到一组
+  // 这些参数要么整体加密、要么整体明文，加密时 icon/sound/group 也都在密文里
   const payload: Record<string, string> = {
     title: message.title,
     body: message.body,
-    group: 'CipherTalk',
+    group: message.group || '密语',
+    sound: 'glass',
+    icon: ICON_URL,
   }
   const link = deepLink(message.route)
   if (link) payload.url = link

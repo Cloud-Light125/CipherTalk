@@ -108,6 +108,8 @@ export async function pushToRemoteDevices(input: {
   body: string
   /** 点通知后手机跳到哪，形如 /chat/12 */
   route?: string
+  /** 通知分组：Bark 的 group / APNs 的 thread-id，同组折叠 */
+  group?: string
 }): Promise<void> {
   // Bark 通道：一台电脑对一个 Bark 地址，与设备表无关（Bark 自己就是那台手机）
   if (isBarkConfigured()) {
@@ -126,6 +128,7 @@ export async function pushToRemoteDevices(input: {
       title: input.title,
       body: input.body,
       route: input.route,
+      group: input.group,
     })
     if (result.ok) continue
     if (result.gone) {

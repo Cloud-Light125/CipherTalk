@@ -113,5 +113,6 @@ export async function persistDetachedRun(run: DetachedRun, logger: DetachedLogge
     title: 'AI 助手已完成',
     body: text.length > PREVIEW_LIMIT ? `${text.slice(0, PREVIEW_LIMIT)}…` : text,
     route: `/chat/${conversationId}`,
+    group: 'AI 助手',
   })
 }

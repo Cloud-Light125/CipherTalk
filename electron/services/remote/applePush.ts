@@ -31,6 +31,8 @@ export type ApnsMessage = {
   body: string
   /** 点通知后手机要跳转到哪，形如 /chat/12 */
   route?: string
+  /** 通知分组，进 aps thread-id；同组折叠到一起 */
+  group?: string
 }
 
 export type ApnsResult =
@@ -115,6 +117,7 @@ function post(host: string, message: ApnsMessage, jwt: string): Promise<{ status
       aps: {
         alert: { title: message.title, body: message.body },
         sound: 'default',
+        ...(message.group ? { 'thread-id': message.group } : {}),
       },
       ...(message.route ? { route: message.route } : {}),
     }))
