@@ -274,7 +274,25 @@ interface ConfigSchema {
   remoteSignalingUrl: string
   remotePairingId: string
   // 已配对手机：token 是长期凭据，吊销=从表里删掉；只在二维码弹窗打开时才允许新配对
-  remoteDevices: Array<{ id: string; name: string; token: string; pairedAt: number; lastSeenAt: number; version?: string }>
+  remoteDevices: Array<{
+    id: string; name: string; token: string; pairedAt: number; lastSeenAt: number; version?: string
+    /** 手机在设置里打开通知后上报的原生推送令牌（iOS 是 APNs device token） */
+    pushToken?: string
+    /** 'ios' | 'android'，决定往哪家推送网关发 */
+    pushPlatform?: string
+    /** APNs 的 apns-topic，即手机 App 的 bundle id */
+    pushBundleId?: string
+  }>
+  // APNs 推送凭据：苹果开发者后台生成的 .p8 私钥内容 + Key ID + Team ID。
+  // 手机把令牌交给本机后，通知由本机直接发往苹果，不经任何第三方推送中转。
+  // 和 AI 服务的密钥一样明文存本地配置库，威胁模型也一样：能读到这里就已经拿到本机权限了
+  remoteApnsKeyP8: string
+  remoteApnsKeyId: string
+  remoteApnsTeamId: string
+  // Bark 推送（免费方案，不需要苹果开发者账号）：设备推送地址 + 可选的端到端加密密钥。
+  // 配了密钥时 Bark 服务器和 APNs 只见密文，密钥只在本机和手机上的 Bark App 里
+  remoteBarkUrl: string
+  remoteBarkKey: string
   // 查看配对二维码的密码，格式 scrypt$<saltHex>$<hashHex>。
   // 存哈希不存密文：只需要验证不需要还原，加密的话密钥也在本机、等于没锁
   remotePairingPasswordHash: string
@@ -493,6 +511,11 @@ const defaults: ConfigSchema = {
   remoteSignalingUrl: '',
   remotePairingId: '',
   remoteDevices: [],
+  remoteApnsKeyP8: '',
+  remoteApnsKeyId: '',
+  remoteApnsTeamId: '',
+  remoteBarkUrl: '',
+  remoteBarkKey: '',
   remotePairingPasswordHash: ''
 }
 

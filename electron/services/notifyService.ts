@@ -5,6 +5,8 @@ import type { MainProcessContext } from '../main/context'
 import { getNotificationIconPath } from '../main/windows/windowManager'
 import { chatService } from './chatService'
 import type { ChatSession } from './chat/types'
+import { remoteGatewayService } from './remote/gateway'
+import { hasPushTargets, pushToRemoteDevices } from './remote/pushHandlers'
 
 /**
  * 消息提醒服务（主进程）。
@@ -185,6 +187,17 @@ class NotifyService {
       avatarUrl: session.avatarUrl,
       preview,
       timestamp,
+    }
+
+    // 已配对的手机在前台连着时不用推送——DataChannel 上它自己看得到。
+    // 只有直连断了（锁屏、切后台）才补一条走 APNs，否则一条消息响两次。
+    if (!remoteGatewayService.isRemoteConnected() && hasPushTargets()) {
+      void pushToRemoteDevices({
+        title: displayName,
+        body: preview,
+        // 克隆会话的 sessionId 就是微信的 username，手机上能直接打开这个会话
+        route: `/clone/${encodeURIComponent(username)}`,
+      })
     }
 
     if (this.ctx?.getWindowManager().isPetWindowOpen()) {

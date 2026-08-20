@@ -11,6 +11,9 @@ import { registerRemoteCloneHandlers } from './cloneHandlers'
 import { registerRemoteWechatHandlers } from './wechatHandlers'
 import { registerRemoteVoiceHandlers } from './voiceHandlers'
 import { registerRemoteAiSettingsHandlers } from './aiSettingsHandlers'
+import { registerRemotePushHandlers } from './pushHandlers'
+import { registerRemoteTranscribeHandlers } from './transcribeHandlers'
+import { persistDetachedRun } from './detachedRun'
 
 const DEFAULT_SIGNALING_URL = 'wss://ctapp.aiqji.com'
 
@@ -230,11 +233,17 @@ export async function startRemoteControl(ctx: MainProcessContext): Promise<{ suc
   registerRemoteWechatHandlers(configService)
   registerRemoteVoiceHandlers()
   registerRemoteAiSettingsHandlers(configService)
+  registerRemotePushHandlers(configService, ctx.getLogService())
+  registerRemoteTranscribeHandlers()
   remoteGatewayService.setLogger(ctx.getLogService())
   remoteGatewayService.setConnectionListener((connected) => {
     ctx.broadcastToWindows('deviceConnect:remote:status', { connected })
   })
   remoteGatewayService.setDeviceAuthorizer((input) => authorizeDevice(ctx, input))
+  // 手机断开后任务继续跑，跑完在这里落库 + 推送
+  remoteGatewayService.setDetachedRunHandler((run) => {
+    void persistDetachedRun(run, ctx.getLogService())
+  })
   remoteGatewayService.applySettings({
     port: Number(configService.get('remoteGatewayPort')) || 5033,
     token,
