@@ -68,6 +68,9 @@ export async function sendBarkMessage(
     group: message.group || '密语',
     sound: 'glass',
     icon: ICON_URL,
+    // timeSensitive：立即亮屏横幅提醒，并穿透专注模式和 iOS 的「定时推送摘要」。
+    // 不设的话通知常被摘要攒着延后弹，看起来就是「静默进了列表、没有横幅没有声音」
+    level: 'timeSensitive',
   }
   const link = deepLink(message.route)
   if (link) payload.url = link
