@@ -84,7 +84,31 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
       keyId: String(configService?.get('remoteApnsKeyId') || ''),
       teamId: String(configService?.get('remoteApnsTeamId') || ''),
       deviceCount: (configService?.get('remoteDevices') ?? []).filter((device) => device.pushToken).length,
+      barkUrl: String(configService?.get('remoteBarkUrl') || ''),
+      barkEncrypted: Boolean(configService?.get('remoteBarkKey')),
     }
+  })
+
+  ipcMain.handle('deviceConnect:remote:setBarkConfig', async (_event, payload: { url?: string; key?: string }) => {
+    const configService = ctx.getConfigService()
+    if (!configService) return { success: false, error: '配置服务未就绪' }
+    const url = String(payload?.url ?? '').trim()
+    if (url && !/^https?:\/\//.test(url)) {
+      return { success: false, error: 'Bark 地址应以 http(s):// 开头，在 Bark App 首页可以复制' }
+    }
+    // key 为 undefined 表示「保持原密钥」，空串才是显式清除——UI 靠这个区分
+    // 「用户没动密钥框」和「用户想去掉加密」
+    if (payload?.key !== undefined) {
+      const key = String(payload.key).trim()
+      const { isValidBarkKey } = await import('../../services/remote/barkPush')
+      if (!isValidBarkKey(key)) {
+        return { success: false, error: '加密密钥必须是 16、24 或 32 个字符（对应 AES-128/192/256）' }
+      }
+      configService.set('remoteBarkKey', key)
+    }
+    configService.set('remoteBarkUrl', url)
+    if (!url) configService.set('remoteBarkKey', '')
+    return { success: true }
   })
 
   ipcMain.handle('deviceConnect:remote:setPushConfig', (_event, payload: {
@@ -125,7 +149,7 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
 
   ipcMain.handle('deviceConnect:remote:testPush', async () => {
     const { pushToRemoteDevices, hasPushTargets } = await import('../../services/remote/pushHandlers')
-    if (!hasPushTargets()) return { success: false, error: '还没有手机登记推送，请先在手机上打开通知开关' }
+    if (!hasPushTargets()) return { success: false, error: '还没有可用的推送通道：配置 Bark 地址，或填 APNs 密钥后在手机上打开通知开关' }
     await pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。' })
     return { success: true }
   })

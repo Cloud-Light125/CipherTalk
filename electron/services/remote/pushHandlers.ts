@@ -7,6 +7,7 @@
 import type { ConfigService } from '../config'
 import { agentRpcHandlers } from './agentRpcRegistry'
 import { sendApnsMessage, type ApnsCredentials } from './applePush'
+import { sendBarkMessage, type BarkConfig } from './barkPush'
 
 type PushLogger = {
   info(category: string, message: string, data?: any): void
@@ -27,6 +28,17 @@ function credentials(): ApnsCredentials {
 export function isApnsConfigured(): boolean {
   const { keyP8, keyId, teamId } = credentials()
   return Boolean(keyP8 && keyId && teamId)
+}
+
+function barkConfig(): BarkConfig {
+  return {
+    url: String(configRef?.get('remoteBarkUrl') || ''),
+    key: String(configRef?.get('remoteBarkKey') || ''),
+  }
+}
+
+export function isBarkConfigured(): boolean {
+  return Boolean(barkConfig().url)
 }
 
 /** 把某台设备的推送令牌抹掉（令牌失效或用户关掉开关） */
@@ -59,7 +71,12 @@ export function registerRemotePushHandlers(configService: ConfigService, log: Pu
       return { success: false, error: '电脑端目前只支持 iOS 推送' }
     }
     if (!isApnsConfigured()) {
-      return { success: false, error: '电脑端还没配置 APNs 推送密钥（设置 → 连接手机 → 推送通知）' }
+      return {
+        success: false,
+        error: isBarkConfigured()
+          ? '电脑端使用 Bark 推送，通知会发到手机上的 Bark App，无需开启此开关'
+          : '电脑端还没配置推送（设置 → 连接手机 → 推送通知，可用免费的 Bark 或 APNs 密钥）',
+      }
     }
 
     const devices = configService.get('remoteDevices') ?? []
@@ -92,6 +109,12 @@ export async function pushToRemoteDevices(input: {
   /** 点通知后手机跳到哪，形如 /chat/12 */
   route?: string
 }): Promise<void> {
+  // Bark 通道：一台电脑对一个 Bark 地址，与设备表无关（Bark 自己就是那台手机）
+  if (isBarkConfigured()) {
+    const result = await sendBarkMessage(barkConfig(), input)
+    if (!result.ok) logger?.warn('RemotePush', 'Bark 推送失败', { reason: result.reason })
+  }
+
   const devices = (configRef?.get('remoteDevices') ?? []).filter((device) => device.pushToken)
   if (devices.length === 0 || !isApnsConfigured()) return
 
@@ -116,5 +139,6 @@ export async function pushToRemoteDevices(input: {
 
 /** 有没有手机等着收通知——没有的话调用方可以整段跳过，不用白算 */
 export function hasPushTargets(): boolean {
+  if (isBarkConfigured()) return true
   return isApnsConfigured() && (configRef?.get('remoteDevices') ?? []).some((device) => device.pushToken)
 }

@@ -7,6 +7,8 @@ type PushConfig = {
   keyId: string
   teamId: string
   deviceCount: number
+  barkUrl: string
+  barkEncrypted: boolean
 }
 
 /**
@@ -21,6 +23,8 @@ export function RemotePushCard() {
   const [keyP8, setKeyP8] = useState('')
   const [keyId, setKeyId] = useState('')
   const [teamId, setTeamId] = useState('')
+  const [barkUrl, setBarkUrl] = useState('')
+  const [barkKey, setBarkKey] = useState('')
 
   const reload = async () => {
     const result = await window.electronAPI.deviceConnect.remote.getPushConfig()
@@ -30,9 +34,12 @@ export function RemotePushCard() {
       keyId: result.keyId,
       teamId: result.teamId,
       deviceCount: result.deviceCount,
+      barkUrl: result.barkUrl,
+      barkEncrypted: result.barkEncrypted,
     })
     setKeyId(result.keyId)
     setTeamId(result.teamId)
+    setBarkUrl(result.barkUrl)
   }
 
   useEffect(() => { void reload() }, [])
@@ -72,6 +79,24 @@ export function RemotePushCard() {
     void reload()
   }
 
+  const saveBark = async () => {
+    setBusy(true)
+    // key 留空表示「不改」？不——Bark 的密钥就一行，直接以当前输入为准最不容易糊涂：
+    // 但已配置加密且输入框为空时，视为保持原密钥，避免每次保存都被清掉
+    const result = await window.electronAPI.deviceConnect.remote.setBarkConfig({
+      url: barkUrl.trim(),
+      key: barkKey.trim() || (config?.barkEncrypted && barkUrl.trim() ? undefined : ''),
+    })
+    setBusy(false)
+    if (!result.success) {
+      toast.danger(result.error || '保存失败')
+      return
+    }
+    setBarkKey('')
+    toast.success(barkUrl.trim() ? 'Bark 推送已保存' : '已清除 Bark 配置')
+    void reload()
+  }
+
   const test = async () => {
     setBusy(true)
     const result = await window.electronAPI.deviceConnect.remote.testPush()
@@ -89,18 +114,51 @@ export function RemotePushCard() {
       >
         {open ? <ChevronDown width={14} height={14} /> : <ChevronRight width={14} height={14} />}
         <span className="text-sm font-medium text-foreground">推送通知</span>
-        <Chip size="sm" variant="soft" color={config?.configured ? 'success' : undefined}>
-          {config?.configured
-            ? config.deviceCount > 0 ? `${config.deviceCount} 台手机已登记` : '已配置，等待手机开启'
-            : '未配置'}
+        <Chip size="sm" variant="soft" color={config?.configured || config?.barkUrl ? 'success' : undefined}>
+          {config?.barkUrl
+            ? config.barkEncrypted ? 'Bark（加密）' : 'Bark'
+            : config?.configured
+              ? config.deviceCount > 0 ? `APNs · ${config.deviceCount} 台手机已登记` : 'APNs 已配置，等待手机开启'
+              : '未配置'}
         </Chip>
       </button>
 
       {open && (
         <div className="mt-3 flex flex-col gap-2">
           <p className="text-xs text-muted">
-            手机切到后台后直连会断开，新消息只能靠推送送达。通知由本机直接发往苹果推送服务，
-            信令服务器和任何第三方都看不到内容。需要苹果开发者账号在后台生成一个 APNs 密钥（.p8）。
+            手机切到后台后直连会断开，新消息只能靠推送送达。两条通道任选其一，都配则同时发。
+          </p>
+
+          <p className="text-sm font-medium text-foreground">方式一：Bark（免费，推荐）</p>
+          <p className="text-xs text-muted">
+            手机装免费开源的 Bark App，把它首页的推送地址粘到下面。填了加密密钥（16/24/32 位，
+            Bark App 的「推送加密」里填同一个）后内容全程只传密文，Bark 服务器和苹果都看不到。
+          </p>
+          <input
+            className="rounded-md border border-default-300 bg-background px-2 py-1.5 text-sm"
+            placeholder="https://api.day.app/xxxxxxxx（Bark App 首页复制）"
+            value={barkUrl}
+            onChange={(e) => setBarkUrl(e.target.value)}
+          />
+          <input
+            className="rounded-md border border-default-300 bg-background px-2 py-1.5 font-mono text-sm"
+            placeholder={config?.barkEncrypted ? '加密密钥已保存，留空即不修改' : '加密密钥（可选，16/24/32 个字符）'}
+            value={barkKey}
+            onChange={(e) => setBarkKey(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button size="sm" isDisabled={busy} onPress={() => void saveBark()}>保存 Bark</Button>
+            {config?.barkUrl && (
+              <Button size="sm" variant="tertiary" isDisabled={busy} onPress={() => void test()}>
+                发送测试
+              </Button>
+            )}
+          </div>
+
+          <p className="mt-2 text-sm font-medium text-foreground">方式二：APNs 密钥（需付费开发者账号）</p>
+          <p className="text-xs text-muted">
+            通知由本机直接发往苹果，链路上没有任何第三方。需要苹果开发者账号在后台生成 APNs 密钥（.p8），
+            且安装包必须用该账号的证书签名。
           </p>
           <div className="flex gap-2">
             <input

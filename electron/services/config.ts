@@ -289,6 +289,10 @@ interface ConfigSchema {
   remoteApnsKeyP8: string
   remoteApnsKeyId: string
   remoteApnsTeamId: string
+  // Bark 推送（免费方案，不需要苹果开发者账号）：设备推送地址 + 可选的端到端加密密钥。
+  // 配了密钥时 Bark 服务器和 APNs 只见密文，密钥只在本机和手机上的 Bark App 里
+  remoteBarkUrl: string
+  remoteBarkKey: string
   // 查看配对二维码的密码，格式 scrypt$<saltHex>$<hashHex>。
   // 存哈希不存密文：只需要验证不需要还原，加密的话密钥也在本机、等于没锁
   remotePairingPasswordHash: string
@@ -510,6 +514,8 @@ const defaults: ConfigSchema = {
   remoteApnsKeyP8: '',
   remoteApnsKeyId: '',
   remoteApnsTeamId: '',
+  remoteBarkUrl: '',
+  remoteBarkKey: '',
   remotePairingPasswordHash: ''
 }
 
