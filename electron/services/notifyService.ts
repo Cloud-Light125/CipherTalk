@@ -197,6 +197,7 @@ class NotifyService {
         body: preview,
         // 克隆会话的 sessionId 就是微信的 username，手机上能直接打开这个会话
         route: `/clone/${encodeURIComponent(username)}`,
+        group: '微信消息',
       })
     }
 

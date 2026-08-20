@@ -109,9 +109,26 @@ export async function persistDetachedRun(run: DetachedRun, logger: DetachedLogge
   }
 
   if (!hasPushTargets()) return
+  const body = text.length > PREVIEW_LIMIT ? `${text.slice(0, PREVIEW_LIMIT)}…` : text
+  if (run.method === 'clone:chat') {
+    // 克隆好友的回复：标题用好友名字（会话标题形如「XX的分身」，去掉后缀），
+    // 跳转回克隆会话页而不是 AI 对话页
+    const sessionId = String(input.sessionId || '')
+    const { agentConversationStore } = await import('../agent/conversationStore')
+    const meta = agentConversationStore.loadMeta(conversationId, false)
+    const displayName = String(meta?.title || '').replace(/的分身$/, '').trim() || '克隆好友'
+    await pushToRemoteDevices({
+      title: displayName,
+      body,
+      route: `/clone/${encodeURIComponent(sessionId)}?displayName=${encodeURIComponent(displayName)}`,
+      group: '克隆好友',
+    })
+    return
+  }
   await pushToRemoteDevices({
     title: 'AI 助手已完成',
-    body: text.length > PREVIEW_LIMIT ? `${text.slice(0, PREVIEW_LIMIT)}…` : text,
+    body,
     route: `/chat/${conversationId}`,
+    group: 'AI 助手',
   })
 }

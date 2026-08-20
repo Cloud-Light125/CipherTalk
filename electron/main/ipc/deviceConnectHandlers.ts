@@ -150,7 +150,7 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
   ipcMain.handle('deviceConnect:remote:testPush', async () => {
     const { pushToRemoteDevices, hasPushTargets } = await import('../../services/remote/pushHandlers')
     if (!hasPushTargets()) return { success: false, error: '还没有可用的推送通道：配置 Bark 地址，或填 APNs 密钥后在手机上打开通知开关' }
-    await pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。' })
+    await pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。', group: '测试' })
     return { success: true }
   })
 
