@@ -353,7 +353,8 @@ class RemoteGatewayService {
         // 手机不在了不代表活儿该停——继续跑完，结果落库再推送通知。
         // 用户主动点停止走的是 agent:abort，那条路不受影响
         detached = true
-        this.logger?.info('RemoteGateway', '手机已断开，任务转入后台继续运行', { method: rpcMethod })
+        // warn 而不是 info：LogService 默认级别是 WARN，info 会被过滤，排查时就像什么都没发生
+        this.logger?.warn('RemoteGateway', '手机已断开，任务转入后台继续运行', { method: rpcMethod })
         return
       }
       const runId = (params[0] as { runId?: string } | undefined)?.runId
@@ -370,7 +371,13 @@ class RemoteGatewayService {
     // detached 期间必须回 false：handler 里是 `if (!sender.isDestroyed()) send(...)`，
     // 说「已销毁」它就不再吐 chunk 了，那就重建不出这条回复
     const fakeEvent = this.createFakeEvent(() => closed && !detached, (channel, payload) => {
-      if (detachable && channel === 'agent:chunk' && chunks.length < MAX_DETACHED_CHUNKS) {
+      // agent:run 走 agent:chunk，clone:chat 走 persona:chunk——两个都要收，
+      // 早先只认 agent:chunk，克隆对话断线跑完后重建出空内容，通知就静默丢了
+      if (
+        detachable
+        && (channel === 'agent:chunk' || channel === 'persona:chunk')
+        && chunks.length < MAX_DETACHED_CHUNKS
+      ) {
         chunks.push((payload as { chunk?: unknown } | undefined)?.chunk)
       }
       if (!closed) this.sendSse(res, channel, payload)
@@ -539,6 +546,7 @@ const ICE_SERVERS = [
 const PART_SIZE = 16000
 
 let ws = null, pc = null, dc = null
+let disconnectTimer = null
 let pidSeq = 1
 let reportedConnected = false
 let authorized = false
@@ -922,9 +930,28 @@ async function onOffer(msg) {
     if (pc !== nextPc) return
     log('RTC 状态: ' + nextPc.connectionState)
     if (nextPc.connectionState === 'connected' && dc?.readyState === 'open') {
+      if (disconnectTimer) { clearTimeout(disconnectTimer); disconnectTimer = null }
       reportConnected(true)
     } else if (nextPc.connectionState === 'failed' || nextPc.connectionState === 'disconnected' || nextPc.connectionState === 'closed') {
       reportConnected(false)
+      // 必须在这里就掐断在途请求：iOS 挂起 App 不发 close 帧，DataChannel 的
+      // onclose 可能几分钟都不来。SSE 不断开，gateway 就一直以为手机还在，
+      // 断线续跑（转后台跑完→落库→推送）整条链路都不会触发。
+      // disconnected 可能是换网瞬断，缓 3 秒确认没恢复再掐；failed/closed 直接掐。
+      if (nextPc.connectionState === 'disconnected') {
+        if (!disconnectTimer) {
+          disconnectTimer = setTimeout(() => {
+            disconnectTimer = null
+            if (pc === nextPc && nextPc.connectionState !== 'connected') {
+              log('连接中断未恢复，中止在途请求')
+              abortAll()
+            }
+          }, 3000)
+        }
+      } else {
+        log('连接已终止，中止在途请求')
+        abortAll()
+      }
     }
   }
   nextPc.ontrack = (e) => {
