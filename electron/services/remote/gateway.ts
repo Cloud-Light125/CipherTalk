@@ -353,7 +353,8 @@ class RemoteGatewayService {
         // 手机不在了不代表活儿该停——继续跑完，结果落库再推送通知。
         // 用户主动点停止走的是 agent:abort，那条路不受影响
         detached = true
-        this.logger?.info('RemoteGateway', '手机已断开，任务转入后台继续运行', { method: rpcMethod })
+        // warn 而不是 info：LogService 默认级别是 WARN，info 会被过滤，排查时就像什么都没发生
+        this.logger?.warn('RemoteGateway', '手机已断开，任务转入后台继续运行', { method: rpcMethod })
         return
       }
       const runId = (params[0] as { runId?: string } | undefined)?.runId

@@ -71,7 +71,7 @@ export async function persistDetachedRun(run: DetachedRun, logger: DetachedLogge
   const assistant = await rebuildAssistantMessage(run.chunks)
   const text = textOf(assistant)
   if (!assistant || !text) {
-    logger?.info('RemoteRun', '后台运行没有产出可保存的内容', { method: run.method })
+    logger?.warn('RemoteRun', '后台运行没有产出可保存的内容', { method: run.method })
     return
   }
 
@@ -102,7 +102,7 @@ export async function persistDetachedRun(run: DetachedRun, logger: DetachedLogge
     ]
     if (pending.length === 0) return
     agentConversationStore.append(conversationId, pending)
-    logger?.info('RemoteRun', '后台运行结果已保存', { conversationId, method: run.method })
+    logger?.warn('RemoteRun', '后台运行结果已保存', { conversationId, method: run.method })
   } catch (error) {
     logger?.warn('RemoteRun', '保存后台运行结果失败', { conversationId, error: String(error) })
     return

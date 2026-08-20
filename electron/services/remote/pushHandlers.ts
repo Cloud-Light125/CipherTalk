@@ -86,7 +86,7 @@ export function registerRemotePushHandlers(configService: ConfigService, log: Pu
     const next = [...devices]
     next[index] = { ...next[index], pushToken, pushPlatform: platform, pushBundleId: bundleId }
     configService.set('remoteDevices', next)
-    logger?.info('RemotePush', '已登记推送令牌', { device: next[index].name })
+    logger?.warn('RemotePush', '已登记推送令牌', { device: next[index].name })
     return { success: true }
   })
 
@@ -114,7 +114,8 @@ export async function pushToRemoteDevices(input: {
   // Bark 通道：一台电脑对一个 Bark 地址，与设备表无关（Bark 自己就是那台手机）
   if (isBarkConfigured()) {
     const result = await sendBarkMessage(barkConfig(), input)
-    if (!result.ok) logger?.warn('RemotePush', 'Bark 推送失败', { reason: result.reason })
+    if (result.ok) logger?.warn('RemotePush', 'Bark 推送已发出', { title: input.title, group: input.group || '' })
+    else logger?.warn('RemotePush', 'Bark 推送失败', { reason: result.reason })
   }
 
   const devices = (configRef?.get('remoteDevices') ?? []).filter((device) => device.pushToken)
@@ -132,7 +133,7 @@ export async function pushToRemoteDevices(input: {
     })
     if (result.ok) continue
     if (result.gone) {
-      logger?.info('RemotePush', '推送令牌已失效，已移除', { device: device.name, reason: result.reason })
+      logger?.warn('RemotePush', '推送令牌已失效，已移除', { device: device.name, reason: result.reason })
       clearPushToken((item) => item.pushToken === device.pushToken)
     } else {
       logger?.warn('RemotePush', '推送发送失败', { device: device.name, reason: result.reason })
