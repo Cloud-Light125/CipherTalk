@@ -14,12 +14,17 @@ import {
   Spinner,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
   useOverlayState,
   type Key
 } from '@heroui/react'
-import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, PersonNutHex, QrCode, Wallet } from '@gravity-ui/icons'
+import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, PersonNutHex, QrCode } from '@gravity-ui/icons'
+import { LottieView, type DotLottie } from '@/components/LottieView'
+import successLottieUrl from '@/assets/lottie/Success.lottie?url'
+import MiDouIcon from './MiDouIcon'
 import { relayOneService } from '../../services/relayOne'
+import { MIDOU_PER_CNY, formatMiDou, formatMiDouCompact, miDouToCny } from '../../lib/miDou'
 import type {
   RelayOneCheckoutInfo,
   RelayOnePaymentOrder,
@@ -37,7 +42,8 @@ interface RelayOneAccountPanelProps {
 }
 
 type AuthTab = 'login' | 'register'
-const PRESET_AMOUNTS = [10, 20, 30, 40, 50]
+// 充值预设，单位密豆（1 元 = 1000 密豆）
+const PRESET_MIDOU_AMOUNTS = [10_000, 20_000, 30_000, 40_000, 50_000]
 
 const EMPTY_STATUS: RelayOneStatus = {
   authenticated: false,
@@ -48,15 +54,6 @@ const EMPTY_STATUS: RelayOneStatus = {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
-}
-
-function formatMoney(value: number | undefined, currency = 'CNY'): string {
-  if (value === undefined) return '--'
-  try {
-    return new Intl.NumberFormat('zh-CN', { style: 'currency', currency }).format(value)
-  } catch {
-    return `${value.toFixed(2)} ${currency}`
-  }
 }
 
 function statusLabel(status: RelayOnePaymentOrder['status']): string {
@@ -97,6 +94,16 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     isOpen: accountModalOpen,
     onOpenChange: setAccountModalOpen
   })
+  // 充值到账的庆祝动画：播完一遍 → 缩小淡出退场 → 移除（同数字分身克隆完成）
+  const [celebration, setCelebration] = useState<'hidden' | 'playing' | 'leaving'>('hidden')
+  const handleSuccessLottieRef = useCallback((instance: DotLottie | null) => {
+    instance?.addEventListener('complete', () => setCelebration('leaving'))
+  }, [])
+  useEffect(() => {
+    if (celebration !== 'leaving') return
+    const timer = window.setTimeout(() => setCelebration('hidden'), 350)
+    return () => window.clearTimeout(timer)
+  }, [celebration])
 
   const activePaymentMethods = useMemo(
     () => checkoutInfo?.paymentMethods.filter((method) => method.enabled) || [],
@@ -113,7 +120,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     if (results[1].status === 'fulfilled') {
       const checkout = results[1].value
       setCheckoutInfo(checkout)
-      setRechargeAmount((current) => current || '20')
+      setRechargeAmount((current) => current || '20000')
       setPaymentMethod((current) => current || checkout.paymentMethods.find((method) => method.enabled)?.id || '')
     }
 
@@ -181,6 +188,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
           if (nextOrder.status !== 'pending') void relayOneService.closePaymentWindow()
           if (nextOrder.status === 'paid') {
             showMessage('充值已到账', true)
+            setCelebration('playing')
             void loadAccountData()
           }
         })
@@ -267,8 +275,11 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   })
 
   const handleCreateOrder = () => runAction('create-order', async () => {
+    const miDou = Number(rechargeAmount)
+    if (!Number.isFinite(miDou) || miDou <= 0) throw new Error('请输入充值的密豆数量')
     const nextOrder = await relayOneService.createPaymentOrder({
-      amount: Number(rechargeAmount),
+      // 界面单位是密豆，下单换算回元
+      amount: miDouToCny(miDou),
       paymentType: paymentMethod
     })
     setOrder(nextOrder)
@@ -296,16 +307,19 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
 
   const rechargeSection = (
     <div className="space-y-3">
-      <div className="flex items-center gap-2"><Wallet width={16} height={16} /><Typography.Heading level={4} className="text-sm">账户充值</Typography.Heading></div>
+      <div className="flex items-center gap-2"><MiDouIcon width={16} height={16} /><Typography.Heading level={4} className="text-sm">密豆充值</Typography.Heading></div>
       <TextField fullWidth value={rechargeAmount} onChange={setRechargeAmount}>
-        <Label>充值金额</Label>
-        <InputGroup variant="secondary" fullWidth><InputGroup.Prefix>{checkoutInfo?.currency || 'CNY'}</InputGroup.Prefix><InputGroup.Input type="number" min={checkoutInfo?.minimumAmount || 0.01} max={checkoutInfo?.maximumAmount} step="0.01" /></InputGroup>
+        <Label>充值数量</Label>
+        <InputGroup variant="secondary" fullWidth><InputGroup.Input type="number" min={Math.ceil((checkoutInfo?.minimumAmount || 0.01) * MIDOU_PER_CNY)} max={checkoutInfo?.maximumAmount ? checkoutInfo.maximumAmount * MIDOU_PER_CNY : undefined} step="100" /><InputGroup.Suffix>密豆</InputGroup.Suffix></InputGroup>
       </TextField>
       <div className="grid grid-cols-5 gap-1.5">
-        {PRESET_AMOUNTS.map((amount) => (
-          <Button key={amount} type="button" variant={Number(rechargeAmount) === amount ? 'primary' : 'outline'} size="sm" className="w-full min-w-0 px-1" onPress={() => setRechargeAmount(String(amount))}>
-            ¥{amount}
-          </Button>
+        {PRESET_MIDOU_AMOUNTS.map((amount) => (
+          <Tooltip key={amount} delay={0}>
+            <Button type="button" variant={Number(rechargeAmount) === amount ? 'primary' : 'outline'} size="sm" className="w-full min-w-0 px-1" onPress={() => setRechargeAmount(String(amount))}>
+              {formatMiDouCompact(amount)}豆
+            </Button>
+            <Tooltip.Content>实际支付 ¥{miDouToCny(amount)}</Tooltip.Content>
+          </Tooltip>
         ))}
       </div>
       {activePaymentMethods.length > 0 && (
@@ -317,8 +331,8 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
       )}
       {order && (
         <Alert status={order.status === 'paid' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}>
-          <Alert.Indicator>{order.status === 'paid' ? <CircleCheck width={18} height={18} /> : <Wallet width={18} height={18} />}</Alert.Indicator>
-          <Alert.Content><Alert.Title>订单 {statusLabel(order.status)}</Alert.Title><Alert.Description>{formatMoney(order.amount, order.currency)}{order.status === 'pending' ? '，正在每 3 秒查询状态' : ''}</Alert.Description></Alert.Content>
+          <Alert.Indicator>{order.status === 'paid' ? <CircleCheck width={18} height={18} /> : <MiDouIcon width={18} height={18} />}</Alert.Indicator>
+          <Alert.Content><Alert.Title>订单 {statusLabel(order.status)}</Alert.Title><Alert.Description>{formatMiDou(order.amount)}{order.status === 'pending' ? '，正在每 3 秒查询状态' : ''}</Alert.Description></Alert.Content>
           {order.paymentUrl && order.status === 'pending' && <Button type="button" variant="outline" size="sm" onPress={() => void relayOneService.openPaymentWindow(order.paymentUrl!)}><ArrowUpRight width={16} height={16} />打开支付页</Button>}
           {order.status === 'pending' && <Button type="button" variant="danger-soft" size="sm" onPress={handleCancelOrder} isDisabled={Boolean(action)}>{action === 'cancel-order' && <Spinner size="sm" />}取消订单</Button>}
         </Alert>
@@ -438,7 +452,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
           <section className="grid gap-3 border-y border-divider py-4 sm:grid-cols-3">
             <div><div className="text-xs text-muted-foreground">账户</div><div className="mt-1 truncate text-sm font-medium">{user?.name || user?.email || status.user?.email || 'RelayOne 用户'}</div></div>
             <div><div className="text-xs text-muted-foreground">邮箱</div><div className="mt-1 truncate text-sm font-medium">{user?.email || status.user?.email || '--'}</div></div>
-            <div><div className="text-xs text-muted-foreground">余额</div><div className="mt-1 text-sm font-semibold text-success">{formatMoney(user?.balance, checkoutInfo?.currency || 'CNY')}</div></div>
+            <div><div className="text-xs text-muted-foreground">密豆</div><div className="mt-1 text-sm font-semibold text-success">{formatMiDou(user?.balance)}</div></div>
           </section>
 
           <Alert status="success">
@@ -495,7 +509,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   const statusBar = (
     <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-y border-divider py-2.5">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent-soft-foreground">
-        <Wallet width={17} height={17} />
+        <MiDouIcon width={17} height={17} />
       </div>
       <div className="min-w-32 flex-1">
         <div className="flex min-w-0 items-center gap-2">
@@ -510,7 +524,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
       </div>
       {status.authenticated && (
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-sm font-semibold text-success">{formatMoney(user?.balance, checkoutInfo?.currency || 'CNY')}</span>
+          <span className="text-sm font-semibold text-success">{formatMiDou(user?.balance)}</span>
           <Chip size="sm" variant="soft" color={hasConfiguredApiKey ? 'accent' : 'warning'}>
             <Chip.Label>{hasConfiguredApiKey ? 'Key 已应用' : '未应用 Key'}</Chip.Label>
           </Chip>
@@ -549,6 +563,22 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
         </Card.Footer>
       </Card>
       {createPortal(accountModal, document.body)}
+      {celebration !== 'hidden' && createPortal(
+        <div
+          className={`pointer-events-none fixed inset-0 flex items-center justify-center transition-all duration-300 ease-in ${
+            celebration === 'leaving' ? 'scale-75 opacity-0' : 'scale-100 opacity-100'
+          }`}
+          style={{ zIndex: 3000 }}
+        >
+          <LottieView
+            autoplay
+            className="size-40"
+            dotLottieRefCallback={handleSuccessLottieRef}
+            src={successLottieUrl}
+          />
+        </div>,
+        document.body
+      )}
     </>
   )
 }

@@ -30,6 +30,7 @@ import { ArrowUpRight, ArrowsRotateLeft, Bulb, CircleCheck, CircleQuestion, Curl
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { getAIProviders, type AIModelInfo, type AIProviderInfo } from '../../types/ai'
+import { RELAYONE_DEFAULT_MODEL } from '../../types/relayOne'
 import * as configService from '../../services/config'
 import { cn } from '../../lib/utils'
 import { useSettingsStore } from '../settings/settingsStore'
@@ -512,10 +513,12 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
     setRemoteModels(result.models)
     setRemoteModelDetails(result.modelDetails || [])
     if (!relayOneConfig.model && result.models[0]) {
-      const nextConfig = { ...relayOneConfig, model: result.models[0] }
+      // 默认展示 gpt-5.6-sol，列表里没有才退回第一个
+      const defaultModel = result.models.find(item => item.toLowerCase() === RELAYONE_DEFAULT_MODEL.toLowerCase()) || result.models[0]
+      const nextConfig = { ...relayOneConfig, model: defaultModel }
       await configService.setAiProviderConfig('relayone', nextConfig)
       setProviderConfigs(prev => ({ ...prev, relayone: nextConfig }))
-      setField('aiModel', result.models[0])
+      setField('aiModel', defaultModel)
     }
   }
 
@@ -614,9 +617,9 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
     await configService.setAiProvider(normalizedProviderId)
   }
 
-  const handleRefreshModels = async () => {
+  const loadRemoteModels = async (notify: boolean) => {
     if (!canFetchProviderModelList(provider, baseURL, currentProvider)) {
-      showMessage('请先填写当前服务商所需的 API 配置', false)
+      if (notify) showMessage('请先填写当前服务商所需的 API 配置', false)
       return
     }
     setIsLoadingModels(true)
@@ -631,24 +634,38 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
       if (!result.success || !result.models?.length) {
         const error = result.error || '模型列表为空'
         setModelListError(error)
-        showMessage(error, false)
+        if (notify) showMessage(error, false)
         return
       }
       setRemoteModels(result.models)
       setRemoteModelDetails(result.modelDetails || [])
       const nextModelDetailsById = new Map((result.modelDetails || []).map(item => [item.id, item]))
       const availableModels = result.models.filter(item => !isDeprecatedModel(nextModelDetailsById.get(item)))
-      if (!availableModels.includes(model)) {
+      // 静默加载（展开下拉自动拉取）不能改掉用户手输的模型，只有主动刷新才纠正
+      if (!availableModels.includes(model) && (notify || !model.trim())) {
         setField('aiModel', availableModels[0] || result.models[0])
       }
-      showMessage('模型列表已刷新', true)
+      if (notify) showMessage('模型列表已刷新', true)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       setModelListError(message)
-      showMessage(`刷新模型失败: ${message}`, false)
+      if (notify) showMessage(`刷新模型失败: ${message}`, false)
     } finally {
       setIsLoadingModels(false)
     }
+  }
+
+  const handleRefreshModels = () => loadRemoteModels(true)
+
+  // 展开模型下拉时自动拉一次列表；同一份配置只自动尝试一次，失败后靠刷新按钮重试
+  const modelAutoFetchKeyRef = useRef('')
+  const maybeAutoLoadModels = () => {
+    if (isLoadingModels || remoteModels.length > 0) return
+    const fetchKey = [provider, apiKey, baseURL, customProtocol].join('|')
+    if (modelAutoFetchKeyRef.current === fetchKey) return
+    if (!canFetchProviderModelList(provider, baseURL, currentProvider)) return
+    modelAutoFetchKeyRef.current = fetchKey
+    void loadRemoteModels(false)
   }
 
   useEffect(() => {
@@ -742,7 +759,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
 
   const handleTestConnection = async () => {
     if (provider !== 'ollama' && !isCodexSubscription && !apiKey.trim()) {
-      showMessage('请先填写 API 密钥', false)
+      showMessage(provider === 'relayone' ? '请先登录 RelayOne 账户，登录后自动配置密钥' : '请先填写 API 密钥', false)
       return
     }
     if (currentProvider?.allowCustomBaseURL && !baseURL.trim()) {
@@ -1031,7 +1048,17 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                     </TextField>
                   )}
 
-                  {!isCodexSubscription && (
+                  {/* RelayOne 密钥全托管，不给输入框；已配置时什么都不显示，未配置时提示去登录 */}
+                  {provider === 'relayone' ? (
+                    !apiKey.trim() && (
+                      <Alert status="warning">
+                        <Alert.Content>
+                          <Alert.Title>尚未配置密钥</Alert.Title>
+                          <Alert.Description>在右侧登录 RelayOne 账户后会自动创建并配置密钥。</Alert.Description>
+                        </Alert.Content>
+                      </Alert>
+                    )
+                  ) : !isCodexSubscription && (
                     <div className="space-y-1">
                       <TextField fullWidth value={apiKey} onChange={(value) => setField('aiApiKey', value)} type={showApiKey ? 'text' : 'password'}>
                         <Label>API 密钥</Label>
@@ -1057,7 +1084,6 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                           </InputGroup.Suffix>
                         </InputGroup>
                       </TextField>
-                      {provider === 'relayone' && <Description>登录 RelayOne 账户后会自动创建密钥并填入，无需手动配置。</Description>}
                     </div>
                   )}
 
@@ -1101,6 +1127,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                         onSelectionChange={(key) => {
                           if (key != null) setField('aiModel', normalizeProviderModel(provider, String(key)))
                         }}
+                        onOpenChange={(open) => { if (open) maybeAutoLoadModels() }}
                         menuTrigger="focus"
                         variant="secondary"
                         fullWidth
@@ -1187,26 +1214,33 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
 
               <Card.Content>
               <dl className="space-y-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted">协议</dt>
-                  <dd className="min-w-0">
-                    <Chip size="sm" variant="soft" color="accent" className="max-w-full">
-                      <Chip.Label className="truncate">{provider === 'relayone' ? '自动（按模型路由）' : formatProtocolLabel(currentProtocol)}</Chip.Label>
-                    </Chip>
-                  </dd>
-                </div>
+                {/* RelayOne 全托管，协议/认证/地址属于内部细节，不展示 */}
+                {provider !== 'relayone' && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted">协议</dt>
+                    <dd className="min-w-0">
+                      <Chip size="sm" variant="soft" color="accent" className="max-w-full">
+                        <Chip.Label className="truncate">{formatProtocolLabel(currentProtocol)}</Chip.Label>
+                      </Chip>
+                    </dd>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-muted">模型</dt>
                   <dd className="truncate font-medium text-foreground">{model || '未选择'}</dd>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted">认证</dt>
-                  <dd className="truncate font-medium text-foreground">{isCodexSubscription ? 'ChatGPT 登录' : maskSecret(apiKey)}</dd>
-                </div>
-                <div className="flex items-start justify-between gap-3">
-                  <dt className="shrink-0 text-muted">地址</dt>
-                  <dd className="min-w-0 truncate text-right font-medium text-foreground">{currentBaseURLLabel}</dd>
-                </div>
+                {provider !== 'relayone' && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted">认证</dt>
+                    <dd className="truncate font-medium text-foreground">{isCodexSubscription ? 'ChatGPT 登录' : maskSecret(apiKey)}</dd>
+                  </div>
+                )}
+                {provider !== 'relayone' && (
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="shrink-0 text-muted">地址</dt>
+                    <dd className="min-w-0 truncate text-right font-medium text-foreground">{currentBaseURLLabel}</dd>
+                  </div>
+                )}
                 {currentProvider?.website && (
                   <div className="flex items-center justify-between gap-3">
                     <dt className="text-muted">官网</dt>
@@ -1216,7 +1250,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                         className="cursor-pointer font-medium text-accent hover:underline"
                         onClick={() => void window.electronAPI.shell.openExternal(currentProvider.website!)}
                       >
-                        注册 / 获取 Key
+                        {provider === 'relayone' ? '访问官网' : '注册 / 获取 Key'}
                       </button>
                     </dd>
                   </div>
@@ -1476,6 +1510,9 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                                 onInputChange={(value) => updatePresetDraft({ model: normalizeProviderModel(presetDraft.provider, value) })}
                                 onSelectionChange={(key) => {
                                   if (key != null) updatePresetDraft({ model: normalizeProviderModel(presetDraft.provider, String(key)) })
+                                }}
+                                onOpenChange={(open) => {
+                                  if (open && !isLoadingPresetModels && presetRemoteModels.length === 0 && !presetModelListError) void loadPresetDraftModels(false)
                                 }}
                                 menuTrigger="focus"
                                 variant="secondary"

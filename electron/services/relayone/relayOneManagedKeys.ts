@@ -28,19 +28,23 @@ export interface RelayOneManagedKeysState {
 
 export interface RelayOneManagedGroupTarget {
   kind: RelayOneManagedKind
+  /** 站点上的分组 ID，配置了就优先按 ID 匹配（分组改名也不受影响）；名字只作兜底和 Key 命名 */
+  groupId?: string
   groupName: string
   protocol: RelayOneManagedProtocol
 }
 
-// 聊天分组的声明顺序即模型聚合与路由的优先级：同名模型归属先命中的分组
+// 聊天分组的声明顺序即模型聚合展示与路由的优先级：同名模型归属先命中的分组。
+// 匹配优先级：这里写死的 groupId → 本地配置里记住的 groupId → groupName 全等。
+// groupId 取自站点 /groups/available（2026-08-25），分组改名不影响匹配。
 export const RELAYONE_MANAGED_GROUPS: RelayOneManagedGroupTarget[] = [
-  { kind: 'cc-max', groupName: 'CC Max 满血反代', protocol: 'anthropic' },
-  { kind: 'plus-pool', groupName: '特惠Plus号池', protocol: 'openai-responses' },
-  { kind: 'grok', groupName: 'Grok', protocol: 'openai-compatible' },
-  { kind: 'image', groupName: 'image2生图分组', protocol: 'openai-compatible' }
+  { kind: 'plus-pool', groupId: '3', groupName: '特惠Plus号池', protocol: 'openai-responses' },
+  { kind: 'cc-max', groupId: '8', groupName: 'CC Max 满血反代', protocol: 'anthropic' },
+  { kind: 'grok', groupId: '11', groupName: 'Grok', protocol: 'openai-compatible' },
+  { kind: 'image', groupId: '35', groupName: 'image2生图分组', protocol: 'openai-compatible' }
 ]
 
-export const RELAYONE_CHAT_KINDS: RelayOneManagedKind[] = ['cc-max', 'plus-pool', 'grok']
+export const RELAYONE_CHAT_KINDS: RelayOneManagedKind[] = ['plus-pool', 'cc-max', 'grok']
 
 export function relayOneManagedKeyName(groupName: string, wxid: string): string {
   return wxid ? `CipherTalk-${groupName}-${wxid}` : `CipherTalk-${groupName}`

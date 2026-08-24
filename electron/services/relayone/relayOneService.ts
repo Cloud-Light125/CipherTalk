@@ -1,21 +1,22 @@
 import { net } from 'electron'
 import type { ConfigService } from '../config'
-import type {
-  RelayOneApiKey,
-  RelayOneCheckoutInfo,
-  RelayOneCreateKeyInput,
-  RelayOneCreatePaymentOrderInput,
-  RelayOneEnsureKeysResult,
-  RelayOneGroup,
-  RelayOneLoginInput,
-  RelayOneLoginResult,
-  RelayOnePaymentMethod,
-  RelayOnePaymentOrder,
-  RelayOnePaymentOrderStatus,
-  RelayOnePublicSettings,
-  RelayOneRegisterInput,
-  RelayOneStatus,
-  RelayOneUser
+import {
+  RELAYONE_DEFAULT_MODEL,
+  type RelayOneApiKey,
+  type RelayOneCheckoutInfo,
+  type RelayOneCreateKeyInput,
+  type RelayOneCreatePaymentOrderInput,
+  type RelayOneEnsureKeysResult,
+  type RelayOneGroup,
+  type RelayOneLoginInput,
+  type RelayOneLoginResult,
+  type RelayOnePaymentMethod,
+  type RelayOnePaymentOrder,
+  type RelayOnePaymentOrderStatus,
+  type RelayOnePublicSettings,
+  type RelayOneRegisterInput,
+  type RelayOneStatus,
+  type RelayOneUser
 } from '../../../src/types/relayOne'
 import { RelayOneSessionStore, type RelayOneSession } from './relayOneSessionStore'
 import {
@@ -389,9 +390,10 @@ export class RelayOneService {
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const payload = asRecord(await response.json())
       const items = Array.isArray(payload.data) ? payload.data : Array.isArray(payload.models) ? payload.models : []
+      // 服务端 /models 返回的顺序与站点展示相反，翻转一次
       return Array.from(new Set(items
         .map((item) => firstString(asRecord(item), ['id', 'name']).replace(/^models\//, ''))
-        .filter(Boolean)))
+        .filter(Boolean))).reverse()
     } finally {
       clearTimeout(timeout)
     }
@@ -440,17 +442,19 @@ export class RelayOneService {
     const nextKeys: RelayOneManagedKeyEntry[] = []
 
     for (const target of RELAYONE_MANAGED_GROUPS) {
-      const group = groups.find((item) => item.name.trim() === target.groupName)
+      const stored = storedState?.keys.find((entry) => entry.kind === target.kind && entry.apiKey)
+      // 优先按 ID 匹配（写死的 > 本地记住的），分组改名不受影响；名字全等只作兜底
+      const group = (target.groupId ? groups.find((item) => item.id === target.groupId) : undefined)
+        || (stored?.groupId ? groups.find((item) => item.id === stored.groupId) : undefined)
+        || groups.find((item) => item.name.trim() === target.groupName)
       if (!group) {
         missingGroups.push(target.groupName)
         // 分组临时下架时保留已有密钥，不丢配置
-        const stored = storedState?.keys.find((entry) => entry.kind === target.kind && entry.apiKey)
         if (stored) nextKeys.push(stored)
         continue
       }
 
       const expectedName = relayOneManagedKeyName(target.groupName, wxid)
-      const stored = storedState?.keys.find((entry) => entry.kind === target.kind && entry.apiKey)
       if (stored && serverKeys.some((item) => item.key.id === stored.keyId)) {
         nextKeys.push({ ...stored, groupId: group.id, groupName: group.name })
         continue
@@ -515,10 +519,13 @@ export class RelayOneService {
       const aggregated = listRelayOneAggregatedModels(state)
       const defaultEntry = chatKeys.find((entry) => entry.kind === 'plus-pool') || chatKeys[0]
       const existing = configService.getAIProviderConfig('relayone')
+      // 用户自己选过的模型不动；空的兜底 gpt-5.6-sol（不在列表里才退回聚合列表第一个）
+      const defaultModel = aggregated.some((model) => model.toLowerCase() === RELAYONE_DEFAULT_MODEL.toLowerCase())
+        ? RELAYONE_DEFAULT_MODEL
+        : (aggregated[0] || RELAYONE_DEFAULT_MODEL)
       const nextConfig = {
         apiKey: defaultEntry.apiKey,
-        // 用户自己选过的模型不动，空的才用聚合列表第一个
-        model: existing?.model || aggregated[0] || '',
+        model: existing?.model || defaultModel,
         baseURL: RELAYONE_INFERENCE_BASE_URL,
         protocol: relayOneProtocolForKind(defaultEntry.kind)
       }
