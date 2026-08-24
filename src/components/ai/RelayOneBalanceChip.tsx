@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Chip, Tooltip } from '@heroui/react'
-import { Wallet } from '@gravity-ui/icons'
 import { relayOneService } from '../../services/relayOne'
+import MiDouIcon from './MiDouIcon'
 import { formatMiDou } from '../../lib/miDou'
 
 // 低余额阈值，单位仍是服务端的元（1 元 = 1000 密豆）
@@ -49,7 +49,7 @@ export default function RelayOneBalanceChip() {
         onClick={() => navigate('/settings?tab=ai')}
       >
         <Chip size="sm" variant="soft" color={low ? 'warning' : 'accent'}>
-          <Wallet width={13} height={13} />
+          <MiDouIcon width={13} height={13} />
           <Chip.Label className="font-medium tabular-nums">{formatMiDou(balance)}</Chip.Label>
         </Chip>
       </button>

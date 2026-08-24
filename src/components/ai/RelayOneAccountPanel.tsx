@@ -19,7 +19,8 @@ import {
   useOverlayState,
   type Key
 } from '@heroui/react'
-import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, PersonNutHex, QrCode, Wallet } from '@gravity-ui/icons'
+import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, PersonNutHex, QrCode } from '@gravity-ui/icons'
+import MiDouIcon from './MiDouIcon'
 import { relayOneService } from '../../services/relayOne'
 import { MIDOU_PER_CNY, formatMiDou, formatMiDouCompact, miDouToCny } from '../../lib/miDou'
 import type {
@@ -293,7 +294,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
 
   const rechargeSection = (
     <div className="space-y-3">
-      <div className="flex items-center gap-2"><Wallet width={16} height={16} /><Typography.Heading level={4} className="text-sm">密豆充值</Typography.Heading></div>
+      <div className="flex items-center gap-2"><MiDouIcon width={16} height={16} /><Typography.Heading level={4} className="text-sm">密豆充值</Typography.Heading></div>
       <TextField fullWidth value={rechargeAmount} onChange={setRechargeAmount}>
         <Label>充值数量</Label>
         <InputGroup variant="secondary" fullWidth><InputGroup.Input type="number" min={Math.ceil((checkoutInfo?.minimumAmount || 0.01) * MIDOU_PER_CNY)} max={checkoutInfo?.maximumAmount ? checkoutInfo.maximumAmount * MIDOU_PER_CNY : undefined} step="100" /><InputGroup.Suffix>密豆</InputGroup.Suffix></InputGroup>
@@ -317,7 +318,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
       )}
       {order && (
         <Alert status={order.status === 'paid' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}>
-          <Alert.Indicator>{order.status === 'paid' ? <CircleCheck width={18} height={18} /> : <Wallet width={18} height={18} />}</Alert.Indicator>
+          <Alert.Indicator>{order.status === 'paid' ? <CircleCheck width={18} height={18} /> : <MiDouIcon width={18} height={18} />}</Alert.Indicator>
           <Alert.Content><Alert.Title>订单 {statusLabel(order.status)}</Alert.Title><Alert.Description>{formatMiDou(order.amount)}{order.status === 'pending' ? '，正在每 3 秒查询状态' : ''}</Alert.Description></Alert.Content>
           {order.paymentUrl && order.status === 'pending' && <Button type="button" variant="outline" size="sm" onPress={() => void relayOneService.openPaymentWindow(order.paymentUrl!)}><ArrowUpRight width={16} height={16} />打开支付页</Button>}
           {order.status === 'pending' && <Button type="button" variant="danger-soft" size="sm" onPress={handleCancelOrder} isDisabled={Boolean(action)}>{action === 'cancel-order' && <Spinner size="sm" />}取消订单</Button>}
@@ -495,7 +496,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   const statusBar = (
     <div className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-y border-divider py-2.5">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent-soft-foreground">
-        <Wallet width={17} height={17} />
+        <MiDouIcon width={17} height={17} />
       </div>
       <div className="min-w-32 flex-1">
         <div className="flex min-w-0 items-center gap-2">
