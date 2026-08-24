@@ -4,10 +4,9 @@ import type {
   RelayOneApiKey,
   RelayOneCheckoutInfo,
   RelayOneCreateKeyInput,
-  RelayOneCreateKeyResult,
   RelayOneCreatePaymentOrderInput,
+  RelayOneEnsureKeysResult,
   RelayOneGroup,
-  RelayOneGroupRate,
   RelayOneLoginInput,
   RelayOneLoginResult,
   RelayOnePaymentMethod,
@@ -19,9 +18,21 @@ import type {
   RelayOneUser
 } from '../../../src/types/relayOne'
 import { RelayOneSessionStore, type RelayOneSession } from './relayOneSessionStore'
+import {
+  RELAYONE_INFERENCE_BASE_URL,
+  RELAYONE_MANAGED_GROUPS,
+  getRelayOneChatKeys,
+  getRelayOneImageKey,
+  getRelayOneManagedState,
+  listRelayOneAggregatedModels,
+  relayOneManagedKeyName,
+  relayOneProtocolForKind,
+  type RelayOneManagedKeyEntry,
+  type RelayOneManagedKeysState
+} from './relayOneManagedKeys'
 
 export const RELAYONE_CONTROL_BASE_URL = 'https://aiapi.aiqji.cn/api/v1'
-export const RELAYONE_INFERENCE_BASE_URL = 'https://aiapi.aiqji.cn/v1'
+export { RELAYONE_INFERENCE_BASE_URL }
 
 type JsonRecord = Record<string, unknown>
 
@@ -134,6 +145,18 @@ function isUsableApiKey(value: string): boolean {
   return Boolean(value && !/[*•…]|\.\.\./.test(value))
 }
 
+const NON_CHAT_MODEL_PATTERNS = ['embedding', 'rerank', 'whisper', 'tts', 'transcribe', 'speech', 'moderation', 'dall-e', 'image', 'stable-diffusion']
+
+/** 聊天分组滤掉明显的非聊天模型；生图分组原样保留 */
+function filterManagedGroupModels(kind: RelayOneManagedKeyEntry['kind'], models: string[]): string[] {
+  if (kind === 'image') return models
+  const chatModels = models.filter((model) => {
+    const lower = model.toLowerCase()
+    return !NON_CHAT_MODEL_PATTERNS.some((pattern) => lower.includes(pattern))
+  })
+  return chatModels.length > 0 ? chatModels : models
+}
+
 const MASKED_SECRET_SEGMENT = '****************'
 
 function maskSecret(value: string): string {
@@ -221,7 +244,7 @@ function normalizePaymentOrder(value: unknown): RelayOnePaymentOrder {
 export class RelayOneService {
   private tempToken: string | null = null
   private refreshPromise: Promise<boolean> | null = null
-  private readonly apiKeySecrets = new Map<string, string>()
+  private ensureKeysPromise: Promise<RelayOneEnsureKeysResult> | null = null
 
   constructor(
     private readonly getConfigService: () => ConfigService | null,
@@ -311,7 +334,6 @@ export class RelayOneService {
       }
     } finally {
       this.tempToken = null
-      this.apiKeySecrets.clear()
       this.sessionStore.clear()
     }
   }
@@ -324,19 +346,15 @@ export class RelayOneService {
     return user
   }
 
-  async listApiKeys(): Promise<RelayOneApiKey[]> {
+  private async listApiKeysRaw(): Promise<Array<{ key: RelayOneApiKey; rawKey: string }>> {
     const payload = await this.request('/keys', { authenticated: true })
-    const currentApiKey = this.getConfigService()?.getAIProviderConfig('relayone')?.apiKey || ''
-    this.apiKeySecrets.clear()
     return getItems(payload, ['items', 'list', 'keys', 'data']).map((value) => {
       const { rawKey, entity } = extractApiKey(value)
-      const normalized = normalizeApiKey(entity)
-      if (normalized.id && isUsableApiKey(rawKey)) this.apiKeySecrets.set(normalized.id, rawKey)
-      return { ...normalized, isApplied: Boolean(currentApiKey && rawKey === currentApiKey) }
+      return { key: normalizeApiKey(entity), rawKey }
     })
   }
 
-  async createApiKey(input: RelayOneCreateKeyInput): Promise<RelayOneCreateKeyResult> {
+  private async createApiKeyRaw(input: RelayOneCreateKeyInput): Promise<{ key: RelayOneApiKey; rawKey: string }> {
     const name = input.name.trim()
     if (!name) throw new Error('请输入 Key 名称')
     const body: JsonRecord = { name }
@@ -345,70 +363,188 @@ export class RelayOneService {
     const payload = await this.request('/keys', { method: 'POST', body, authenticated: true })
     const { rawKey, entity } = extractApiKey(payload)
     if (!rawKey) throw new Error('RelayOne 已创建 Key，但响应中未包含可应用的密钥')
-
-    this.applyApiKeyToAI(rawKey)
-    const normalized = normalizeApiKey(entity)
-    if (normalized.id) this.apiKeySecrets.set(normalized.id, rawKey)
-    return {
-      apiKey: { ...normalized, keyPreview: normalized.keyPreview || maskSecret(rawKey), isApplied: true },
-      appliedToAI: true
-    }
+    return { key: normalizeApiKey(entity), rawKey }
   }
 
-  async applyApiKey(keyId: string): Promise<void> {
-    const normalizedKeyId = keyId.trim()
-    if (!normalizedKeyId) throw new Error('缺少 Key ID')
-    let apiKey = this.apiKeySecrets.get(normalizedKeyId)
-    if (!apiKey) {
-      await this.listApiKeys()
-      apiKey = this.apiKeySecrets.get(normalizedKeyId)
-    }
-    if (!apiKey) {
-      throw new Error('RelayOne 未返回该 Key 的完整密钥，无法直接应用；请新建一个 Key')
-    }
-    this.applyApiKeyToAI(apiKey)
-  }
-
-  async updateApiKeyGroup(keyId: string, groupId: string): Promise<RelayOneApiKey> {
-    const normalizedKeyId = keyId.trim()
-    if (!normalizedKeyId) throw new Error('缺少 Key ID')
-    const payload = await this.request(`/keys/${encodeURIComponent(normalizedKeyId)}`, {
-      method: 'PUT',
-      body: { group_id: numericGroupId(groupId, 0) },
-      authenticated: true
-    })
-    return normalizeApiKey(payload)
-  }
-
-  async deleteApiKey(keyId: string): Promise<void> {
+  private async deleteApiKey(keyId: string): Promise<void> {
     const normalizedKeyId = keyId.trim()
     if (!normalizedKeyId) throw new Error('缺少 Key ID')
     await this.request(`/keys/${encodeURIComponent(normalizedKeyId)}`, { method: 'DELETE', authenticated: true })
-    this.apiKeySecrets.delete(normalizedKeyId)
   }
 
-  async listAvailableGroups(): Promise<RelayOneGroup[]> {
+  private async listAvailableGroups(): Promise<RelayOneGroup[]> {
     const payload = await this.request('/groups/available', { authenticated: true })
     return getItems(payload, ['items', 'list', 'groups', 'data']).map(normalizeGroup)
   }
 
-  async listGroupRates(): Promise<RelayOneGroupRate[]> {
-    const payload = await this.request('/groups/rates', { authenticated: true })
-    const source = asRecord(payload)
-    const nestedItems = getItems(payload, ['items', 'list', 'rates', 'groups', 'data'])
-    const items = nestedItems.length > 0
-      ? nestedItems
-      : Object.entries(source).map(([id, value]) => ({ id, value }))
-    return items.flatMap((value): RelayOneGroupRate[] => {
-      const source = asRecord(value)
-      const rate = optionalNumber(source, ['rate', 'ratio', 'multiplier', 'value'])
-      if (rate === undefined) return []
-      return [{
-        groupId: firstString(source, ['group_id', 'groupId', 'id', 'name']),
-        groupName: firstString(source, ['group_name', 'groupName', 'name', 'id']),
-        rate
-      }]
+  /** 用某把托管 Key 拉推理端 /models，返回该分组可用的模型 ID 列表 */
+  async listInferenceModels(apiKey: string): Promise<string[]> {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    try {
+      const response = await net.fetch(`${RELAYONE_INFERENCE_BASE_URL}/models`, {
+        headers: { Accept: 'application/json', Authorization: `Bearer ${apiKey}` },
+        signal: controller.signal
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const payload = asRecord(await response.json())
+      const items = Array.isArray(payload.data) ? payload.data : Array.isArray(payload.models) ? payload.models : []
+      return Array.from(new Set(items
+        .map((item) => firstString(asRecord(item), ['id', 'name']).replace(/^models\//, ''))
+        .filter(Boolean)))
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
+  /**
+   * 登录后自动创建/校准四个固定分组的托管密钥，并写入大模型与作图配置。
+   * 幂等：配置里四把 Key 都在且非强制时直接返回，不发请求。
+   * activate=true（登录时）才把当前服务商切到 relayone；后台校准只更新配置，不抢用户选的服务商。
+   */
+  async ensureManagedKeys(force = false, activate = false): Promise<RelayOneEnsureKeysResult> {
+    if (this.ensureKeysPromise) return this.ensureKeysPromise
+    this.ensureKeysPromise = this.doEnsureManagedKeys(force, activate).finally(() => {
+      this.ensureKeysPromise = null
     })
+    return this.ensureKeysPromise
+  }
+
+  private async doEnsureManagedKeys(force: boolean, activate: boolean): Promise<RelayOneEnsureKeysResult> {
+    this.requireSession()
+    const configService = this.getConfigService()
+    if (!configService) throw new Error('CipherTalk 配置服务尚未就绪')
+
+    const storedState = getRelayOneManagedState(configService)
+    if (!force && storedState && RELAYONE_MANAGED_GROUPS.every((target) =>
+      storedState.keys.some((entry) => entry.kind === target.kind && entry.apiKey)
+    )) {
+      return {
+        ready: getRelayOneChatKeys(storedState).length > 0,
+        updated: false,
+        created: [],
+        missingGroups: [],
+        imageConfigured: Boolean(getRelayOneImageKey(storedState)),
+        chatModelCount: listRelayOneAggregatedModels(storedState).length
+      }
+    }
+
+    const wxid = String(configService.get('myWxid') || '').trim()
+    const [groups, serverKeys] = await Promise.all([
+      this.listAvailableGroups(),
+      this.listApiKeysRaw()
+    ])
+
+    const created: string[] = []
+    const missingGroups: string[] = []
+    const nextKeys: RelayOneManagedKeyEntry[] = []
+
+    for (const target of RELAYONE_MANAGED_GROUPS) {
+      const group = groups.find((item) => item.name.trim() === target.groupName)
+      if (!group) {
+        missingGroups.push(target.groupName)
+        // 分组临时下架时保留已有密钥，不丢配置
+        const stored = storedState?.keys.find((entry) => entry.kind === target.kind && entry.apiKey)
+        if (stored) nextKeys.push(stored)
+        continue
+      }
+
+      const expectedName = relayOneManagedKeyName(target.groupName, wxid)
+      const stored = storedState?.keys.find((entry) => entry.kind === target.kind && entry.apiKey)
+      if (stored && serverKeys.some((item) => item.key.id === stored.keyId)) {
+        nextKeys.push({ ...stored, groupId: group.id, groupName: group.name })
+        continue
+      }
+
+      const existing = serverKeys.find((item) => item.key.name === expectedName)
+      if (existing && isUsableApiKey(existing.rawKey)) {
+        nextKeys.push({
+          kind: target.kind,
+          keyId: existing.key.id,
+          name: expectedName,
+          apiKey: existing.rawKey,
+          groupId: group.id,
+          groupName: group.name,
+          models: []
+        })
+        continue
+      }
+      // 同名 Key 拿不到完整密钥（服务端只回掩码）就删掉重建，避免每次登录堆积重名 Key
+      if (existing?.key.id) {
+        await this.deleteApiKey(existing.key.id).catch(() => undefined)
+      }
+      const createdKey = await this.createApiKeyRaw({ name: expectedName, groupId: group.id })
+      nextKeys.push({
+        kind: target.kind,
+        keyId: createdKey.key.id,
+        name: expectedName,
+        apiKey: createdKey.rawKey,
+        groupId: group.id,
+        groupName: group.name,
+        models: []
+      })
+      created.push(target.groupName)
+    }
+
+    // 各分组用自己的 Key 拉一次模型列表：既是下拉聚合的数据，也是按模型路由的依据
+    await Promise.all(nextKeys.map(async (entry) => {
+      const previous = storedState?.keys.find((item) => item.kind === entry.kind)?.models || []
+      entry.models = await this.listInferenceModels(entry.apiKey)
+        .then((models) => filterManagedGroupModels(entry.kind, models))
+        .catch(() => (entry.models.length > 0 ? entry.models : previous))
+    }))
+
+    const nextState: RelayOneManagedKeysState = { wxid, updatedAt: Date.now(), keys: nextKeys }
+    configService.set('relayOneManagedKeys', nextState)
+    this.applyManagedState(configService, nextState, activate)
+
+    return {
+      ready: getRelayOneChatKeys(nextState).length > 0,
+      updated: true,
+      created,
+      missingGroups,
+      imageConfigured: Boolean(getRelayOneImageKey(nextState)),
+      chatModelCount: listRelayOneAggregatedModels(nextState).length
+    }
+  }
+
+  /** 把托管密钥落进大模型（relayone 服务商）与作图配置 */
+  private applyManagedState(configService: ConfigService, state: RelayOneManagedKeysState, activate: boolean): void {
+    const chatKeys = getRelayOneChatKeys(state)
+    if (chatKeys.length > 0) {
+      const aggregated = listRelayOneAggregatedModels(state)
+      const defaultEntry = chatKeys.find((entry) => entry.kind === 'plus-pool') || chatKeys[0]
+      const existing = configService.getAIProviderConfig('relayone')
+      const nextConfig = {
+        apiKey: defaultEntry.apiKey,
+        // 用户自己选过的模型不动，空的才用聚合列表第一个
+        model: existing?.model || aggregated[0] || '',
+        baseURL: RELAYONE_INFERENCE_BASE_URL,
+        protocol: relayOneProtocolForKind(defaultEntry.kind)
+      }
+      if (activate) {
+        configService.setAIProviderConfigAndActivate('relayone', nextConfig)
+      } else {
+        configService.setAIProviderConfig('relayone', nextConfig)
+      }
+    }
+
+    const imageKey = getRelayOneImageKey(state)
+    if (imageKey) {
+      const current = configService.get('imageGenConfig')
+      const isRelayOneImageConfig = String(current?.baseURL || '').includes('aiapi.aiqji.cn')
+      // 用户配了别家的作图服务就不碰；没配过或本来就是 RelayOne 的才写入
+      if (!current?.apiKey || isRelayOneImageConfig) {
+        configService.set('imageGenConfig', {
+          ...current,
+          enabled: true,
+          protocol: 'openai-compatible',
+          apiKey: imageKey.apiKey,
+          baseURL: RELAYONE_INFERENCE_BASE_URL,
+          model: (isRelayOneImageConfig && current.model) ? current.model : (imageKey.models[0] || current?.model || '')
+        })
+      }
+    }
   }
 
   async getCheckoutInfo(): Promise<RelayOneCheckoutInfo> {
@@ -476,18 +612,6 @@ export class RelayOneService {
       refreshToken: firstString(payload, ['refresh_token', 'refreshToken']) || undefined,
       expiresAt: expiresIn ? Date.now() + expiresIn * 1000 : undefined,
       user: userValue ? normalizeUser(userValue) : undefined
-    })
-  }
-
-  private applyApiKeyToAI(apiKey: string): void {
-    const configService = this.getConfigService()
-    if (!configService) throw new Error('CipherTalk 配置服务尚未就绪')
-    const existing = configService.getAIProviderConfig('relayone')
-    configService.setAIProviderConfigAndActivate('relayone', {
-      apiKey,
-      model: existing?.model || '',
-      baseURL: RELAYONE_INFERENCE_BASE_URL,
-      protocol: 'openai-responses'
     })
   }
 

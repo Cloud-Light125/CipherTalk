@@ -127,6 +127,20 @@ interface ConfigSchema {
       updatedAt: number
     }
   }
+  // RelayOne 登录后自动创建的托管密钥（四个固定分组），路由与聚合逻辑见 relayone/relayOneManagedKeys.ts
+  relayOneManagedKeys: {
+    wxid: string
+    updatedAt: number
+    keys: Array<{
+      kind: 'cc-max' | 'plus-pool' | 'grok' | 'image'
+      keyId: string
+      name: string
+      apiKey: string
+      groupId: string
+      groupName: string
+      models: string[]
+    }>
+  }
   agentCodeWorkspaceRoot: string
   agentCodeWorkspaceApprovalPolicy: 'on-request' | 'risk-based' | 'full-access'
   // Agent 工具审批策略（发送微信媒体/文件、导出、任务、MCP 等，见 toolApproval.ts）；语义与上面的代码工作区策略一致
@@ -404,6 +418,7 @@ const defaults: ConfigSchema = {
   aiActiveConfigPresetId: '',
   aiProviderConfigs: {},  // 空对象，用户配置后填充
   aiProviderModelCache: {},
+  relayOneManagedKeys: { wxid: '', updatedAt: 0, keys: [] },
   agentCodeWorkspaceRoot: '',
   agentCodeWorkspaceApprovalPolicy: 'on-request',
   agentToolApprovalPolicy: 'on-request',

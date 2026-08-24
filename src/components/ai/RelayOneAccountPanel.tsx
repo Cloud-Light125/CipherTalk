@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Alert,
@@ -6,7 +6,6 @@ import {
   Card,
   Chip,
   CloseButton,
-  Description,
   InputGroup,
   Label,
   ListBox,
@@ -19,13 +18,10 @@ import {
   useOverlayState,
   type Key
 } from '@heroui/react'
-import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, PersonNutHex, Plus, QrCode, TrashBin, Wallet } from '@gravity-ui/icons'
+import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, PersonNutHex, QrCode, Wallet } from '@gravity-ui/icons'
 import { relayOneService } from '../../services/relayOne'
 import type {
-  RelayOneApiKey,
   RelayOneCheckoutInfo,
-  RelayOneGroup,
-  RelayOneGroupRate,
   RelayOnePaymentOrder,
   RelayOnePublicSettings,
   RelayOneStatus,
@@ -41,7 +37,6 @@ interface RelayOneAccountPanelProps {
 }
 
 type AuthTab = 'login' | 'register'
-const DEFAULT_GROUP_KEY = '__default__'
 const PRESET_AMOUNTS = [10, 20, 30, 40, 50]
 
 const EMPTY_STATUS: RelayOneStatus = {
@@ -76,34 +71,10 @@ function statusLabel(status: RelayOnePaymentOrder['status']): string {
   return labels[status]
 }
 
-function groupLabel(groupId: string | undefined, groups: RelayOneGroup[]): string {
-  if (!groupId) return '默认分组'
-  return groups.find((group) => group.id === groupId)?.name || groupId
-}
-
-function groupRate(groupId: string | undefined, groupName: string, rates: RelayOneGroupRate[]): number | undefined {
-  if (groupId) {
-    return rates.find((rate) => rate.groupId === groupId || rate.groupName === groupName)?.rate
-  }
-  return rates.find((rate) => {
-    const normalizedId = rate.groupId.trim().toLowerCase()
-    const normalizedName = rate.groupName.trim().toLowerCase()
-    return !normalizedId || normalizedId === 'default' || normalizedId === DEFAULT_GROUP_KEY || normalizedName === '默认分组' || normalizedName === 'default'
-  })?.rate
-}
-
-function GroupRateChip({ rate }: { rate: number | undefined }) {
-  if (rate === undefined) return null
-  return <Chip size="sm" variant="soft" color="accent" className="shrink-0"><Chip.Label>{rate}x</Chip.Label></Chip>
-}
-
 export default function RelayOneAccountPanel({ onProviderApplied, showMessage, hasConfiguredApiKey, statusHost }: RelayOneAccountPanelProps) {
   const [status, setStatus] = useState<RelayOneStatus>(EMPTY_STATUS)
   const [publicSettings, setPublicSettings] = useState<RelayOnePublicSettings | null>(null)
   const [user, setUser] = useState<RelayOneUser | null>(null)
-  const [apiKeys, setApiKeys] = useState<RelayOneApiKey[]>([])
-  const [groups, setGroups] = useState<RelayOneGroup[]>([])
-  const [rates, setRates] = useState<RelayOneGroupRate[]>([])
   const [checkoutInfo, setCheckoutInfo] = useState<RelayOneCheckoutInfo | null>(null)
   const [order, setOrder] = useState<RelayOnePaymentOrder | null>(null)
   const [authTab, setAuthTab] = useState<AuthTab>('login')
@@ -116,8 +87,6 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   const [invitationCode, setInvitationCode] = useState('')
   const [twoFactorCode, setTwoFactorCode] = useState('')
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false)
-  const [newKeyName, setNewKeyName] = useState('CipherTalk')
-  const [newKeyGroupId, setNewKeyGroupId] = useState('')
   const [rechargeAmount, setRechargeAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('')
   const [loading, setLoading] = useState(true)
@@ -129,7 +98,6 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     onOpenChange: setAccountModalOpen
   })
 
-  const activeGroups = useMemo(() => groups.filter((group) => group.enabled), [groups])
   const activePaymentMethods = useMemo(
     () => checkoutInfo?.paymentMethods.filter((method) => method.enabled) || [],
     [checkoutInfo]
@@ -138,26 +106,12 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   const loadAccountData = useCallback(async () => {
     const results = await Promise.allSettled([
       relayOneService.getCurrentUser(),
-      relayOneService.listApiKeys(),
-      relayOneService.listAvailableGroups(),
-      relayOneService.listGroupRates(),
       relayOneService.getCheckoutInfo()
     ])
 
     if (results[0].status === 'fulfilled') setUser(results[0].value)
-    if (results[1].status === 'fulfilled') setApiKeys(results[1].value)
-    const nextGroups = results[2].status === 'fulfilled' ? results[2].value : []
-    if (results[2].status === 'fulfilled') setGroups(nextGroups)
-    if (results[3].status === 'fulfilled') {
-      const userRates = results[3].value
-      setRates(nextGroups.length > 0 ? nextGroups.map((group) => ({
-        groupId: group.id,
-        groupName: group.name,
-        rate: userRates.find((rate) => rate.groupId === group.id)?.rate ?? group.rateMultiplier
-      })) : userRates)
-    }
-    if (results[4].status === 'fulfilled') {
-      const checkout = results[4].value
+    if (results[1].status === 'fulfilled') {
+      const checkout = results[1].value
       setCheckoutInfo(checkout)
       setRechargeAmount((current) => current || '20')
       setPaymentMethod((current) => current || checkout.paymentMethods.find((method) => method.enabled)?.id || '')
@@ -166,6 +120,19 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     const rejected = results.find((result): result is PromiseRejectedResult => result.status === 'rejected')
     if (rejected) setError(errorMessage(rejected.reason))
   }, [])
+
+  // 密钥全托管：确保四个固定分组的 Key 都在，缺了就补建并写入大模型/作图配置
+  const syncManagedKeys = useCallback(async () => {
+    try {
+      const result = await relayOneService.ensureManagedKeys()
+      if (result.updated) await onProviderApplied()
+      if (result.missingGroups.length > 0) {
+        showMessage(`RelayOne 缺少分组：${result.missingGroups.join('、')}`, false)
+      }
+    } catch (nextError) {
+      setError(errorMessage(nextError))
+    }
+  }, [onProviderApplied, showMessage])
 
   const initialize = useCallback(async () => {
     setLoading(true)
@@ -184,6 +151,18 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
       setLoading(false)
     }
   }, [loadAccountData])
+
+  // 已登录状态下补一次托管密钥校准（覆盖旧版本升级上来、之前登录过的用户）；ref 防止回调身份变化导致重复执行
+  const managedKeysSyncedRef = useRef(false)
+  useEffect(() => {
+    if (!status.authenticated) {
+      managedKeysSyncedRef.current = false
+      return
+    }
+    if (managedKeysSyncedRef.current) return
+    managedKeysSyncedRef.current = true
+    void syncManagedKeys()
+  }, [status.authenticated, syncManagedKeys])
 
   useEffect(() => {
     void initialize()
@@ -242,7 +221,9 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     setStatus(result.status || await relayOneService.getStatus())
     setPassword('')
     await loadAccountData()
-    showMessage('RelayOne 登录成功', true)
+    // 登录时主进程已自动创建各分组密钥并写入配置，这里刷新设置页展示
+    await onProviderApplied()
+    showMessage('RelayOne 登录成功，密钥已自动配置', true)
   })
 
   const handleVerifyTwoFactor = () => runAction('2fa', async () => {
@@ -251,7 +232,8 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     setRequiresTwoFactor(false)
     setTwoFactorCode('')
     await loadAccountData()
-    showMessage('两步验证成功', true)
+    await onProviderApplied()
+    showMessage('两步验证成功，密钥已自动配置', true)
   })
 
   const handleRegister = () => runAction('register', async () => {
@@ -280,40 +262,9 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     await relayOneService.logout()
     setStatus(await relayOneService.getStatus())
     setUser(null)
-    setApiKeys([])
     setOrder(null)
     showMessage('已退出 RelayOne 账户', true)
   })
-
-  const handleCreateKey = () => runAction('create-key', async () => {
-    await relayOneService.createApiKey({ name: newKeyName, groupId: newKeyGroupId || undefined })
-    setApiKeys(await relayOneService.listApiKeys())
-    await onProviderApplied()
-    setAccountModalOpen(false)
-    showMessage('API Key 已创建并应用到当前 AI 配置', true)
-  })
-
-  const handleApplyKey = (keyId: string) => runAction(`apply-${keyId}`, async () => {
-    await relayOneService.applyApiKey(keyId)
-    await onProviderApplied()
-    setAccountModalOpen(false)
-    showMessage('API Key 已应用到当前 AI 配置', true)
-  })
-
-  const handleUpdateKeyGroup = (keyId: string, groupId: string) => runAction(`group-${keyId}`, async () => {
-    await relayOneService.updateApiKeyGroup(keyId, groupId)
-    setApiKeys(await relayOneService.listApiKeys())
-    showMessage('Key 分组已更新', true)
-  })
-
-  const handleDeleteKey = (keyId: string) => {
-    if (!window.confirm('确认删除这个 RelayOne API Key？已写入 CipherTalk 的本地 Key 不会自动清除。')) return
-    void runAction(`delete-${keyId}`, async () => {
-      await relayOneService.deleteApiKey(keyId)
-      setApiKeys((current) => current.filter((item) => item.id !== keyId))
-      showMessage('API Key 已删除', true)
-    })
-  }
 
   const handleCreateOrder = () => runAction('create-order', async () => {
     const nextOrder = await relayOneService.createPaymentOrder({
@@ -490,94 +441,13 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
             <div><div className="text-xs text-muted-foreground">余额</div><div className="mt-1 text-sm font-semibold text-success">{formatMoney(user?.balance, checkoutInfo?.currency || 'CNY')}</div></div>
           </section>
 
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><Typography.Heading level={4} className="text-sm">API Key</Typography.Heading><Description>新建 Key 会直接应用到 CipherTalk 的 RelayOne 模型配置。</Description></div>
-              <Chip size="sm" variant="soft" color="accent"><Chip.Label>{apiKeys.length} 个</Chip.Label></Chip>
-            </div>
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]">
-              <TextField fullWidth value={newKeyName} onChange={setNewKeyName}>
-                <Label>Key 名称</Label>
-                <InputGroup variant="secondary" fullWidth><InputGroup.Input placeholder="CipherTalk" /></InputGroup>
-              </TextField>
-              <Select selectedKey={newKeyGroupId || DEFAULT_GROUP_KEY} onSelectionChange={(key: Key | null) => setNewKeyGroupId(key == null || String(key) === DEFAULT_GROUP_KEY ? '' : String(key))} placeholder="默认分组" variant="secondary" fullWidth>
-                <Label>分组</Label>
-                <Select.Trigger>
-                  <Select.Value>{({ defaultChildren }) => (
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate">{groupLabel(newKeyGroupId, activeGroups) || defaultChildren}</span>
-                      <GroupRateChip rate={groupRate(newKeyGroupId, groupLabel(newKeyGroupId, activeGroups), rates)} />
-                    </span>
-                  )}</Select.Value>
-                  <Select.Indicator />
-                </Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    <ListBox.Item id={DEFAULT_GROUP_KEY} textValue="默认分组">
-                      <span className="flex min-w-0 flex-1 items-center gap-2"><span>默认分组</span><GroupRateChip rate={groupRate(undefined, '默认分组', rates)} /></span>
-                      <ListBox.ItemIndicator />
-                    </ListBox.Item>
-                    {activeGroups.map((group) => (
-                      <ListBox.Item key={group.id} id={group.id} textValue={group.name}>
-                        <span className="flex min-w-0 flex-1 items-center gap-2"><span className="truncate">{group.name}</span><GroupRateChip rate={groupRate(group.id, group.name, rates)} /></span>
-                        <ListBox.ItemIndicator />
-                      </ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
-              <Button type="button" variant="primary" size="sm" className="self-end" onPress={handleCreateKey} isDisabled={Boolean(action)}>
-                {action === 'create-key' ? <Spinner size="sm" /> : <Plus width={16} height={16} />}创建并应用
-              </Button>
-            </div>
-            <div className="h-52 divide-y divide-divider overflow-y-auto overscroll-contain border-t border-divider scrollbar">
-              {apiKeys.length === 0 ? <div className="py-5 text-sm text-muted-foreground">暂无 API Key</div> : apiKeys.map((item) => (
-                <div key={item.id} className="grid items-center gap-3 py-3 md:grid-cols-[minmax(0,1fr)_240px_auto]">
-                  <div className="min-w-0">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <div className="truncate text-sm font-medium">{item.name}</div>
-                      {item.isApplied && <Chip size="sm" variant="soft" color="success"><Chip.Label>使用中</Chip.Label></Chip>}
-                    </div>
-                    <div className="truncate font-mono text-xs text-muted-foreground">{item.keyPreview || '密钥仅在创建时可见'}</div>
-                  </div>
-                  <Select selectedKey={item.groupId || DEFAULT_GROUP_KEY} onSelectionChange={(key: Key | null) => void handleUpdateKeyGroup(item.id, key == null || String(key) === DEFAULT_GROUP_KEY ? '' : String(key))} placeholder="默认分组" variant="secondary" fullWidth isDisabled={Boolean(action)}>
-                    <Select.Trigger>
-                      <Select.Value>{({ defaultChildren }) => (
-                        <span className="flex min-w-0 items-center gap-2">
-                          <span className="truncate">{groupLabel(item.groupId, activeGroups) || defaultChildren}</span>
-                          <GroupRateChip rate={groupRate(item.groupId, groupLabel(item.groupId, activeGroups), rates)} />
-                        </span>
-                      )}</Select.Value>
-                      <Select.Indicator />
-                    </Select.Trigger>
-                    <Select.Popover>
-                      <ListBox>
-                        <ListBox.Item id={DEFAULT_GROUP_KEY} textValue="默认分组">
-                          <span className="flex min-w-0 flex-1 items-center gap-2"><span>默认分组</span><GroupRateChip rate={groupRate(undefined, '默认分组', rates)} /></span>
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
-                        {activeGroups.map((group) => (
-                          <ListBox.Item key={group.id} id={group.id} textValue={group.name}>
-                            <span className="flex min-w-0 flex-1 items-center gap-2"><span className="truncate">{group.name}</span><GroupRateChip rate={groupRate(group.id, group.name, rates)} /></span>
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
-                        ))}
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant={item.isApplied ? 'outline' : 'primary'} size="sm" onPress={() => void handleApplyKey(item.id)} isDisabled={Boolean(action) || item.isApplied}>
-                      {action === `apply-${item.id}` && <Spinner size="sm" />}{item.isApplied ? '使用中' : '使用'}
-                    </Button>
-                    <Button type="button" variant="danger-soft" size="sm" isIconOnly aria-label={`删除 ${item.name}`} onPress={() => handleDeleteKey(item.id)} isDisabled={Boolean(action)}>
-                      {action === `delete-${item.id}` ? <Spinner size="sm" /> : <TrashBin width={16} height={16} />}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
+          <Alert status="success">
+            <Alert.Indicator><CircleCheck width={18} height={18} /></Alert.Indicator>
+            <Alert.Content>
+              <Alert.Title>密钥自动托管</Alert.Title>
+              <Alert.Description>登录后已自动创建各分组密钥并配置到大模型与作图，充值后即可直接使用。</Alert.Description>
+            </Alert.Content>
+          </Alert>
         </div>
       )}
     </div>
@@ -590,7 +460,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
           size="lg"
           scroll="inside"
           placement="center"
-          className={`w-full! max-h-[calc(100vh-32px)]! p-4! ${status.authenticated ? 'max-w-220!' : 'max-w-156!'}`}
+          className="w-full! max-w-156! max-h-[calc(100vh-32px)]! p-4!"
         >
           <Modal.Dialog aria-label="RelayOne 账户管理" className="max-w-none!">
             <Modal.Header className="gap-2 border-b border-divider pb-3">
@@ -656,7 +526,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
       <Card>
         <Card.Content>
           {status.authenticated ? rechargeSection : (
-            <div className="text-sm text-muted-foreground">登录 RelayOne 账户后可直接充值并创建 API Key。</div>
+            <div className="text-sm text-muted-foreground">登录 RelayOne 账户后自动配置密钥，充值即可使用。</div>
           )}
         </Card.Content>
 
@@ -669,7 +539,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
             onPress={() => setAccountModalOpen(true)}
           >
             <PersonNutHex width={16} height={16} />
-            {status.authenticated ? (hasConfiguredApiKey ? '账户管理' : '创建 Key') : '登录 / 注册'}
+            {status.authenticated ? '账户管理' : '登录 / 注册'}
           </Button>
           {status.authenticated && (
             <Button type="button" variant="primary" size="sm" onPress={handleCreateOrder} isDisabled={Boolean(action) || !paymentMethod}>

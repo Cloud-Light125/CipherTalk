@@ -941,16 +941,16 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
             </Alert.Indicator>
             <Alert.Content>
               <Alert.Title>还没有 API Key？</Alert.Title>
-              <Alert.Description>RelayOne 官方中转：一个 Key 直连全模型，国内可用，低于官方价，注册即用。</Alert.Description>
+              <Alert.Description>RelayOne 官方中转：登录自动配置密钥，直连全模型，国内可用，低于官方价。</Alert.Description>
             </Alert.Content>
             <Button
               type="button"
               variant="primary"
               size="sm"
               className="shrink-0 self-center"
-              onPress={() => void window.electronAPI.shell.openExternal('https://hicccc.cc')}
+              onPress={() => void handleSelectProvider('relayone')}
             >
-              注册获取 Key
+              使用
             </Button>
           </Alert>
         )}
@@ -1057,7 +1057,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                           </InputGroup.Suffix>
                         </InputGroup>
                       </TextField>
-                      {provider === 'relayone' && <Description>在 RelayOne 账户卡片中创建 Key 后会自动填入，并刷新模型列表。</Description>}
+                      {provider === 'relayone' && <Description>登录 RelayOne 账户后会自动创建密钥并填入，无需手动配置。</Description>}
                     </div>
                   )}
 
@@ -1191,7 +1191,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                   <dt className="text-muted">协议</dt>
                   <dd className="min-w-0">
                     <Chip size="sm" variant="soft" color="accent" className="max-w-full">
-                      <Chip.Label className="truncate">{formatProtocolLabel(currentProtocol)}</Chip.Label>
+                      <Chip.Label className="truncate">{provider === 'relayone' ? '自动（按模型路由）' : formatProtocolLabel(currentProtocol)}</Chip.Label>
                     </Chip>
                   </dd>
                 </div>

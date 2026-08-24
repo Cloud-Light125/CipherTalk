@@ -10,6 +10,7 @@ import {
 } from '../ai/providers/catalog'
 import { getResolvedProxyUrl } from '../ai/proxyFetch'
 import { getCodexSubscriptionAuthPath, CODEX_SUBSCRIPTION_DUMMY_API_KEY } from '../ai/codexSubscriptionAuth'
+import { resolveRelayOneModelRoute } from '../relayone/relayOneManagedKeys'
 import type { AgentProviderConfig, AgentProviderConfigOverride } from './types'
 
 export function resolveProviderConfig(override?: AgentProviderConfigOverride | null): AgentProviderConfig {
@@ -25,14 +26,24 @@ export function resolveProviderConfig(override?: AgentProviderConfigOverride | n
     }
     const isCodexSubscription = name === CODEX_SUBSCRIPTION_PROVIDER_ID
     const configuredProtocol = providerConfig?.protocol
-    const providerKind = isCodexSubscription
+    let providerKind = isCodexSubscription
       ? 'codex-subscription'
       : configuredProtocol === 'codex-subscription'
         ? def.protocol
         : configuredProtocol || def.protocol || 'openai-compatible'
-    const apiKey = isCodexSubscription ? CODEX_SUBSCRIPTION_DUMMY_API_KEY : providerConfig?.apiKey || ''
-    const baseURL = isCodexSubscription ? 'https://api.openai.com/v1' : providerConfig?.baseURL || def.baseURL || ''
+    let apiKey = isCodexSubscription ? CODEX_SUBSCRIPTION_DUMMY_API_KEY : providerConfig?.apiKey || ''
+    let baseURL = isCodexSubscription ? 'https://api.openai.com/v1' : providerConfig?.baseURL || def.baseURL || ''
     const model = providerConfig?.model || def.models?.[0] || ''
+
+    // RelayOne 托管密钥：模型属于哪个分组就用哪把 Key / 哪种协议
+    if (name === 'relayone') {
+      const route = resolveRelayOneModelRoute(config, model)
+      if (route) {
+        providerKind = route.protocol
+        apiKey = route.apiKey
+        baseURL = route.baseURL
+      }
+    }
     if (!apiKey && !isCodexSubscription) throw new Error('未配置 AI 服务商的 API Key，请先在设置中配置')
     if (!model) throw new Error('未选择模型，请先在设置中选择模型')
 
