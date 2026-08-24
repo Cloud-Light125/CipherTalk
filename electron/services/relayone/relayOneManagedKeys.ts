@@ -32,15 +32,15 @@ export interface RelayOneManagedGroupTarget {
   protocol: RelayOneManagedProtocol
 }
 
-// 聊天分组的声明顺序即模型聚合与路由的优先级：同名模型归属先命中的分组
+// 聊天分组的声明顺序即模型聚合展示与路由的优先级：同名模型归属先命中的分组
 export const RELAYONE_MANAGED_GROUPS: RelayOneManagedGroupTarget[] = [
-  { kind: 'cc-max', groupName: 'CC Max 满血反代', protocol: 'anthropic' },
   { kind: 'plus-pool', groupName: '特惠Plus号池', protocol: 'openai-responses' },
+  { kind: 'cc-max', groupName: 'CC Max 满血反代', protocol: 'anthropic' },
   { kind: 'grok', groupName: 'Grok', protocol: 'openai-compatible' },
   { kind: 'image', groupName: 'image2生图分组', protocol: 'openai-compatible' }
 ]
 
-export const RELAYONE_CHAT_KINDS: RelayOneManagedKind[] = ['cc-max', 'plus-pool', 'grok']
+export const RELAYONE_CHAT_KINDS: RelayOneManagedKind[] = ['plus-pool', 'cc-max', 'grok']
 
 export function relayOneManagedKeyName(groupName: string, wxid: string): string {
   return wxid ? `CipherTalk-${groupName}-${wxid}` : `CipherTalk-${groupName}`

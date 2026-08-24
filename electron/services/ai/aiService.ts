@@ -205,7 +205,8 @@ class AIService {
       // /models 只认 Bearer 鉴权，统一用 openai-compatible 客户端拉列表即可
       const provider = new CatalogAIProvider({ ...definition, protocol: 'openai-compatible' }, entry.apiKey, definition.baseURL)
       const models = await provider.listModels()
-        .then((list) => this.normalizeRemoteModelList(list))
+        // 服务端返回顺序与站点展示相反，翻转一次（与 relayOneService.listInferenceModels 一致）
+        .then((list) => this.normalizeRemoteModelList(list).reverse())
         .catch((error) => {
           console.warn('[AIService] RelayOne 分组模型列表获取失败:', entry.groupName, error instanceof Error ? error.message : String(error))
           return entry.models

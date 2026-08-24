@@ -389,9 +389,10 @@ export class RelayOneService {
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const payload = asRecord(await response.json())
       const items = Array.isArray(payload.data) ? payload.data : Array.isArray(payload.models) ? payload.models : []
+      // 服务端 /models 返回的顺序与站点展示相反，翻转一次
       return Array.from(new Set(items
         .map((item) => firstString(asRecord(item), ['id', 'name']).replace(/^models\//, ''))
-        .filter(Boolean)))
+        .filter(Boolean))).reverse()
     } finally {
       clearTimeout(timeout)
     }
