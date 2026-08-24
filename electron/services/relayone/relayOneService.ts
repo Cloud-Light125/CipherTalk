@@ -441,17 +441,19 @@ export class RelayOneService {
     const nextKeys: RelayOneManagedKeyEntry[] = []
 
     for (const target of RELAYONE_MANAGED_GROUPS) {
-      const group = groups.find((item) => item.name.trim() === target.groupName)
+      const stored = storedState?.keys.find((entry) => entry.kind === target.kind && entry.apiKey)
+      // 优先按 ID 匹配（写死的 > 本地记住的），分组改名不受影响；名字全等只作兜底
+      const group = (target.groupId ? groups.find((item) => item.id === target.groupId) : undefined)
+        || (stored?.groupId ? groups.find((item) => item.id === stored.groupId) : undefined)
+        || groups.find((item) => item.name.trim() === target.groupName)
       if (!group) {
         missingGroups.push(target.groupName)
         // 分组临时下架时保留已有密钥，不丢配置
-        const stored = storedState?.keys.find((entry) => entry.kind === target.kind && entry.apiKey)
         if (stored) nextKeys.push(stored)
         continue
       }
 
       const expectedName = relayOneManagedKeyName(target.groupName, wxid)
-      const stored = storedState?.keys.find((entry) => entry.kind === target.kind && entry.apiKey)
       if (stored && serverKeys.some((item) => item.key.id === stored.keyId)) {
         nextKeys.push({ ...stored, groupId: group.id, groupName: group.name })
         continue
