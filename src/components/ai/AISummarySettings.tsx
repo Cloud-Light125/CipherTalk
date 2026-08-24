@@ -617,9 +617,9 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
     await configService.setAiProvider(normalizedProviderId)
   }
 
-  const handleRefreshModels = async () => {
+  const loadRemoteModels = async (notify: boolean) => {
     if (!canFetchProviderModelList(provider, baseURL, currentProvider)) {
-      showMessage('请先填写当前服务商所需的 API 配置', false)
+      if (notify) showMessage('请先填写当前服务商所需的 API 配置', false)
       return
     }
     setIsLoadingModels(true)
@@ -634,24 +634,38 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
       if (!result.success || !result.models?.length) {
         const error = result.error || '模型列表为空'
         setModelListError(error)
-        showMessage(error, false)
+        if (notify) showMessage(error, false)
         return
       }
       setRemoteModels(result.models)
       setRemoteModelDetails(result.modelDetails || [])
       const nextModelDetailsById = new Map((result.modelDetails || []).map(item => [item.id, item]))
       const availableModels = result.models.filter(item => !isDeprecatedModel(nextModelDetailsById.get(item)))
-      if (!availableModels.includes(model)) {
+      // 静默加载（展开下拉自动拉取）不能改掉用户手输的模型，只有主动刷新才纠正
+      if (!availableModels.includes(model) && (notify || !model.trim())) {
         setField('aiModel', availableModels[0] || result.models[0])
       }
-      showMessage('模型列表已刷新', true)
+      if (notify) showMessage('模型列表已刷新', true)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       setModelListError(message)
-      showMessage(`刷新模型失败: ${message}`, false)
+      if (notify) showMessage(`刷新模型失败: ${message}`, false)
     } finally {
       setIsLoadingModels(false)
     }
+  }
+
+  const handleRefreshModels = () => loadRemoteModels(true)
+
+  // 展开模型下拉时自动拉一次列表；同一份配置只自动尝试一次，失败后靠刷新按钮重试
+  const modelAutoFetchKeyRef = useRef('')
+  const maybeAutoLoadModels = () => {
+    if (isLoadingModels || remoteModels.length > 0) return
+    const fetchKey = [provider, apiKey, baseURL, customProtocol].join('|')
+    if (modelAutoFetchKeyRef.current === fetchKey) return
+    if (!canFetchProviderModelList(provider, baseURL, currentProvider)) return
+    modelAutoFetchKeyRef.current = fetchKey
+    void loadRemoteModels(false)
   }
 
   useEffect(() => {
@@ -1113,6 +1127,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                         onSelectionChange={(key) => {
                           if (key != null) setField('aiModel', normalizeProviderModel(provider, String(key)))
                         }}
+                        onOpenChange={(open) => { if (open) maybeAutoLoadModels() }}
                         menuTrigger="focus"
                         variant="secondary"
                         fullWidth
@@ -1495,6 +1510,9 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                                 onInputChange={(value) => updatePresetDraft({ model: normalizeProviderModel(presetDraft.provider, value) })}
                                 onSelectionChange={(key) => {
                                   if (key != null) updatePresetDraft({ model: normalizeProviderModel(presetDraft.provider, String(key)) })
+                                }}
+                                onOpenChange={(open) => {
+                                  if (open && !isLoadingPresetModels && presetRemoteModels.length === 0 && !presetModelListError) void loadPresetDraftModels(false)
                                 }}
                                 menuTrigger="focus"
                                 variant="secondary"
