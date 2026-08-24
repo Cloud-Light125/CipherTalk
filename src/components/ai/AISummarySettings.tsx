@@ -1031,19 +1031,16 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                     </TextField>
                   )}
 
-                  {/* RelayOne 密钥全托管，不给输入框，只展示托管状态 */}
+                  {/* RelayOne 密钥全托管，不给输入框；已配置时什么都不显示，未配置时提示去登录 */}
                   {provider === 'relayone' ? (
-                    <Alert status={apiKey.trim() ? 'success' : 'warning'}>
-                      {apiKey.trim() && <Alert.Indicator><CircleCheck width={18} height={18} /></Alert.Indicator>}
-                      <Alert.Content>
-                        <Alert.Title>{apiKey.trim() ? '密钥已自动托管' : '尚未配置密钥'}</Alert.Title>
-                        <Alert.Description>
-                          {apiKey.trim()
-                            ? '登录后已按分组自动创建并配置密钥，无需手动填写。'
-                            : '在右侧登录 RelayOne 账户后会自动创建并配置密钥。'}
-                        </Alert.Description>
-                      </Alert.Content>
-                    </Alert>
+                    !apiKey.trim() && (
+                      <Alert status="warning">
+                        <Alert.Content>
+                          <Alert.Title>尚未配置密钥</Alert.Title>
+                          <Alert.Description>在右侧登录 RelayOne 账户后会自动创建并配置密钥。</Alert.Description>
+                        </Alert.Content>
+                      </Alert>
+                    )
                   ) : !isCodexSubscription && (
                     <div className="space-y-1">
                       <TextField fullWidth value={apiKey} onChange={(value) => setField('aiApiKey', value)} type={showApiKey ? 'text' : 'password'}>
