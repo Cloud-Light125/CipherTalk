@@ -20,6 +20,8 @@ import {
   type Key
 } from '@heroui/react'
 import { ArrowUpRight, ArrowsRotateLeft, CircleCheck, PersonNutHex, QrCode } from '@gravity-ui/icons'
+import { LottieView, type DotLottie } from '@/components/LottieView'
+import successLottieUrl from '@/assets/lottie/Success.lottie?url'
 import MiDouIcon from './MiDouIcon'
 import { relayOneService } from '../../services/relayOne'
 import { MIDOU_PER_CNY, formatMiDou, formatMiDouCompact, miDouToCny } from '../../lib/miDou'
@@ -92,6 +94,16 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
     isOpen: accountModalOpen,
     onOpenChange: setAccountModalOpen
   })
+  // 充值到账的庆祝动画：播完一遍 → 缩小淡出退场 → 移除（同数字分身克隆完成）
+  const [celebration, setCelebration] = useState<'hidden' | 'playing' | 'leaving'>('hidden')
+  const handleSuccessLottieRef = useCallback((instance: DotLottie | null) => {
+    instance?.addEventListener('complete', () => setCelebration('leaving'))
+  }, [])
+  useEffect(() => {
+    if (celebration !== 'leaving') return
+    const timer = window.setTimeout(() => setCelebration('hidden'), 350)
+    return () => window.clearTimeout(timer)
+  }, [celebration])
 
   const activePaymentMethods = useMemo(
     () => checkoutInfo?.paymentMethods.filter((method) => method.enabled) || [],
@@ -176,6 +188,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
           if (nextOrder.status !== 'pending') void relayOneService.closePaymentWindow()
           if (nextOrder.status === 'paid') {
             showMessage('充值已到账', true)
+            setCelebration('playing')
             void loadAccountData()
           }
         })
@@ -550,6 +563,22 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
         </Card.Footer>
       </Card>
       {createPortal(accountModal, document.body)}
+      {celebration !== 'hidden' && createPortal(
+        <div
+          className={`pointer-events-none fixed inset-0 flex items-center justify-center transition-all duration-300 ease-in ${
+            celebration === 'leaving' ? 'scale-75 opacity-0' : 'scale-100 opacity-100'
+          }`}
+          style={{ zIndex: 3000 }}
+        >
+          <LottieView
+            autoplay
+            className="size-40"
+            dotLottieRefCallback={handleSuccessLottieRef}
+            src={successLottieUrl}
+          />
+        </div>,
+        document.body
+      )}
     </>
   )
 }

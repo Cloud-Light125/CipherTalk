@@ -1196,26 +1196,33 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
 
               <Card.Content>
               <dl className="space-y-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted">协议</dt>
-                  <dd className="min-w-0">
-                    <Chip size="sm" variant="soft" color="accent" className="max-w-full">
-                      <Chip.Label className="truncate">{provider === 'relayone' ? '自动（按模型路由）' : formatProtocolLabel(currentProtocol)}</Chip.Label>
-                    </Chip>
-                  </dd>
-                </div>
+                {/* RelayOne 全托管，协议/认证/地址属于内部细节，不展示 */}
+                {provider !== 'relayone' && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted">协议</dt>
+                    <dd className="min-w-0">
+                      <Chip size="sm" variant="soft" color="accent" className="max-w-full">
+                        <Chip.Label className="truncate">{formatProtocolLabel(currentProtocol)}</Chip.Label>
+                      </Chip>
+                    </dd>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-muted">模型</dt>
                   <dd className="truncate font-medium text-foreground">{model || '未选择'}</dd>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted">认证</dt>
-                  <dd className="truncate font-medium text-foreground">{isCodexSubscription ? 'ChatGPT 登录' : maskSecret(apiKey)}</dd>
-                </div>
-                <div className="flex items-start justify-between gap-3">
-                  <dt className="shrink-0 text-muted">地址</dt>
-                  <dd className="min-w-0 truncate text-right font-medium text-foreground">{currentBaseURLLabel}</dd>
-                </div>
+                {provider !== 'relayone' && (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted">认证</dt>
+                    <dd className="truncate font-medium text-foreground">{isCodexSubscription ? 'ChatGPT 登录' : maskSecret(apiKey)}</dd>
+                  </div>
+                )}
+                {provider !== 'relayone' && (
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="shrink-0 text-muted">地址</dt>
+                    <dd className="min-w-0 truncate text-right font-medium text-foreground">{currentBaseURLLabel}</dd>
+                  </div>
+                )}
                 {currentProvider?.website && (
                   <div className="flex items-center justify-between gap-3">
                     <dt className="text-muted">官网</dt>
@@ -1225,7 +1232,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                         className="cursor-pointer font-medium text-accent hover:underline"
                         onClick={() => void window.electronAPI.shell.openExternal(currentProvider.website!)}
                       >
-                        注册 / 获取 Key
+                        {provider === 'relayone' ? '访问官网' : '注册 / 获取 Key'}
                       </button>
                     </dd>
                   </div>
