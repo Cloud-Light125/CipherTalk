@@ -1,3 +1,6 @@
+/** RelayOne 的默认展示模型：用户没选过模型时兜底显示它，主进程与渲染端共用 */
+export const RELAYONE_DEFAULT_MODEL = 'gpt-5.6-sol'
+
 export interface RelayOnePublicSettings {
   siteName: string
   registrationEnabled: boolean

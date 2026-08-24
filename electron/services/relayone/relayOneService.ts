@@ -1,21 +1,22 @@
 import { net } from 'electron'
 import type { ConfigService } from '../config'
-import type {
-  RelayOneApiKey,
-  RelayOneCheckoutInfo,
-  RelayOneCreateKeyInput,
-  RelayOneCreatePaymentOrderInput,
-  RelayOneEnsureKeysResult,
-  RelayOneGroup,
-  RelayOneLoginInput,
-  RelayOneLoginResult,
-  RelayOnePaymentMethod,
-  RelayOnePaymentOrder,
-  RelayOnePaymentOrderStatus,
-  RelayOnePublicSettings,
-  RelayOneRegisterInput,
-  RelayOneStatus,
-  RelayOneUser
+import {
+  RELAYONE_DEFAULT_MODEL,
+  type RelayOneApiKey,
+  type RelayOneCheckoutInfo,
+  type RelayOneCreateKeyInput,
+  type RelayOneCreatePaymentOrderInput,
+  type RelayOneEnsureKeysResult,
+  type RelayOneGroup,
+  type RelayOneLoginInput,
+  type RelayOneLoginResult,
+  type RelayOnePaymentMethod,
+  type RelayOnePaymentOrder,
+  type RelayOnePaymentOrderStatus,
+  type RelayOnePublicSettings,
+  type RelayOneRegisterInput,
+  type RelayOneStatus,
+  type RelayOneUser
 } from '../../../src/types/relayOne'
 import { RelayOneSessionStore, type RelayOneSession } from './relayOneSessionStore'
 import {
@@ -518,10 +519,13 @@ export class RelayOneService {
       const aggregated = listRelayOneAggregatedModels(state)
       const defaultEntry = chatKeys.find((entry) => entry.kind === 'plus-pool') || chatKeys[0]
       const existing = configService.getAIProviderConfig('relayone')
+      // 用户自己选过的模型不动；空的兜底 gpt-5.6-sol（不在列表里才退回聚合列表第一个）
+      const defaultModel = aggregated.some((model) => model.toLowerCase() === RELAYONE_DEFAULT_MODEL.toLowerCase())
+        ? RELAYONE_DEFAULT_MODEL
+        : (aggregated[0] || RELAYONE_DEFAULT_MODEL)
       const nextConfig = {
         apiKey: defaultEntry.apiKey,
-        // 用户自己选过的模型不动，空的才用聚合列表第一个
-        model: existing?.model || aggregated[0] || '',
+        model: existing?.model || defaultModel,
         baseURL: RELAYONE_INFERENCE_BASE_URL,
         protocol: relayOneProtocolForKind(defaultEntry.kind)
       }

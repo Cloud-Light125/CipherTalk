@@ -30,6 +30,7 @@ import { ArrowUpRight, ArrowsRotateLeft, Bulb, CircleCheck, CircleQuestion, Curl
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { getAIProviders, type AIModelInfo, type AIProviderInfo } from '../../types/ai'
+import { RELAYONE_DEFAULT_MODEL } from '../../types/relayOne'
 import * as configService from '../../services/config'
 import { cn } from '../../lib/utils'
 import { useSettingsStore } from '../settings/settingsStore'
@@ -512,10 +513,12 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
     setRemoteModels(result.models)
     setRemoteModelDetails(result.modelDetails || [])
     if (!relayOneConfig.model && result.models[0]) {
-      const nextConfig = { ...relayOneConfig, model: result.models[0] }
+      // 默认展示 gpt-5.6-sol，列表里没有才退回第一个
+      const defaultModel = result.models.find(item => item.toLowerCase() === RELAYONE_DEFAULT_MODEL.toLowerCase()) || result.models[0]
+      const nextConfig = { ...relayOneConfig, model: defaultModel }
       await configService.setAiProviderConfig('relayone', nextConfig)
       setProviderConfigs(prev => ({ ...prev, relayone: nextConfig }))
-      setField('aiModel', result.models[0])
+      setField('aiModel', defaultModel)
     }
   }
 
