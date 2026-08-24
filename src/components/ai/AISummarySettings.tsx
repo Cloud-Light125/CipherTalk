@@ -742,7 +742,7 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
 
   const handleTestConnection = async () => {
     if (provider !== 'ollama' && !isCodexSubscription && !apiKey.trim()) {
-      showMessage('请先填写 API 密钥', false)
+      showMessage(provider === 'relayone' ? '请先登录 RelayOne 账户，登录后自动配置密钥' : '请先填写 API 密钥', false)
       return
     }
     if (currentProvider?.allowCustomBaseURL && !baseURL.trim()) {
@@ -1031,7 +1031,20 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                     </TextField>
                   )}
 
-                  {!isCodexSubscription && (
+                  {/* RelayOne 密钥全托管，不给输入框，只展示托管状态 */}
+                  {provider === 'relayone' ? (
+                    <Alert status={apiKey.trim() ? 'success' : 'warning'}>
+                      {apiKey.trim() && <Alert.Indicator><CircleCheck width={18} height={18} /></Alert.Indicator>}
+                      <Alert.Content>
+                        <Alert.Title>{apiKey.trim() ? '密钥已自动托管' : '尚未配置密钥'}</Alert.Title>
+                        <Alert.Description>
+                          {apiKey.trim()
+                            ? '登录后已按分组自动创建并配置密钥，无需手动填写。'
+                            : '在右侧登录 RelayOne 账户后会自动创建并配置密钥。'}
+                        </Alert.Description>
+                      </Alert.Content>
+                    </Alert>
+                  ) : !isCodexSubscription && (
                     <div className="space-y-1">
                       <TextField fullWidth value={apiKey} onChange={(value) => setField('aiApiKey', value)} type={showApiKey ? 'text' : 'password'}>
                         <Label>API 密钥</Label>
@@ -1057,7 +1070,6 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                           </InputGroup.Suffix>
                         </InputGroup>
                       </TextField>
-                      {provider === 'relayone' && <Description>登录 RelayOne 账户后会自动创建密钥并填入，无需手动配置。</Description>}
                     </div>
                   )}
 
