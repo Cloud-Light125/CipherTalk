@@ -7,13 +7,9 @@ import type {
 import type { AccountProfile, AccountProfileInput, AccountProfilePatch } from './account'
 import type { AIModelInfo, AIProviderInfo } from './ai'
 import type {
-  RelayOneApiKey,
   RelayOneCheckoutInfo,
-  RelayOneCreateKeyInput,
-  RelayOneCreateKeyResult,
   RelayOneCreatePaymentOrderInput,
-  RelayOneGroup,
-  RelayOneGroupRate,
+  RelayOneEnsureKeysResult,
   RelayOneIpcResult,
   RelayOneLoginInput,
   RelayOneLoginResult,
@@ -1866,13 +1862,7 @@ export interface ElectronAPI {
     verifyTwoFactor: (code: string) => Promise<RelayOneIpcResult<RelayOneLoginResult>>
     logout: () => Promise<RelayOneIpcResult<void>>
     getCurrentUser: () => Promise<RelayOneIpcResult<RelayOneUser>>
-    listApiKeys: () => Promise<RelayOneIpcResult<RelayOneApiKey[]>>
-    createApiKey: (input: RelayOneCreateKeyInput) => Promise<RelayOneIpcResult<RelayOneCreateKeyResult>>
-    applyApiKey: (keyId: string) => Promise<RelayOneIpcResult<void>>
-    updateApiKeyGroup: (keyId: string, groupId: string) => Promise<RelayOneIpcResult<RelayOneApiKey>>
-    deleteApiKey: (keyId: string) => Promise<RelayOneIpcResult<void>>
-    listAvailableGroups: () => Promise<RelayOneIpcResult<RelayOneGroup[]>>
-    listGroupRates: () => Promise<RelayOneIpcResult<RelayOneGroupRate[]>>
+    ensureManagedKeys: (force?: boolean) => Promise<RelayOneIpcResult<RelayOneEnsureKeysResult>>
     getCheckoutInfo: () => Promise<RelayOneIpcResult<RelayOneCheckoutInfo>>
     createPaymentOrder: (input: RelayOneCreatePaymentOrderInput) => Promise<RelayOneIpcResult<RelayOnePaymentOrder>>
     getPaymentOrder: (orderId: string) => Promise<RelayOneIpcResult<RelayOnePaymentOrder>>

@@ -10,6 +10,13 @@ import {
   type AIModelInfo,
   type AIProviderProtocol
 } from './providers/catalog'
+import {
+  getRelayOneChatKeys,
+  getRelayOneManagedState,
+  listRelayOneAggregatedModels,
+  resolveRelayOneModelRoute,
+  type RelayOneManagedKeysState
+} from '../relayone/relayOneManagedKeys'
 
 class AIService {
   private configService: ConfigService
@@ -39,13 +46,26 @@ class AIService {
     return { name, definition, providerConfig }
   }
 
-  private getProvider(providerName?: string, apiKey?: string, baseURLOverride?: string, protocolOverride?: AIProviderProtocol): AIProvider {
+  private getProvider(providerName?: string, apiKey?: string, baseURLOverride?: string, protocolOverride?: AIProviderProtocol, model?: string): AIProvider {
     const { name, definition, providerConfig } = this.resolveProviderDefinition(providerName, protocolOverride)
-    const key = apiKey || providerConfig?.apiKey || ''
-    const baseURL = baseURLOverride || providerConfig?.baseURL || definition.baseURL
+    let key = apiKey || providerConfig?.apiKey || ''
+    let baseURL = baseURLOverride || providerConfig?.baseURL || definition.baseURL
+    let protocol = protocolOverride || providerConfig?.protocol || definition.protocol
+
+    // RelayOne 托管密钥：按模型反查该走哪个分组的 Key / 协议
+    if (name === 'relayone') {
+      const route = resolveRelayOneModelRoute(this.configService, model || providerConfig?.model || '')
+      if (route) {
+        // 界面回填的是默认 Key，命中路由时换成分组 Key；用户手填的其它 Key 保持不动
+        if (!apiKey || apiKey === providerConfig?.apiKey) key = route.apiKey
+        baseURL = route.baseURL
+        protocol = route.protocol
+      }
+    }
+
     const effectiveDefinition = {
       ...definition,
-      protocol: protocolOverride || providerConfig?.protocol || definition.protocol
+      protocol
     }
 
     if (!key && !definition.optionalApiKey) {
@@ -71,7 +91,7 @@ class AIService {
 
   async testConnection(providerName: string, apiKey: string, baseURL?: string, protocol?: AIProviderProtocol, model?: string): Promise<{ success: boolean; error?: string; needsProxy?: boolean }> {
     try {
-      const provider = this.getProvider(providerName, apiKey, baseURL, protocol)
+      const provider = this.getProvider(providerName, apiKey, baseURL, protocol, model)
       return await provider.testConnection(model)
     } catch (error) {
       return {
@@ -169,9 +189,53 @@ class AIService {
     return result
   }
 
+  /**
+   * RelayOne 托管密钥的聚合模型列表：三个聊天分组各用自己的 Key 拉一次 /models，
+   * 结果写回配置（路由映射与下拉必须一致），再按分组优先级去重合并。
+   */
+  private async listRelayOneManagedModels(): Promise<{ success: boolean; models?: string[]; modelDetails?: AIModelInfo[]; error?: string } | null> {
+    const state = getRelayOneManagedState(this.configService)
+    if (!state) return null
+    const chatKeys = getRelayOneChatKeys(state)
+    if (chatKeys.length === 0) return null
+    const definition = getProviderDefinition('relayone')
+    if (!definition) return null
+
+    const refreshed = await Promise.all(chatKeys.map(async (entry) => {
+      // /models 只认 Bearer 鉴权，统一用 openai-compatible 客户端拉列表即可
+      const provider = new CatalogAIProvider({ ...definition, protocol: 'openai-compatible' }, entry.apiKey, definition.baseURL)
+      const models = await provider.listModels()
+        .then((list) => this.normalizeRemoteModelList(list))
+        .catch((error) => {
+          console.warn('[AIService] RelayOne 分组模型列表获取失败:', entry.groupName, error instanceof Error ? error.message : String(error))
+          return entry.models
+        })
+      return { kind: entry.kind, models }
+    }))
+
+    const nextState: RelayOneManagedKeysState = {
+      ...state,
+      keys: state.keys.map((entry) => {
+        const update = refreshed.find((item) => item.kind === entry.kind)
+        return update && update.models.length > 0 ? { ...entry, models: update.models } : entry
+      })
+    }
+    this.configService.set('relayOneManagedKeys', nextState)
+
+    const models = listRelayOneAggregatedModels(nextState)
+    if (models.length === 0) {
+      return { success: false, error: 'RelayOne 分组未返回可用模型列表' }
+    }
+    return { success: true, models, modelDetails: [] }
+  }
+
   async listProviderModels(options: { provider: string; apiKey?: string; baseURL?: string; protocol?: AIProviderProtocol }): Promise<{ success: boolean; models?: string[]; modelDetails?: AIModelInfo[]; error?: string }> {
     try {
       const providerId = normalizeProviderId(options.provider)
+      if (providerId === 'relayone') {
+        const aggregated = await this.listRelayOneManagedModels()
+        if (aggregated) return aggregated
+      }
       const onlineDefinition = await getProviderDefinitionOnline(providerId)
       const definition = onlineDefinition
       if (!definition) {
