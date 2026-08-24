@@ -277,6 +277,12 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
   const handleCreateOrder = () => runAction('create-order', async () => {
     const miDou = Number(rechargeAmount)
     if (!Number.isFinite(miDou) || miDou <= 0) throw new Error('请输入充值的密豆数量')
+    // 10 密豆 = 1 分钱，支付金额最小到分；同时不能低于站点的最低充值额
+    if (!Number.isInteger(miDou) || miDou % 10 !== 0) throw new Error('充值数量需为 10 密豆的整数倍')
+    const minMiDou = Math.ceil((checkoutInfo?.minimumAmount ?? 0.01) * MIDOU_PER_CNY)
+    if (miDou < minMiDou) throw new Error(`单次最少充值 ${minMiDou.toLocaleString('zh-CN')} 密豆`)
+    const maxMiDou = checkoutInfo?.maximumAmount ? Math.floor(checkoutInfo.maximumAmount * MIDOU_PER_CNY) : undefined
+    if (maxMiDou && miDou > maxMiDou) throw new Error(`单次最多充值 ${maxMiDou.toLocaleString('zh-CN')} 密豆`)
     const nextOrder = await relayOneService.createPaymentOrder({
       // 界面单位是密豆，下单换算回元
       amount: miDouToCny(miDou),
@@ -572,7 +578,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
         >
           <LottieView
             autoplay
-            className="size-40"
+            className="size-[min(60vh,60vw)]"
             dotLottieRefCallback={handleSuccessLottieRef}
             src={successLottieUrl}
           />
