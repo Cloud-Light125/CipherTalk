@@ -101,6 +101,7 @@ function localizeErrorMessage(message: string): string {
     [/email (already exists|already registered|is already in use)/, '该邮箱已注册'],
     [/user not found/, '用户不存在'],
     [/insufficient (balance|funds|quota)/, '账户余额不足'],
+    [/amount (is )?out of range/, '充值数量超出站点允许范围'],
     [/order not found/, '订单不存在'],
     [/(api )?key not found/, 'API Key 不存在'],
     [/token (has )?expired/, '登录状态已过期，请重新登录']

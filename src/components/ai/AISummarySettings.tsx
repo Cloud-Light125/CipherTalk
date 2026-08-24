@@ -657,16 +657,24 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
 
   const handleRefreshModels = () => loadRemoteModels(true)
 
-  // 展开模型下拉时自动拉一次列表；同一份配置只自动尝试一次，失败后靠刷新按钮重试
+  // 配置就绪后静默预拉一次模型列表，让下拉一点开就有内容；同一份配置只自动尝试一次，失败后靠刷新按钮重试
   const modelAutoFetchKeyRef = useRef('')
   const maybeAutoLoadModels = () => {
     if (isLoadingModels || remoteModels.length > 0) return
+    if (!canFetchProviderModelList(provider, baseURL, currentProvider)) return
+    // 没填密钥时请求必然失败，不白打（ollama 和可免密钥的服务商除外）
+    if (!apiKey.trim() && provider !== 'ollama' && !currentProvider?.optionalApiKey) return
     const fetchKey = [provider, apiKey, baseURL, customProtocol].join('|')
     if (modelAutoFetchKeyRef.current === fetchKey) return
-    if (!canFetchProviderModelList(provider, baseURL, currentProvider)) return
     modelAutoFetchKeyRef.current = fetchKey
     void loadRemoteModels(false)
   }
+
+  useEffect(() => {
+    maybeAutoLoadModels()
+    // maybeAutoLoadModels 内部已按配置指纹去重，这里只需在配置变化时触发
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider, apiKey, baseURL, customProtocol, providers.length])
 
   useEffect(() => {
     if (isCodexSubscription && codexAuthenticated) void handleRefreshModels()
@@ -1127,7 +1135,6 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                         onSelectionChange={(key) => {
                           if (key != null) setField('aiModel', normalizeProviderModel(provider, String(key)))
                         }}
-                        onOpenChange={(open) => { if (open) maybeAutoLoadModels() }}
                         menuTrigger="focus"
                         variant="secondary"
                         fullWidth
@@ -1135,7 +1142,8 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                       >
                         <Label>模型</Label>
                         <ComboBox.InputGroup>
-                          <Input placeholder="请选择或输入模型名称" variant="secondary" />
+                          {/* 列表为空时 react-aria 不触发 onOpenChange，聚焦事件兜底自动拉取 */}
+                          <Input placeholder="请选择或输入模型名称" variant="secondary" onFocus={maybeAutoLoadModels} />
                           <ComboBox.Trigger />
                         </ComboBox.InputGroup>
                         <ComboBox.Popover>
@@ -1511,9 +1519,6 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                                 onSelectionChange={(key) => {
                                   if (key != null) updatePresetDraft({ model: normalizeProviderModel(presetDraft.provider, String(key)) })
                                 }}
-                                onOpenChange={(open) => {
-                                  if (open && !isLoadingPresetModels && presetRemoteModels.length === 0 && !presetModelListError) void loadPresetDraftModels(false)
-                                }}
                                 menuTrigger="focus"
                                 variant="secondary"
                                 fullWidth
@@ -1521,7 +1526,14 @@ function AISummarySettings({ showMessage }: AISummarySettingsProps) {
                               >
                                 <Label>模型</Label>
                                 <ComboBox.InputGroup>
-                                  <Input placeholder="请选择或输入模型名称" variant="secondary" />
+                                  {/* 列表为空时 react-aria 不触发 onOpenChange，聚焦事件兜底自动拉取 */}
+                                  <Input
+                                    placeholder="请选择或输入模型名称"
+                                    variant="secondary"
+                                    onFocus={() => {
+                                      if (!isLoadingPresetModels && presetRemoteModels.length === 0 && !presetModelListError) void loadPresetDraftModels(false)
+                                    }}
+                                  />
                                   <ComboBox.Trigger />
                                 </ComboBox.InputGroup>
                                 <ComboBox.Popover>
