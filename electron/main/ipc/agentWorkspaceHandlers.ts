@@ -2,6 +2,17 @@ import { ipcMain } from 'electron'
 import type { MainProcessContext } from '../context'
 import { codeWorkspaceService } from '../../services/agent/codeWorkspaceService'
 
+/** UI 侧读写只允许工作区内的相对路径：绝对路径与 .. 一律拒绝（Agent 工具链路不受此限制）。 */
+function parseWorkspaceRelativePath(value: unknown): string {
+  const raw = String(value ?? '').trim()
+  if (!raw) throw new Error('path 不能为空')
+  if (raw.length > 400) throw new Error('path 过长')
+  const normalized = raw.replace(/\\/g, '/')
+  if (normalized.startsWith('/') || /^[a-zA-Z]:\//.test(normalized)) throw new Error('只允许工作区内的相对路径')
+  if (normalized.split('/').includes('..')) throw new Error('path 不能包含 ..')
+  return normalized
+}
+
 export function registerAgentWorkspaceHandlers(ctx: MainProcessContext): void {
   codeWorkspaceService.setContext(ctx)
 
@@ -50,6 +61,25 @@ export function registerAgentWorkspaceHandlers(ctx: MainProcessContext): void {
   ipcMain.handle('agentWorkspace:listFiles', async (_event, payload: unknown) => {
     try {
       return await codeWorkspaceService.listFilesForUi(payload && typeof payload === 'object' ? payload as Record<string, unknown> : {})
+    } catch (error: any) {
+      return { success: false, error: error?.message || String(error) }
+    }
+  })
+
+  ipcMain.handle('agentWorkspace:readFile', async (_event, payload: unknown) => {
+    try {
+      const path = parseWorkspaceRelativePath((payload as any)?.path)
+      return await codeWorkspaceService.readFileForUi({ path })
+    } catch (error: any) {
+      return { success: false, error: error?.message || String(error) }
+    }
+  })
+
+  ipcMain.handle('agentWorkspace:writeFile', async (_event, payload: unknown) => {
+    try {
+      const path = parseWorkspaceRelativePath((payload as any)?.path)
+      const content = String((payload as any)?.content ?? '')
+      return await codeWorkspaceService.writeFileForUi({ path, content })
     } catch (error: any) {
       return { success: false, error: error?.message || String(error) }
     }

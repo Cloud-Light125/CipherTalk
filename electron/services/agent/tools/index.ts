@@ -148,6 +148,8 @@ export function buildCodeOnlyTools(
   enableImageGen = false,
 ): ToolSet {
   return {
+    // 多文件改动是长任务，没有 update_plan 跑几轮就散了
+    update_plan: updatePlan,
     ...createCodeWorkspaceTools(codeWorkspace),
     ...(enableImageGen ? { generate_image: generateImage } : {}),
   }

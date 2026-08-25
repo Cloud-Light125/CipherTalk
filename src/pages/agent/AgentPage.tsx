@@ -366,7 +366,14 @@ export default function AgentPage() {
     })
     const offApproval = window.electronAPI.agentWorkspace.onApprovalRequest((request) => {
       setCodeWorkspaceApproval(request)
-      setCodeWorkspaceApprovalExpanded(false)
+      // 画布写回文件触发的审批直接弹确认框：窄屏下画布是全屏的，底部审批条会被盖住
+      const canvasFilePath = canvasRef.current?.fileBinding?.path
+      const fromCanvasSave = Boolean(
+        canvasFilePath
+        && request.kind === 'write'
+        && String(request.targetPath || '').replace(/\\/g, '/') === canvasFilePath
+      )
+      setCodeWorkspaceApprovalExpanded(fromCanvasSave)
     })
     const offEvent = window.electronAPI.agentWorkspace.onWorkspaceEvent((event: CodeWorkspaceEvent) => {
       if (event.state) {
@@ -696,6 +703,7 @@ export default function AgentPage() {
   const canvas = useAgentCanvas({
     conversationId,
     clientId: clientIdRef.current,
+    workspaceRoot: codeWorkspaceState?.workspace?.root ?? null,
     onError: (message) => toast.danger(message, { timeout: 3000 }),
   })
   const canvasRef = useRef(canvas)
@@ -742,6 +750,11 @@ export default function AgentPage() {
     setCanvasMenuOpen(false)
     setCanvasMarkedRevision(null)
     void canvasRef.current.createCanvas(kind)
+  }, [])
+  const handleOpenFileInCanvas = useCallback((file: CodeWorkspaceFileDragReference) => {
+    setCanvasMenuOpen(false)
+    setCanvasMarkedRevision(null)
+    void canvasRef.current.openFileCanvas(file)
   }, [])
   const handleOpenCanvasItem = useCallback((canvasId: string) => {
     setCanvasMenuOpen(false)
@@ -2633,6 +2646,10 @@ export default function AgentPage() {
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {workspaceSidebarOpen && (
             <CodeWorkspaceSidebar
+              canOpenInCanvas={Boolean(conversationId)}
+              onNotify={(message) => toast.info(message, { timeout: 2000 })}
+              onOpenFileInCanvas={handleOpenFileInCanvas}
+              onReferenceFile={addWorkspaceFileReference}
               onSelect={handleSelectCodeWorkspace}
               state={codeWorkspaceState}
             />

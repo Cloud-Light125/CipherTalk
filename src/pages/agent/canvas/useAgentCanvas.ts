@@ -17,14 +17,30 @@ import type {
   AgentCanvasSaveStatus,
   AgentCanvasUpdatedEvent,
 } from './agentCanvasTypes'
-import { canvasApi } from './agentCanvasStore'
+import { canvasApi, canvasKindForFile } from './agentCanvasStore'
+
+/** 绑定文件的读写走工作区 API；未就绪时按「文件不可用」处理，不影响画布本身 */
+function workspaceApi() {
+  return window.electronAPI?.agentWorkspace ?? null
+}
 
 const AUTO_SAVE_DEBOUNCE_MS = 600
+/** 自己写回文件后 fs.watch 会回声一次（常常还不止一次），这段时间内的同路径变更不算外部改动 */
+const SELF_WRITE_ECHO_MS = 1500
 
 export interface UseAgentCanvasOptions {
   conversationId: number | null
   clientId: string
+  /** 当前工作区绝对根：与画布 sourceRoot 不一致时禁止写回（工作区已被切换） */
+  workspaceRoot?: string | null
   onError?: (message: string) => void
+}
+
+/** 绑定文件的画布才有；canWrite 为 false 时头部的「保存到文件」置灰并给出原因 */
+export interface AgentCanvasFileBinding {
+  path: string
+  canWrite: boolean
+  disabledReason: string
 }
 
 export interface UseAgentCanvasResult {
@@ -37,7 +53,18 @@ export interface UseAgentCanvasResult {
   saveStatus: AgentCanvasSaveStatus
   conflict: AgentCanvasConflictInfo | null
   error: string | null
+  /** 绑定的工作区文件（未绑定为 null） */
+  fileBinding: AgentCanvasFileBinding | null
+  /** 画布内容与磁盘文件不一致（未写回） */
+  fileDirty: boolean
+  /** 打开期间文件在外部被改动 */
+  fileChangedOutside: boolean
   openCanvas: (canvasId: string) => Promise<void>
+  openFileCanvas: (file: { name: string; path: string }) => Promise<void>
+  saveToFile: () => Promise<boolean>
+  reloadFromFile: () => Promise<void>
+  /** 关掉外部改动提示条（用户选择先不处理） */
+  dismissFileChangedOutside: () => void
   closePanel: () => void
   createCanvas: (kind: AgentCanvasKind) => Promise<void>
   setDraft: (text: string) => void
@@ -51,7 +78,7 @@ export interface UseAgentCanvasResult {
   getRunContext: () => AgentCanvasRunContextInput | null
 }
 
-export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCanvasOptions): UseAgentCanvasResult {
+export function useAgentCanvas({ conversationId, clientId, workspaceRoot, onError }: UseAgentCanvasOptions): UseAgentCanvasResult {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -61,6 +88,10 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
   const [conflict, setConflict] = useState<AgentCanvasConflictInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saveFailed, setSaveFailed] = useState(false)
+  // 绑定文件：fileContent 是最后一次已知的磁盘内容，用来判断「未写回」
+  const [fileContent, setFileContent] = useState<string | null>(null)
+  const [fileReadable, setFileReadable] = useState(true)
+  const [fileChangedOutside, setFileChangedOutside] = useState(false)
 
   const recordRef = useRef<AgentCanvasRecord | null>(null)
   recordRef.current = record
@@ -75,6 +106,7 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
   const debounceTimerRef = useRef<number | null>(null)
   const conversationIdRef = useRef(conversationId)
   conversationIdRef.current = conversationId
+  const selfWriteAtRef = useRef(0)
 
   // onError 走 ref：调用方通常传内联箭头函数，直接进依赖会让保存/订阅链每次渲染重建
   const onErrorRef = useRef(onError)
@@ -175,6 +207,25 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
     }, AUTO_SAVE_DEBOUNCE_MS)
   }, [clearDebounce, save])
 
+  /** 打开绑定文件的画布时对齐一次磁盘内容：读不到就只留只读态，不阻断画布本身 */
+  const refreshFileState = useCallback(async (next: AgentCanvasRecord | null) => {
+    setFileChangedOutside(false)
+    if (!next?.sourcePath) {
+      setFileContent(null)
+      setFileReadable(true)
+      return
+    }
+    const api = workspaceApi()
+    const read = api ? await api.readFile({ path: next.sourcePath }) : { success: false as const }
+    if (read.success && typeof read.content === 'string') {
+      setFileContent(read.content)
+      setFileReadable(true)
+      return
+    }
+    setFileContent(null)
+    setFileReadable(false)
+  }, [])
+
   const openCanvas = useCallback(async (canvasId: string) => {
     if (!await flushSave()) return
     setLoading(true)
@@ -191,11 +242,12 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
         return
       }
       applyRecord(result.canvas, true)
+      await refreshFileState(result.canvas)
       setOpen(true)
     } finally {
       setLoading(false)
     }
-  }, [applyRecord, flushSave, reportError])
+  }, [applyRecord, flushSave, refreshFileState, reportError])
 
   const closePanel = useCallback(() => {
     void flushSave()
@@ -224,6 +276,112 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
     applyRecord(result.canvas, true)
     setOpen(true)
   }, [applyRecord, clientId, flushSave, reportError])
+
+  /** 代码树「在画布中打开」：同一文件复用已有画布，否则按扩展名建一个绑定画布 */
+  const openFileCanvas = useCallback(async (file: { name: string; path: string }) => {
+    const targetConversationId = conversationIdRef.current
+    if (!targetConversationId) {
+      reportError('请先发送一条消息创建会话，再在画布中打开文件')
+      return
+    }
+    if (!await flushSave()) return
+    setLoading(true)
+    try {
+      const api = workspaceApi()
+      if (!api) {
+        reportError('代码工作区未就绪')
+        return
+      }
+      const read = await api.readFile({ path: file.path })
+      if (!read.success || typeof read.content !== 'string' || !read.root) {
+        reportError(read.denied ? '已拒绝读取该文件' : `打开文件失败：${read.error || '未知错误'}`)
+        return
+      }
+      const existing = await canvasApi().findBySource({
+        conversationId: targetConversationId,
+        sourcePath: file.path,
+        sourceRoot: read.root,
+      })
+      if (existing.success && existing.canvas) {
+        setConflict(null)
+        applyRecord(existing.canvas, true)
+        setFileContent(read.content)
+        setFileReadable(true)
+        setFileChangedOutside(false)
+        setOpen(true)
+        return
+      }
+      const { kind, language } = canvasKindForFile(file.path)
+      const created = await canvasApi().create({
+        conversationId: targetConversationId,
+        kind,
+        title: file.name,
+        language,
+        content: read.content,
+        originClientId: clientId,
+        sourcePath: file.path,
+        sourceRoot: read.root,
+      })
+      if (!created.success || !created.canvas) {
+        reportError(`在画布中打开失败：${created.error || '未知错误'}`)
+        return
+      }
+      setConflict(null)
+      applyRecord(created.canvas, true)
+      setFileContent(read.content)
+      setFileReadable(true)
+      setFileChangedOutside(false)
+      setOpen(true)
+    } finally {
+      setLoading(false)
+    }
+  }, [applyRecord, clientId, flushSave, reportError])
+
+  /** 写回磁盘：先把画布本身存住，再走工作区写入（审批 + 快照 + 审计） */
+  const saveToFile = useCallback(async (): Promise<boolean> => {
+    const current = recordRef.current
+    if (!current?.sourcePath) return false
+    const api = workspaceApi()
+    if (!api) {
+      reportError('代码工作区未就绪')
+      return false
+    }
+    if (!await flushSave()) return false
+    const content = draftRef.current
+    selfWriteAtRef.current = Date.now()
+    const result = await api.writeFile({ path: current.sourcePath, content })
+    if (!result.success) {
+      selfWriteAtRef.current = 0
+      reportError(result.denied ? '已拒绝写入，文件未修改' : `保存到文件失败：${result.error || '未知错误'}`)
+      return false
+    }
+    setFileContent(content)
+    setFileReadable(true)
+    setFileChangedOutside(false)
+    return true
+  }, [flushSave, reportError])
+
+  /** 用磁盘内容覆盖画布：走 setDraft 进自动保存，磁盘那一版同样留在版本历史里 */
+  const reloadFromFile = useCallback(async () => {
+    const current = recordRef.current
+    if (!current?.sourcePath) return
+    const api = workspaceApi()
+    if (!api) {
+      reportError('代码工作区未就绪')
+      return
+    }
+    const read = await api.readFile({ path: current.sourcePath })
+    if (!read.success || typeof read.content !== 'string') {
+      reportError(read.denied ? '已拒绝读取该文件' : `重新载入文件失败：${read.error || '未知错误'}`)
+      return
+    }
+    setFileContent(read.content)
+    setFileReadable(true)
+    setFileChangedOutside(false)
+    setDraft(read.content)
+  }, [reportError, setDraft])
+
+  const dismissFileChangedOutside = useCallback(() => setFileChangedOutside(false), [])
 
   const rename = useCallback(async (title: string) => {
     const current = recordRef.current
@@ -292,6 +450,9 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
       setDraftState('')
       setSavedContent('')
       setConflict(null)
+      setFileContent(null)
+      setFileReadable(true)
+      setFileChangedOutside(false)
     } else if (result.conflict) {
       conflictRef.current = result.conflict
       setConflict(result.conflict)
@@ -406,6 +567,21 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
     return () => { off?.() }
   }, [applyRecord, clientId, openCanvas, reportError])
 
+  // 绑定文件在外部被改动（编辑器、git、Agent 写入）→ 出提示条，不自动覆盖画布
+  useEffect(() => {
+    const off = window.electronAPI?.agentWorkspace?.onWorkspaceEvent?.((event) => {
+      if (!event || event.type !== 'files-changed') return
+      const current = recordRef.current
+      if (!current?.sourcePath) return
+      const target = current.sourcePath.replace(/\\/g, '/')
+      const hit = (event.changedPaths || []).some((changed) => String(changed).replace(/\\/g, '/') === target)
+      if (!hit) return
+      if (Date.now() - selfWriteAtRef.current < SELF_WRITE_ECHO_MS) return
+      setFileChangedOutside(true)
+    })
+    return () => { off?.() }
+  }, [])
+
   // 切换会话：Canvas 随会话走，关面板并清空状态（未保存内容先 flush）
   useEffect(() => {
     return () => { clearDebounce() }
@@ -426,6 +602,9 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
       setConflict(null)
       setError(null)
       setSaveFailed(false)
+      setFileContent(null)
+      setFileReadable(true)
+      setFileChangedOutside(false)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在 conversationId 变化时清理
   }, [conversationId])
@@ -440,6 +619,22 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
         : isDirty
           ? 'dirty'
           : 'saved'
+
+  const fileBinding = useMemo<AgentCanvasFileBinding | null>(() => {
+    if (!record?.sourcePath) return null
+    const disabledReason = record.status === 'archived'
+      ? '画布已归档，不能写回文件'
+      : !workspaceRoot
+        ? '当前没有打开的代码工作区'
+        : record.sourceRoot && record.sourceRoot !== workspaceRoot
+          ? '工作区已切换，无法写回原文件'
+          : !fileReadable
+            ? '文件已不可读，可能已被删除或移动'
+            : ''
+    return { path: record.sourcePath, canWrite: !disabledReason, disabledReason }
+  }, [fileReadable, record, workspaceRoot])
+
+  const fileDirty = Boolean(record?.sourcePath) && fileContent !== null && draft !== fileContent
 
   const getRunContext = useCallback((): AgentCanvasRunContextInput | null => {
     const current = recordRef.current
@@ -456,7 +651,14 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
     saveStatus,
     conflict,
     error,
+    fileBinding,
+    fileDirty,
+    fileChangedOutside,
     openCanvas,
+    openFileCanvas,
+    saveToFile,
+    reloadFromFile,
+    dismissFileChangedOutside,
     closePanel,
     createCanvas,
     setDraft,
@@ -469,7 +671,9 @@ export function useAgentCanvas({ conversationId, clientId, onError }: UseAgentCa
     getRunContext,
   }), [
     open, loading, saving, record, draft, isDirty, saveStatus, conflict, error,
-    openCanvas, closePanel, createCanvas, setDraft, flushSave, rename,
+    fileBinding, fileDirty, fileChangedOutside,
+    openCanvas, openFileCanvas, saveToFile, reloadFromFile, dismissFileChangedOutside,
+    closePanel, createCanvas, setDraft, flushSave, rename,
     restoreRevision, archiveCanvas, conflictUseLatest, conflictKeepMine, getRunContext,
   ])
 }

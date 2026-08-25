@@ -282,6 +282,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   agentCanvas: {
     create: (input: unknown) => ipcRenderer.invoke('agentCanvas:create', input) as Promise<{ success: boolean; canvas?: unknown; error?: string }>,
     get: (canvasId: string) => ipcRenderer.invoke('agentCanvas:get', { canvasId }) as Promise<{ success: boolean; canvas?: unknown; error?: string }>,
+    findBySource: (input: unknown) => ipcRenderer.invoke('agentCanvas:findBySource', input) as Promise<{ success: boolean; canvas?: unknown | null; error?: string }>,
     list: (conversationId: number) => ipcRenderer.invoke('agentCanvas:list', { conversationId }) as Promise<{ success: boolean; canvases?: unknown[]; error?: string }>,
     update: (input: unknown) => ipcRenderer.invoke('agentCanvas:update', input) as Promise<{ success: boolean; canvas?: unknown; conflict?: unknown; error?: string }>,
     rename: (input: unknown) => ipcRenderer.invoke('agentCanvas:rename', input) as Promise<{ success: boolean; canvas?: unknown; conflict?: unknown; error?: string }>,
@@ -303,6 +304,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getState: () => ipcRenderer.invoke('agentWorkspace:getState') as Promise<{ success: boolean; state?: unknown; error?: string }>,
     setApprovalPolicy: (policy: unknown) => ipcRenderer.invoke('agentWorkspace:setApprovalPolicy', policy) as Promise<{ success: boolean; state?: unknown; error?: string }>,
     listFiles: (payload: unknown) => ipcRenderer.invoke('agentWorkspace:listFiles', payload) as Promise<{ success: boolean; root?: string; items?: unknown[]; truncated?: boolean; error?: string }>,
+    readFile: (payload: unknown) => ipcRenderer.invoke('agentWorkspace:readFile', payload) as Promise<{ success: boolean; path?: string; root?: string; content?: string; lineCount?: number; sizeBytes?: number; truncated?: boolean; denied?: boolean; error?: string }>,
+    writeFile: (payload: unknown) => ipcRenderer.invoke('agentWorkspace:writeFile', payload) as Promise<{ success: boolean; path?: string; bytes?: number; denied?: boolean; error?: string }>,
     approve: (requestId: string) => ipcRenderer.invoke('agentWorkspace:approve', requestId) as Promise<{ success: boolean }>,
     reject: (requestId: string, _reason?: string) => ipcRenderer.invoke('agentWorkspace:reject', requestId) as Promise<{ success: boolean }>,
     onApprovalRequest: (callback: (request: unknown) => void): (() => void) => {

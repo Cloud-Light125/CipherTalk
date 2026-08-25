@@ -4,8 +4,9 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { Button as HeroButton, Tooltip } from '@heroui/react'
-import { ArrowDownToLine, ArrowLeft, Check, ClockArrowRotateLeft, Code, Copy, Eye, FileText, PencilToLine, TrashBin, Xmark } from '@gravity-ui/icons'
+import { ArrowDownToLine, ArrowLeft, Check, ClockArrowRotateLeft, Code, Copy, Eye, FileText, FloppyDisk, PencilToLine, TrashBin, Xmark } from '@gravity-ui/icons'
 import type { AgentCanvasRecord, AgentCanvasSaveStatus } from './agentCanvasTypes'
+import type { AgentCanvasFileBinding } from './useAgentCanvas'
 import { saveStatusLabel } from './agentCanvasStore'
 
 export interface AgentCanvasHeaderProps {
@@ -14,6 +15,12 @@ export interface AgentCanvasHeaderProps {
   historyOpen: boolean
   copied: boolean
   readOnly?: boolean
+  /** 绑定工作区文件的画布才显示「保存到文件」 */
+  fileBinding: AgentCanvasFileBinding | null
+  /** 画布内容与磁盘文件不一致 */
+  fileDirty: boolean
+  fileSaving: boolean
+  onSaveToFile: () => void
   /** document 类型才有预览/编辑切换；code 类型恒为编辑态，传 null 隐藏按钮 */
   viewMode: 'preview' | 'edit' | null
   onToggleViewMode?: () => void
@@ -37,6 +44,10 @@ export function AgentCanvasHeader({
   historyOpen,
   copied,
   readOnly = false,
+  fileBinding,
+  fileDirty,
+  fileSaving,
+  onSaveToFile,
   viewMode,
   onToggleViewMode,
   onRename,
@@ -101,7 +112,7 @@ export function AgentCanvasHeader({
           className="min-w-0 flex-1 truncate rounded-(--agent-radius,12px) px-1.5 py-1 text-left font-medium text-foreground text-sm hover:bg-accent/40"
           disabled={readOnly}
           onClick={() => setEditing(true)}
-          title={`重命名：${record.title}`}
+          title={fileBinding ? `${fileBinding.path}（重命名只改画布标题，不重命名文件）` : `重命名：${record.title}`}
           type="button"
         >
           {record.title}
@@ -111,7 +122,30 @@ export function AgentCanvasHeader({
       <span className={`shrink-0 text-[11px] ${statusClass(saveStatus)}`}>
         {saveStatusLabel(saveStatus)} · v{record.revision}
       </span>
+      {fileBinding && (
+        <span className={`shrink-0 text-[11px] ${fileDirty ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+          {fileDirty ? '未写回文件' : '与文件一致'}
+        </span>
+      )}
       <div className="flex shrink-0 items-center gap-0.5">
+        {fileBinding && (
+          <Tooltip delay={0}>
+            <HeroButton
+              aria-label="保存到文件"
+              className="size-8 p-0"
+              isDisabled={!fileBinding.canWrite || fileSaving || !fileDirty}
+              isIconOnly
+              onPress={onSaveToFile}
+              size="sm"
+              variant={fileDirty && fileBinding.canWrite ? 'secondary' : 'tertiary'}
+            >
+              <FloppyDisk className="size-4" />
+            </HeroButton>
+            <Tooltip.Content placement="bottom">
+              {fileBinding.disabledReason || (fileDirty ? `保存到 ${fileBinding.path}` : '内容与文件一致')}
+            </Tooltip.Content>
+          </Tooltip>
+        )}
         {viewMode !== null && (
           <Tooltip delay={0}>
             <HeroButton

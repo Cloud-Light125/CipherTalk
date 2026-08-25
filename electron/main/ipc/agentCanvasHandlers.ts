@@ -60,11 +60,32 @@ function parseOriginClientId(value: unknown): string | null {
   return typeof value === 'string' && value ? value.slice(0, 80) : null
 }
 
+/** 绑定的工作区文件路径：只接受工作区内的相对路径（绝对路径/.. 一律拒绝），空值表示不绑定。 */
+function parseSourcePath(value: unknown): string | null {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  if (raw.length > 400) throw new Error('sourcePath 过长')
+  const normalized = raw.replace(/\\/g, '/')
+  if (normalized.startsWith('/') || /^[a-zA-Z]:\//.test(normalized)) throw new Error('sourcePath 必须是工作区内的相对路径')
+  if (normalized.split('/').includes('..')) throw new Error('sourcePath 不能包含 ..')
+  return normalized
+}
+
+function parseSourceRoot(value: unknown): string | null {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  if (raw.length > 1000) throw new Error('sourceRoot 过长')
+  return raw
+}
+
 export function registerAgentCanvasHandlers(ctx: MainProcessContext): void {
   setAgentCanvasChangeBroadcaster((event) => ctx.broadcastToWindows('agentCanvas:updated', event))
 
   ipcMain.handle('agentCanvas:create', async (_event, payload: any) => {
     try {
+      const sourcePath = parseSourcePath(payload?.sourcePath)
+      const sourceRoot = parseSourceRoot(payload?.sourceRoot)
+      if (sourcePath && !sourceRoot) throw new Error('绑定文件的画布必须携带 sourceRoot')
       const canvas = agentCanvasStore.create({
         conversationId: parseConversationId(payload?.conversationId),
         kind: parseKind(payload?.kind),
@@ -73,8 +94,26 @@ export function registerAgentCanvasHandlers(ctx: MainProcessContext): void {
         content: parseContent(payload?.content),
         createdBy: 'user',
         originClientId: parseOriginClientId(payload?.originClientId),
+        sourcePath,
+        sourceRoot: sourcePath ? sourceRoot : null,
       })
       return { success: true, canvas }
+    } catch (error) {
+      return fail(error)
+    }
+  })
+
+  ipcMain.handle('agentCanvas:findBySource', async (_event, payload: any) => {
+    try {
+      const sourcePath = parseSourcePath(payload?.sourcePath)
+      const sourceRoot = parseSourceRoot(payload?.sourceRoot)
+      if (!sourcePath || !sourceRoot) throw new Error('sourcePath/sourceRoot 不能为空')
+      const canvas = agentCanvasStore.findBySourcePath(
+        parseConversationId(payload?.conversationId),
+        sourcePath,
+        sourceRoot,
+      )
+      return { success: true, canvas: canvas ?? null }
     } catch (error) {
       return fail(error)
     }
