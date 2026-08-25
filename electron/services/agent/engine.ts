@@ -18,6 +18,7 @@ import { compactMessages } from './compaction'
 import { reportAgentProgress, withAgentProgress } from './progress'
 import { getCachedStartupMemory, warmStartupMemory } from './runtimeCache'
 import { buildToolRuntimeContext } from './toolPolicy'
+import { activeToolNames, selectToolGroups, type ToolGroupId } from './toolGroups'
 import { buildAgentToolApproval } from './toolApproval'
 import { currentModelVisionSupport } from './tools/mediaHistory'
 import { detectImageMime } from '../media/mediaResolver'
@@ -448,6 +449,12 @@ export async function runAgent(
     const imageGenOn = !toolsDisabled && isImageGenAvailable()
     const toolProfile = input.toolProfile ?? (input.codeWorkspace ? 'hybrid' : 'chat')
     const codeWorkspace = (toolProfile === 'code' || toolProfile === 'hybrid') ? (input.codeWorkspace ?? null) : null
+    // 低频工具按组挂载：本轮关键词命中的组 + 模型 enable_tools 开启的组才进 activeTools，
+    // 其余照常注册但不发给模型（省预填 token，见 toolGroups.ts）。只对 chat/hybrid 生效，
+    // code profile 本来就只有十几个工具，计划模式更少。
+    const keywordGroups = new Set<ToolGroupId>(selectToolGroups(userText))
+    const unlockedGroups = new Set<ToolGroupId>()
+    const groupingEnabled = !toolsDisabled && !input.planMode && toolProfile !== 'code'
     const applicationTools: ToolSet = toolsDisabled
       ? {}
       : input.planMode
@@ -460,6 +467,7 @@ export async function runAgent(
             includeConversationHistory,
             canvasContext: input.canvasContext,
             emitChunk: onChunk,
+            onEnableTools: (groups) => { for (const group of groups) unlockedGroups.add(group) },
           })
     const baseTools = toolsDisabled
       ? {}
@@ -467,7 +475,20 @@ export async function runAgent(
         ...applicationTools,
         ...webSearch.nativeTools,
       })
-    perf('构建工具集', `${Object.keys(baseTools).length} 个 / 联网 ${webSearch.backend}`)
+    const allToolNames = Object.keys(baseTools)
+    /** query_sql 组随运行时闸门自动解锁：模型用过结构化工具后才出现在工具列表里 */
+    const computeActiveTools = (querySqlUnlocked: boolean): string[] | undefined => {
+      if (!groupingEnabled) return undefined
+      const groups = new Set<ToolGroupId>([...keywordGroups, ...unlockedGroups])
+      if (querySqlUnlocked) groups.add('sql')
+      return activeToolNames(allToolNames, groups)
+    }
+    const initialActiveTools = computeActiveTools(false)
+    perf(
+      '构建工具集',
+      `${allToolNames.length} 个 / 本轮激活 ${initialActiveTools ? initialActiveTools.length : allToolNames.length} 个`
+      + `${keywordGroups.size > 0 ? ` / 命中组 ${[...keywordGroups].join(',')}` : ''} / 联网 ${webSearch.backend}`,
+    )
     const prepared = buildAgentInstructions(input, memoryContext, relevantMemoryContext, baseTools, webSearchOn, imageGenOn)
     const providerCache = buildProviderCacheStatus(input, prepared.promptCacheKey)
     perf('组装系统提示')
@@ -482,6 +503,7 @@ export async function runAgent(
       // 不放行 AI SDK 会直接抛 InvalidPromptError（#243）
       allowSystemInMessages: true,
       tools: prepared.tools,
+      ...(initialActiveTools ? { activeTools: initialActiveTools as any } : {}),
       ...agentTemperatureOption(input.providerConfig, DEFAULT_AGENT_TEMPERATURE),
       reasoning: buildReasoningOption(input.providerConfig),
       // 不设步数上限，由模型自行决定何时收尾；兜底靠总超时 + prepareStep 里的死循环强制收尾。
@@ -525,6 +547,7 @@ export async function runAgent(
       prepareStep: async ({ messages, steps }) => {
         const runtimeContext = buildToolRuntimeContext(steps)
         const forceFinalAnswer = hasRepeatedToolCallLoop(steps)
+        const stepActiveTools = computeActiveTools(runtimeContext.querySqlUnlocked)
         return {
           messages: await aiCompactStep({
             messages,
@@ -535,6 +558,7 @@ export async function runAgent(
           }),
           runtimeContext: runtimeContext as any,
           toolsContext: { query_sql: runtimeContext } as any,
+          ...(!forceFinalAnswer && stepActiveTools ? { activeTools: stepActiveTools as any } : {}),
           ...(forceFinalAnswer ? {
             activeTools: [] as [],
             toolChoice: 'none' as const,
