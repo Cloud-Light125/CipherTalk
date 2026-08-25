@@ -36,6 +36,8 @@ import { createCanvasTools } from './canvas'
 import { createCodeWorkspaceTools } from './codeWorkspace'
 import { exportChat } from './exportChat'
 import { createAgentCapabilityTools } from './capabilities'
+import { createEnableTools } from './enableTools'
+import type { ToolGroupId } from '../toolGroups'
 
 /** 基础读/查工具（不含 delegate_analysis），主 Agent 与子 Agent 共用。 */
 export function buildBaseTools(_scope: AgentScope): ToolSet {
@@ -99,6 +101,11 @@ export interface BuildChatToolsOptions {
   canvasContext?: AgentCanvasRunContext
   /** 工具直发 UIMessageChunk 的出口（canvas 工具用它发 data-canvas 引用）。 */
   emitChunk?: (chunk: UIMessageChunk) => void
+  /**
+   * 低频工具按组挂载（见 toolGroups.ts）时的解锁回调；传了才挂 enable_tools。
+   * 不传表示调用方不做分组，工具全量激活（子 Agent、微信机器人等）。
+   */
+  onEnableTools?: (groups: ToolGroupId[]) => void
 }
 
 function createWechatReplyMediaTools(): ToolSet {
@@ -129,6 +136,7 @@ export function buildChatTools(
     ...(options.allowWechatReplyMedia ? createWechatReplyMediaTools() : {}),
     export_chat: exportChat,
     persona_control: personaControl,
+    ...(options.onEnableTools ? { enable_tools: createEnableTools(options.onEnableTools) } : {}),
     remember: createRemember(scope),
     recall: createRecall(scope, options.includeConversationHistory !== false),
     list_memories: createListMemories(scope),

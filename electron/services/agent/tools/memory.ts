@@ -338,6 +338,14 @@ export async function buildMemoryContext(scope: AgentScope): Promise<string> {
   }
 }
 
+/** 本轮文件记忆注入上限；超出部分截断并提示模型用 recall 取全文。 */
+const PRELOAD_FILE_CONTEXT_MAX_CHARS = 3_000
+
+function truncateMemoryContext(context: string, maxChars: number): string {
+  if (context.length <= maxChars) return context
+  return `${context.slice(0, maxChars)}\n…（本轮只注入了前 ${maxChars} 字符，需要更多细节用 recall 检索）`
+}
+
 /** 按本轮问题预召回相关记忆，降低模型忘记主动 recall 的概率。 */
 export async function preloadRelevantMemories(
   query: string,
@@ -371,8 +379,10 @@ export async function preloadRelevantMemories(
     const itemContext = items.length > 0
       ? `\n\n# 本轮相关记忆\n以下记忆与用户当前问题可能相关；仍需以当前对话与工具查询结果为准。\n${items.map(formatMemoryLine).join('\n')}`
       : ''
+    // 这段每轮都变、进不了 prompt cache 前缀，塞满 12k 字符等于每轮多付一次全价预填。
+    // 收到 3k：够放几条真正相关的记忆，细节让模型自己 recall。
     const fileContext = markdown.context
-      ? `\n\n# 本轮文件记忆（${markdown.mode}）\n${markdown.context.slice(0, 12_000)}`
+      ? `\n\n# 本轮文件记忆（${markdown.mode}）\n${truncateMemoryContext(markdown.context, PRELOAD_FILE_CONTEXT_MAX_CHARS)}`
       : ''
     return `${itemContext}${fileContext}`
   } catch {
