@@ -37,6 +37,26 @@ export interface CodeWorkspaceListFilesResult {
   error?: string
 }
 
+/** code_search 单条命中：路径相对 workspace root，text 为整行（过长会截断） */
+export interface CodeWorkspaceSearchMatch {
+  path: string
+  line: number
+  text: string
+}
+
+export interface CodeWorkspaceSearchResult {
+  success: boolean
+  root?: string
+  matches?: CodeWorkspaceSearchMatch[]
+  /** 命中数达到上限被截断：还有更多结果没返回 */
+  truncated?: boolean
+  /** 实际用的搜索实现：装了 ripgrep 走 rg，否则内置遍历 */
+  engine?: 'ripgrep' | 'builtin'
+  /** builtin 扫到时间预算上限提前结束（结果不完整） */
+  timedOut?: boolean
+  error?: string
+}
+
 export type CodeWorkspaceBrowserDiagnosticKind =
   | 'console'
   | 'page-error'

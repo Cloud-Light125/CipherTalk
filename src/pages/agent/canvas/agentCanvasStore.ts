@@ -45,6 +45,21 @@ export function canvasFileExtension(kind: AgentCanvasKind, language?: string): s
   return LANGUAGE_EXT[String(language || '').toLowerCase()] || 'txt'
 }
 
+/** 反查表：扩展名 → 代码语言（同扩展名多语言时取表里靠后的那个，如 sh → shell） */
+const EXT_LANGUAGE: Record<string, string> = Object.fromEntries(
+  Object.entries(LANGUAGE_EXT).map(([language, ext]) => [ext, language]),
+)
+
+/**
+ * 工作区文件 → 画布类型：只有 Markdown/纯文本进文档画布（文档画布默认渲染预览），
+ * 无扩展名的 Makefile / Dockerfile / LICENSE 走代码画布，避免被当成 Markdown 渲染。
+ */
+export function canvasKindForFile(filePath: string): { kind: AgentCanvasKind; language?: string } {
+  const ext = filePath.replace(/\\/g, '/').split('/').pop()?.split('.').slice(1).pop()?.toLowerCase() || ''
+  if (ext === 'md' || ext === 'markdown' || ext === 'txt') return { kind: 'document' }
+  return { kind: 'code', language: EXT_LANGUAGE[ext] || ext || undefined }
+}
+
 /** 触发浏览器式下载（内容来自本地状态，不经主进程写文件）。 */
 export function downloadCanvasContent(record: AgentCanvasRecord, content: string): void {
   const ext = canvasFileExtension(record.kind, record.language)

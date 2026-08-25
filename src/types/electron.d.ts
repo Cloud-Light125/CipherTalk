@@ -161,6 +161,10 @@ export interface AgentCanvasRecord {
   createdBy: 'user' | 'agent'
   createdAt: number
   updatedAt: number
+  /** 绑定的工作区文件（相对工作区根），从代码树打开时写入；普通画布为空 */
+  sourcePath?: string
+  /** 绑定时的工作区绝对根：工作区切换后据此判断能否写回 */
+  sourceRoot?: string
 }
 
 export interface AgentCanvasListItem extends Omit<AgentCanvasRecord, 'content'> {
@@ -375,6 +379,29 @@ export interface CodeWorkspaceListFilesResult {
   root?: string
   items?: CodeWorkspaceFileItem[]
   truncated?: boolean
+  error?: string
+}
+
+/** UI 打开文件（不截断行数，仍受单文件字节上限约束） */
+export interface CodeWorkspaceReadFileResult {
+  success: boolean
+  path?: string
+  /** 当前工作区绝对根，画布据此记录绑定 */
+  root?: string
+  content?: string
+  lineCount?: number
+  sizeBytes?: number
+  truncated?: boolean
+  denied?: boolean
+  error?: string
+}
+
+/** UI 写回文件（与 Agent 写入同一条审批/快照/审计链路） */
+export interface CodeWorkspaceWriteFileResult {
+  success: boolean
+  path?: string
+  bytes?: number
+  denied?: boolean
   error?: string
 }
 
@@ -1704,8 +1731,9 @@ export interface ElectronAPI {
     onConversationUpdated: (callback: (event: AgentConversationUpdatedEvent) => void) => () => void
   }
   agentCanvas: {
-    create: (input: { conversationId: number; kind: AgentCanvasKind; title: string; language?: string; content: string; originClientId?: string | null }) => Promise<{ success: boolean; canvas?: AgentCanvasRecord; error?: string }>
+    create: (input: { conversationId: number; kind: AgentCanvasKind; title: string; language?: string; content: string; originClientId?: string | null; sourcePath?: string | null; sourceRoot?: string | null }) => Promise<{ success: boolean; canvas?: AgentCanvasRecord; error?: string }>
     get: (canvasId: string) => Promise<{ success: boolean; canvas?: AgentCanvasRecord; error?: string }>
+    findBySource: (input: { conversationId: number; sourcePath: string; sourceRoot: string }) => Promise<{ success: boolean; canvas?: AgentCanvasRecord | null; error?: string }>
     list: (conversationId: number) => Promise<{ success: boolean; canvases?: AgentCanvasListItem[]; error?: string }>
     update: (input: { canvasId: string; baseRevision: number; content: string; originClientId?: string | null }) => Promise<{ success: boolean; canvas?: AgentCanvasRecord; conflict?: AgentCanvasConflictInfo; error?: string }>
     rename: (input: { canvasId: string; baseRevision: number; title: string; originClientId?: string | null }) => Promise<{ success: boolean; canvas?: AgentCanvasRecord; conflict?: AgentCanvasConflictInfo; error?: string }>
@@ -1722,6 +1750,8 @@ export interface ElectronAPI {
     getState: () => Promise<{ success: boolean; state?: CodeWorkspaceState; error?: string }>
     setApprovalPolicy: (policy: CodeWorkspaceApprovalPolicy) => Promise<{ success: boolean; state?: CodeWorkspaceState; error?: string }>
     listFiles: (payload: { path?: string; maxDepth?: number; limit?: number }) => Promise<CodeWorkspaceListFilesResult>
+    readFile: (payload: { path: string }) => Promise<CodeWorkspaceReadFileResult>
+    writeFile: (payload: { path: string; content: string }) => Promise<CodeWorkspaceWriteFileResult>
     approve: (requestId: string) => Promise<{ success: boolean; error?: string }>
     reject: (requestId: string, reason?: string) => Promise<{ success: boolean; error?: string }>
     onApprovalRequest: (callback: (request: CodeWorkspaceApprovalRequest) => void) => () => void

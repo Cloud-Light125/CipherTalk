@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { AlertDialog, Button as HeroButton, Spinner } from '@heroui/react'
-import { TrashBin, TriangleExclamation } from '@gravity-ui/icons'
+import { FileArrowDown, TrashBin, TriangleExclamation } from '@gravity-ui/icons'
 import { MessageResponse } from '@/components/ai-elements/message'
 import type { UseAgentCanvasResult } from './useAgentCanvas'
 import { downloadCanvasContent } from './agentCanvasStore'
@@ -24,6 +24,7 @@ export function AgentCanvasPanel({ canvas, markedRevision }: AgentCanvasPanelPro
   const [copied, setCopied] = useState(false)
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [keepMineConfirmOpen, setKeepMineConfirmOpen] = useState(false)
+  const [fileSaving, setFileSaving] = useState(false)
   // 文档画布默认预览态（Markdown/mermaid/echarts 渲染出来），代码画布恒为编辑态
   const [viewMode, setViewMode] = useState<'preview' | 'edit'>('preview')
 
@@ -48,6 +49,15 @@ export function AgentCanvasPanel({ canvas, markedRevision }: AgentCanvasPanelPro
     if (record) downloadCanvasContent(record, canvas.draft)
   }, [record, canvas.draft])
 
+  const handleSaveToFile = useCallback(async () => {
+    setFileSaving(true)
+    try {
+      await canvas.saveToFile()
+    } finally {
+      setFileSaving(false)
+    }
+  }, [canvas])
+
   const handleCopyMine = useCallback(async () => {
     if (!navigator.clipboard?.writeText) return
     await navigator.clipboard.writeText(canvas.draft)
@@ -64,7 +74,11 @@ export function AgentCanvasPanel({ canvas, markedRevision }: AgentCanvasPanelPro
         <>
           <AgentCanvasHeader
             copied={copied}
+            fileBinding={canvas.fileBinding}
+            fileDirty={canvas.fileDirty}
+            fileSaving={fileSaving}
             historyOpen={historyOpen}
+            onSaveToFile={() => { void handleSaveToFile() }}
             readOnly={record.status === 'archived'}
             onArchive={() => setArchiveConfirmOpen(true)}
             onClose={canvas.closePanel}
@@ -91,6 +105,20 @@ export function AgentCanvasPanel({ canvas, markedRevision }: AgentCanvasPanelPro
               </HeroButton>
               <HeroButton onPress={() => { void handleCopyMine() }} size="sm" variant="tertiary">
                 复制我的内容
+              </HeroButton>
+            </div>
+          )}
+          {canvas.fileChangedOutside && (
+            <div className="flex flex-wrap items-center gap-2 border-b border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs">
+              <FileArrowDown className="size-4 shrink-0 text-sky-600 dark:text-sky-400" />
+              <span className="min-w-0 flex-1 text-sky-700 dark:text-sky-300">
+                {canvas.fileBinding?.path} 已在画布之外被修改，画布内容仍是你这边的版本。
+              </span>
+              <HeroButton onPress={() => { void canvas.reloadFromFile() }} size="sm" variant="tertiary">
+                重新载入文件
+              </HeroButton>
+              <HeroButton onPress={canvas.dismissFileChangedOutside} size="sm" variant="tertiary">
+                忽略
               </HeroButton>
             </div>
           )}

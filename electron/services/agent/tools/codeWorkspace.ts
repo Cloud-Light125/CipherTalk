@@ -39,14 +39,39 @@ export function createCodeWorkspaceTools(
       execute: async ({ path, maxDepth, limit }) => callCodeWorkspace(workspace, 'list_files', { path, maxDepth, limit }),
     }),
 
+    code_search: tool({
+      description:
+        '按内容搜索代码工作区里的文件（相当于 grep -rn），返回 文件:行号:整行。'
+        + '找函数/变量/字符串定义在哪、某个 API 被谁调用、报错信息出自哪里，都先用它，不要靠列目录猜文件名。'
+        + '只读、不需要用户确认，可以放心多次调用逐步收窄。',
+      inputSchema: z.object({
+        pattern: z.string().min(1).max(200).describe('搜索内容，按正则解释；写不成正则时按字面量匹配'),
+        path: z.string().default('.').describe('搜索起点目录：相对 workspace root，或本机绝对路径；默认整个工作区'),
+        glob: z.string().optional().describe('文件名过滤，如 *.ts、*.{ts,tsx}、src/**/*.tsx；省略则搜所有文本文件'),
+        caseSensitive: z.boolean().default(false).describe('是否区分大小写，默认不区分'),
+        maxResults: z.number().int().min(1).max(200).default(60).describe('最多返回多少条命中，默认 60'),
+      }),
+      execute: async ({ pattern, path, glob, caseSensitive, maxResults }) => callCodeWorkspace(workspace, 'search_files', {
+        pattern,
+        path,
+        glob,
+        caseSensitive,
+        maxResults,
+      }),
+    }),
+
     code_read_file: tool({
       description:
-        '读取代码工作区或电脑任意可访问位置的文本文件。路径可填相对 workspace root 的路径，或本机绝对路径；会拦截二进制、大文件；.env、密钥、证书、token 等敏感文件需要用户高风险确认。',
+        '读取代码工作区或电脑任意可访问位置的文本文件。路径可填相对 workspace root 的路径，或本机绝对路径；会拦截二进制、大文件；'
+        + '.env、密钥、证书、token 等敏感文件需要用户高风险确认。'
+        + '单次最多返回 1400 行：返回里的 lineCount 是文件总行数，hasMore=true 表示后面还有内容，'
+        + '要接着看就用同一 path 加 offset 继续读，不要拿半个文件下结论。',
       inputSchema: z.object({
         path: z.string().min(1).describe('文件路径：相对 workspace root，或本机绝对路径'),
+        offset: z.number().int().min(0).default(0).describe('从第几行开始读（0 基），用于续读长文件，默认从头开始'),
         maxLines: z.number().int().min(1).max(1400).default(1400).describe('最多返回行数，默认 1400'),
       }),
-      execute: async ({ path, maxLines }) => callCodeWorkspace(workspace, 'read_file', { path, maxLines }),
+      execute: async ({ path, offset, maxLines }) => callCodeWorkspace(workspace, 'read_file', { path, offset, maxLines }),
     }),
 
     code_get_dev_server_logs: tool({

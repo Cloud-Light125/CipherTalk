@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react'
 import { AlertDialog, Button as HeroButton, Label, Popover, Tabs } from '@heroui/react'
 import { ArrowsRotateLeft, ArrowUpRightFromSquare, ChevronRight, Code, Display, File, Folder, FolderOpen, ShieldExclamation, Square, Terminal, Xmark } from '@gravity-ui/icons'
 import type {
@@ -7,6 +7,7 @@ import type {
   CodeWorkspaceRef,
   CodeWorkspaceState,
 } from '@/types/electron'
+import { CodeWorkspaceFileMenu, type CodeWorkspaceFileMenuState } from './CodeWorkspaceFileMenu'
 
 export const CODE_WORKSPACE_FILE_REF_MIME = 'application/x-ciphertalk-code-workspace-file'
 
@@ -41,8 +42,21 @@ type CodeWorkspacePanelPopoverProps = {
 
 type CodeWorkspaceSidebarProps = {
   className?: string
+  /** 无会话时右键菜单里的「在画布中打开」置灰 */
+  canOpenInCanvas?: boolean
+  onNotify?: (message: string) => void
+  onOpenFileInCanvas?: (file: CodeWorkspaceFileDragReference) => void
+  onReferenceFile?: (file: CodeWorkspaceFileDragReference) => void
   onSelect: () => void
   state: CodeWorkspaceState | null
+}
+
+/** 工作区根（绝对） + 树里的相对路径 → 绝对路径，供 shell 打开/定位 */
+function joinWorkspacePath(root: string, relativePath: string): string {
+  const separator = root.includes('\\') && !root.includes('/') ? '\\' : '/'
+  const trimmedRoot = root.replace(/[\\/]+$/, '')
+  const normalized = separator === '\\' ? relativePath.replace(/\//g, '\\') : relativePath.replace(/\\/g, '/')
+  return `${trimmedRoot}${separator}${normalized}`
 }
 
 function basename(value: string): string {
@@ -93,12 +107,16 @@ function FileTreeRow({
   expanded,
   item,
   loading,
+  onContextMenu,
+  onOpenFile,
   onToggle,
 }: {
   depth: number
   expanded: boolean
   item: CodeWorkspaceFileItem
   loading: boolean
+  onContextMenu: (item: CodeWorkspaceFileItem, event: MouseEvent) => void
+  onOpenFile: (item: CodeWorkspaceFileItem) => void
   onToggle: (item: CodeWorkspaceFileItem) => void
 }) {
   const isDir = item.type === 'dir'
@@ -121,9 +139,15 @@ function FileTreeRow({
       className={`flex h-7 w-full min-w-0 items-center gap-1 rounded-(--agent-radius,12px) px-1.5 text-left text-xs text-muted-foreground hover:bg-accent/45 hover:text-foreground ${isDir ? '' : 'cursor-grab active:cursor-grabbing'}`}
       draggable={!isDir}
       onClick={() => isDir && onToggle(item)}
+      onContextMenu={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onContextMenu(item, event)
+      }}
+      onDoubleClick={() => { if (!isDir) onOpenFile(item) }}
       onDragStart={handleDragStart}
       style={{ paddingLeft: `${Math.min(depth, 8) * 0.75 + 0.375}rem` }}
-      title={isDir ? displayName : `拖到输入框引用：${item.path}`}
+      title={isDir ? displayName : `双击在画布中打开 · 拖到输入框引用：${item.path}`}
       type="button"
     >
       {isDir ? (
@@ -140,6 +164,10 @@ function FileTreeRow({
 
 export function CodeWorkspaceSidebar({
   className,
+  canOpenInCanvas = false,
+  onNotify,
+  onOpenFileInCanvas,
+  onReferenceFile,
   onSelect,
   state,
 }: CodeWorkspaceSidebarProps) {
@@ -150,6 +178,7 @@ export function CodeWorkspaceSidebar({
   const [loadingPaths, setLoadingPaths] = useState<Set<string>>(() => new Set())
   const [error, setError] = useState('')
   const [truncated, setTruncated] = useState(false)
+  const [fileMenu, setFileMenu] = useState<CodeWorkspaceFileMenuState | null>(null)
   const childrenByPathRef = useRef(childrenByPath)
 
   useEffect(() => {
@@ -199,6 +228,7 @@ export function CodeWorkspaceSidebar({
     setExpanded(new Set())
     setError('')
     setTruncated(false)
+    setFileMenu(null)
     if (workspace) void loadDirectory('.', true)
   }, [loadDirectory, workspace?.id])
 
@@ -235,6 +265,26 @@ export function CodeWorkspaceSidebar({
     void loadDirectory(item.path)
   }
 
+  const openFileInCanvas = (item: CodeWorkspaceFileItem) => {
+    if (item.type === 'dir') return
+    if (!canOpenInCanvas) {
+      onNotify?.('请先发送一条消息创建会话，再在画布中打开文件')
+      return
+    }
+    onOpenFileInCanvas?.({ name: fileName(item.path), path: item.path })
+  }
+
+  const handleContextMenu = (item: CodeWorkspaceFileItem, event: MouseEvent) => {
+    if (!workspace) return
+    setFileMenu({
+      absPath: joinWorkspacePath(workspace.root, item.path),
+      expanded: expanded.has(item.path),
+      item,
+      x: event.clientX,
+      y: event.clientY,
+    })
+  }
+
   const renderItems = (items: CodeWorkspaceFileItem[], depth: number): ReactNode[] => {
     const rows: ReactNode[] = []
     for (const item of items) {
@@ -246,6 +296,8 @@ export function CodeWorkspaceSidebar({
           item={item}
           key={item.path}
           loading={loadingPaths.has(item.path)}
+          onContextMenu={handleContextMenu}
+          onOpenFile={openFileInCanvas}
           onToggle={toggleDirectory}
         />
       )
@@ -323,6 +375,19 @@ export function CodeWorkspaceSidebar({
           </div>
         )}
       </div>
+      <CodeWorkspaceFileMenu
+        canOpenInCanvas={canOpenInCanvas}
+        menu={fileMenu}
+        onClose={() => setFileMenu(null)}
+        onCopied={(message) => onNotify?.(message)}
+        onOpenInCanvas={openFileInCanvas}
+        onRefreshDirectory={(item) => {
+          setExpanded((prev) => new Set(prev).add(item.path))
+          void loadDirectory(item.path, true)
+        }}
+        onReference={(item) => onReferenceFile?.({ name: fileName(item.path), path: item.path })}
+        onToggleDirectory={toggleDirectory}
+      />
     </aside>
   )
 }

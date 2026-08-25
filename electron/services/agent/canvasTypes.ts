@@ -27,6 +27,10 @@ export interface AgentCanvasRecord {
   createdBy: 'user' | 'agent'
   createdAt: number
   updatedAt: number
+  /** 绑定的工作区文件（相对工作区根），从代码树打开时写入；普通画布为空 */
+  sourcePath?: string
+  /** 绑定时的工作区绝对根：工作区切换后据此判断能否写回 */
+  sourceRoot?: string
 }
 
 /** 版本列表条目：不携带正文，正文按需走 getRevision。 */
@@ -94,6 +98,8 @@ export interface CreateCanvasInput {
   content: string
   createdBy: 'user' | 'agent'
   originClientId?: string | null
+  sourcePath?: string | null
+  sourceRoot?: string | null
 }
 
 export interface UpdateCanvasInput {

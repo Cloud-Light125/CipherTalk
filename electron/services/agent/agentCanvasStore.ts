@@ -129,6 +129,20 @@ export class AgentCanvasStore {
       CREATE INDEX IF NOT EXISTS idx_agent_canvas_conversation
         ON agent_canvases(conversation_id, updated_at DESC);
     `)
+
+    // CREATE TABLE IF NOT EXISTS 不会给已有库补列，绑定文件的两列走增量迁移
+    const columns = new Set((db.prepare('PRAGMA table_info(agent_canvases)').all() as Array<{ name: string }>)
+      .map((column) => column.name))
+    if (!columns.has('source_path')) {
+      db.exec('ALTER TABLE agent_canvases ADD COLUMN source_path TEXT')
+    }
+    if (!columns.has('source_root')) {
+      db.exec('ALTER TABLE agent_canvases ADD COLUMN source_root TEXT')
+    }
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_agent_canvas_source
+        ON agent_canvases(conversation_id, source_path);
+    `)
   }
 
   private mapRecord(row: any): AgentCanvasRecord {
@@ -144,6 +158,8 @@ export class AgentCanvasStore {
       createdBy: row.created_by === 'agent' ? 'agent' : 'user',
       createdAt: Number(row.created_at || 0),
       updatedAt: Number(row.updated_at || 0),
+      sourcePath: row.source_path ? String(row.source_path) : undefined,
+      sourceRoot: row.source_root ? String(row.source_root) : undefined,
     }
   }
 
@@ -223,8 +239,8 @@ export class AgentCanvasStore {
       db.prepare(`
         INSERT INTO agent_canvases (
           id, conversation_id, kind, title, language, content,
-          revision, status, created_by, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 1, 'active', ?, ?, ?)
+          revision, status, created_by, created_at, updated_at, source_path, source_root
+        ) VALUES (?, ?, ?, ?, ?, ?, 1, 'active', ?, ?, ?, ?, ?)
       `).run(
         id,
         conversationId,
@@ -235,6 +251,8 @@ export class AgentCanvasStore {
         input.createdBy === 'agent' ? 'agent' : 'user',
         now,
         now,
+        input.sourcePath ? String(input.sourcePath) : null,
+        input.sourceRoot ? String(input.sourceRoot) : null,
       )
       this.writeRevision(db, id, 1, content, input.createdBy === 'agent' ? 'agent' : 'user', now)
     })
@@ -249,11 +267,22 @@ export class AgentCanvasStore {
     return row ? this.mapRecord(row) : null
   }
 
+  /** 同一文件重复打开时复用已有画布：只认同会话 + 同工作区根 + 未归档的那一个。 */
+  findBySourcePath(conversationId: number, sourcePath: string, sourceRoot: string): AgentCanvasRecord | null {
+    const row = this.getDb().prepare(`
+      SELECT * FROM agent_canvases
+      WHERE conversation_id = ? AND source_path = ? AND source_root = ? AND status = 'active'
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `).get(Number(conversationId), String(sourcePath), String(sourceRoot)) as any
+    return row ? this.mapRecord(row) : null
+  }
+
   /** 列表不返回正文（正文只走 get），避免长文档在列表接口反复搬运。 */
   list(conversationId: number): Array<Omit<AgentCanvasRecord, 'content'> & { contentLength: number }> {
     const rows = this.getDb().prepare(`
       SELECT id, conversation_id, kind, title, language, length(content) AS content_length,
-             revision, status, created_by, created_at, updated_at
+             revision, status, created_by, created_at, updated_at, source_path, source_root
       FROM agent_canvases
       WHERE conversation_id = ?
       ORDER BY updated_at DESC

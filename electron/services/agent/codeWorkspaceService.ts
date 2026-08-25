@@ -17,6 +17,8 @@ import type {
   CodeWorkspaceFileItem,
   CodeWorkspaceListFilesResult,
   CodeWorkspaceRef,
+  CodeWorkspaceSearchMatch,
+  CodeWorkspaceSearchResult,
   CodeWorkspaceState,
   CodeWorkspaceToolCall,
 } from './codeWorkspaceTypes'
@@ -26,6 +28,15 @@ const CONFIG_KEY = 'agentCodeWorkspaceRoot'
 const APPROVAL_POLICY_CONFIG_KEY = 'agentCodeWorkspaceApprovalPolicy'
 const MAX_READ_BYTES = 512 * 1024
 const MAX_READ_LINES = 1400
+const SEARCH_MAX_MATCHES = 200
+const SEARCH_MAX_PATTERN_CHARS = 200
+const SEARCH_MATCH_TEXT_CHARS = 300
+/** 内置遍历的兜底预算：正则回溯或超大仓库都不该把主进程钉死 */
+const SEARCH_TIME_BUDGET_MS = 10_000
+const SEARCH_MAX_FILE_BYTES = 2 * 1024 * 1024
+const SEARCH_MAX_LINE_CHARS = 2000
+const RIPGREP_DETECT_TIMEOUT_MS = 2_000
+const RIPGREP_SEARCH_TIMEOUT_MS = 20_000
 const MAX_LIST_ITEMS = 600
 const MAX_DIFF_CHARS = 40_000
 const MAX_LOG_LINES = 600
@@ -168,6 +179,52 @@ function looksShellLike(command: string, args: string[]): boolean {
   return /[;&|`$<>]/.test(text) || /\b(?:powershell|pwsh|cmd|bash|sh|zsh)\b/i.test(command)
 }
 
+/** 简易 glob → 正则：** 跨目录、* 单层、? 单字符、{a,b} 择一；其余字符按字面量转义 */
+function globToRegExp(glob: string): RegExp {
+  let source = ''
+  for (let i = 0; i < glob.length; i += 1) {
+    const char = glob[i]
+    if (char === '{') {
+      const end = glob.indexOf('}', i)
+      if (end > i) {
+        const options = glob.slice(i + 1, end).split(',')
+          .map((option) => option.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        source += `(?:${options.join('|')})`
+        i = end
+        continue
+      }
+    }
+    if (char === '*') {
+      if (glob[i + 1] === '*') {
+        source += '.*'
+        i += 1
+        if (glob[i + 1] === '/') i += 1
+      } else {
+        source += '[^/]*'
+      }
+      continue
+    }
+    if (char === '?') {
+      source += '[^/]'
+      continue
+    }
+    source += char.replace(/[.+^${}()|[\]\\]/g, '\\$&')
+  }
+  // 不含 / 的 glob（如 *.ts）按"匹配任意目录下的文件名"理解
+  const prefix = glob.includes('/') ? '' : '(?:.*/)?'
+  return new RegExp(`^${prefix}${source}$`)
+}
+
+/** 先按正则解释 pattern；写不成正则（模型常直接传字面量）就退回字面量匹配 */
+function buildSearchRegExp(pattern: string, caseSensitive: boolean): RegExp {
+  const flags = caseSensitive ? 'g' : 'gi'
+  try {
+    return new RegExp(pattern, flags)
+  } catch {
+    return new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags)
+  }
+}
+
 function buildDiffPreview(displayPath: string, before: string, after: string): string {
   if (before === after) return `No changes in ${displayPath}`
   const beforeLines = before.split(/\r?\n/)
@@ -206,6 +263,7 @@ export class CodeWorkspaceService {
   private workspaceWatcher: fs.FSWatcher | null = null
   private workspaceWatchTimer: NodeJS.Timeout | null = null
   private workspaceWatchPaths = new Set<string>()
+  private ripgrepAvailable: boolean | null = null
 
   setContext(ctx: MainProcessContext): void {
     this.ctx = ctx
@@ -289,6 +347,19 @@ export class CodeWorkspaceService {
     return this.listFiles(args)
   }
 
+  /** 文件树右键「在画布中打开」用：不截断，且带上工作区根供画布记录绑定 */
+  async readFileForUi(args: Record<string, unknown>): Promise<unknown> {
+    await this.ensureWorkspaceInitialized()
+    const result = await this.readFileInternal(args.path, { maxLines: null }) as Record<string, unknown>
+    return result.success ? { ...result, root: this.workspace?.root || '' } : result
+  }
+
+  /** 画布「保存到文件」用：与 Agent 写入同一条链路（审批 + 快照 + 审计 + 文件树刷新） */
+  async writeFileForUi(args: Record<string, unknown>): Promise<unknown> {
+    await this.ensureWorkspaceInitialized()
+    return this.writeFile(args)
+  }
+
   async handleToolCall(call: CodeWorkspaceToolCall): Promise<unknown> {
     await this.ensureWorkspaceInitialized()
     if (call.workspace?.root) {
@@ -300,6 +371,8 @@ export class CodeWorkspaceService {
         return this.getStatus()
       case 'list_files':
         return this.listFiles(args)
+      case 'search_files':
+        return this.searchFiles(args)
       case 'read_file':
         return this.readFile(args)
       case 'replace_in_file':
@@ -634,8 +707,187 @@ export class CodeWorkspaceService {
     return { success: true, root: start.displayPath, items, truncated: items.length >= limit }
   }
 
+  /**
+   * 只读内容搜索。装了 ripgrep 就交给 rg（大仓库快一个量级、自动尊重 .gitignore），
+   * 否则退回内置遍历。全程只读，不走审批 —— 搜索必须廉价到模型愿意随手用。
+   */
+  private async searchFiles(args: Record<string, unknown>): Promise<CodeWorkspaceSearchResult> {
+    const pattern = String(args.pattern ?? '').trim()
+    if (!pattern) return { success: false, error: 'pattern 不能为空' }
+    if (pattern.length > SEARCH_MAX_PATTERN_CHARS) return { success: false, error: `pattern 超过 ${SEARCH_MAX_PATTERN_CHARS} 字符` }
+
+    const start = await this.resolvePath(args.path || '.')
+    const stat = await fs.promises.stat(start.absPath)
+    if (!stat.isDirectory()) return { success: false, error: '搜索路径不是目录' }
+
+    const glob = typeof args.glob === 'string' && args.glob.trim() ? args.glob.trim() : ''
+    const caseSensitive = args.caseSensitive === true
+    // NaN 会让 matches.length >= maxResults 永远为假，结果就没了上限，这里必须兜住
+    const requestedMax = Math.trunc(Number(args.maxResults ?? 60))
+    const maxResults = Number.isFinite(requestedMax) ? Math.max(1, Math.min(SEARCH_MAX_MATCHES, requestedMax)) : 60
+
+    if (await this.hasRipgrep()) {
+      const viaRipgrep = await this.searchWithRipgrep(start.absPath, { pattern, glob, caseSensitive, maxResults })
+      if (viaRipgrep) return { ...viaRipgrep, root: start.displayPath }
+    }
+    const viaBuiltin = await this.searchWithBuiltin(start.absPath, { pattern, glob, caseSensitive, maxResults })
+    return { ...viaBuiltin, root: start.displayPath }
+  }
+
+  /** rg 探测只做一次，结果缓存到进程结束 */
+  private async hasRipgrep(): Promise<boolean> {
+    if (this.ripgrepAvailable !== null) return this.ripgrepAvailable
+    this.ripgrepAvailable = await new Promise<boolean>((resolve) => {
+      let settled = false
+      const done = (value: boolean) => {
+        if (settled) return
+        settled = true
+        resolve(value)
+      }
+      try {
+        const child = spawn('rg', ['--version'], { windowsHide: true })
+        const timer = setTimeout(() => {
+          child.kill()
+          done(false)
+        }, RIPGREP_DETECT_TIMEOUT_MS)
+        child.on('error', () => { clearTimeout(timer); done(false) })
+        child.on('close', (code) => { clearTimeout(timer); done(code === 0) })
+      } catch {
+        done(false)
+      }
+    })
+    return this.ripgrepAvailable
+  }
+
+  /** rg 失败（spawn 报错、参数不兼容、输出解析不出来）返回 null，由调用方退回内置遍历 */
+  private async searchWithRipgrep(
+    cwd: string,
+    opts: { pattern: string; glob: string; caseSensitive: boolean; maxResults: number },
+  ): Promise<CodeWorkspaceSearchResult | null> {
+    const rgArgs = ['--line-number', '--no-heading', '--color', 'never', '--no-messages']
+    if (!opts.caseSensitive) rgArgs.push('--ignore-case')
+    if (opts.glob) rgArgs.push('--glob', opts.glob)
+    for (const dir of SKIP_DIRS) rgArgs.push('--glob', `!${dir}`)
+    // pattern 走 -e 且不经 shell，不存在命令注入；rg 自己解释正则，与内置遍历语义基本一致
+    rgArgs.push('-e', opts.pattern, '.')
+
+    const output = await new Promise<{ ok: boolean; stdout: string }>((resolve) => {
+      let stdout = ''
+      let settled = false
+      const done = (value: { ok: boolean; stdout: string }) => {
+        if (settled) return
+        settled = true
+        resolve(value)
+      }
+      try {
+        const child = spawn('rg', rgArgs, { cwd, windowsHide: true })
+        const timer = setTimeout(() => { child.kill(); done({ ok: false, stdout }) }, RIPGREP_SEARCH_TIMEOUT_MS)
+        child.stdout.on('data', (chunk) => {
+          if (stdout.length < 2_000_000) stdout += String(chunk)
+          else child.kill()
+        })
+        child.stderr.on('data', () => { /* --no-messages 已抑制大部分噪音 */ })
+        child.on('error', () => { clearTimeout(timer); done({ ok: false, stdout: '' }) })
+        // 退出码 1 = 没有命中，也是正常结果
+        child.on('close', (code) => { clearTimeout(timer); done({ ok: code === 0 || code === 1, stdout }) })
+      } catch {
+        done({ ok: false, stdout: '' })
+      }
+    })
+    if (!output.ok) return null
+
+    const matches: CodeWorkspaceSearchMatch[] = []
+    let truncated = false
+    for (const line of output.stdout.split('\n')) {
+      if (!line) continue
+      if (matches.length >= opts.maxResults) { truncated = true; break }
+      // 形如 ./src/a.ts:12:内容；路径里不含冒号（rg 输出的是相对路径）
+      const firstColon = line.indexOf(':')
+      const secondColon = line.indexOf(':', firstColon + 1)
+      if (firstColon <= 0 || secondColon <= firstColon) continue
+      const lineNumber = Number(line.slice(firstColon + 1, secondColon))
+      if (!Number.isInteger(lineNumber)) continue
+      matches.push({
+        path: line.slice(0, firstColon).replace(/^\.[\\/]/, ''),
+        line: lineNumber,
+        text: line.slice(secondColon + 1).slice(0, SEARCH_MATCH_TEXT_CHARS),
+      })
+    }
+    return { success: true, matches, truncated, engine: 'ripgrep' }
+  }
+
+  private async searchWithBuiltin(
+    root: string,
+    opts: { pattern: string; glob: string; caseSensitive: boolean; maxResults: number },
+  ): Promise<CodeWorkspaceSearchResult> {
+    const regex = buildSearchRegExp(opts.pattern, opts.caseSensitive)
+    const globRegex = opts.glob ? globToRegExp(opts.glob) : null
+    const matches: CodeWorkspaceSearchMatch[] = []
+    const deadline = Date.now() + SEARCH_TIME_BUDGET_MS
+    const queue: string[] = [root]
+    let truncated = false
+    let timedOut = false
+
+    while (queue.length > 0) {
+      if (Date.now() > deadline) { timedOut = true; break }
+      const dir = queue.shift()!
+      const dirents = await fs.promises.readdir(dir, { withFileTypes: true }).catch(() => [])
+      for (const dirent of dirents) {
+        if (SKIP_DIRS.has(dirent.name)) continue
+        const absPath = path.join(dir, dirent.name)
+        if (dirent.isDirectory()) {
+          queue.push(absPath)
+          continue
+        }
+        if (!dirent.isFile()) continue
+        if (this.isBinaryPath(absPath)) continue
+        const relative = path.relative(root, absPath).replace(/\\/g, '/')
+        if (globRegex && !globRegex.test(relative)) continue
+        if (Date.now() > deadline) { timedOut = true; break }
+        const fileStat = await fs.promises.stat(absPath).catch(() => null)
+        if (!fileStat || fileStat.size > SEARCH_MAX_FILE_BYTES) continue
+        const buffer = await fs.promises.readFile(absPath).catch(() => null)
+        if (!buffer || buffer.includes(0)) continue
+        const lines = buffer.toString('utf8').split(/\r?\n/)
+        for (let index = 0; index < lines.length; index += 1) {
+          const text = lines[index]
+          if (text.length > SEARCH_MAX_LINE_CHARS) continue
+          regex.lastIndex = 0
+          if (!regex.test(text)) continue
+          if (matches.length >= opts.maxResults) { truncated = true; break }
+          matches.push({ path: relative, line: index + 1, text: text.slice(0, SEARCH_MATCH_TEXT_CHARS) })
+        }
+        if (truncated) break
+      }
+      if (truncated || timedOut) break
+    }
+    return { success: true, matches, truncated, timedOut: timedOut || undefined, engine: 'builtin' }
+  }
+
   private async readFile(args: Record<string, unknown>): Promise<unknown> {
-    const target = await this.resolvePath(args.path)
+    const maxLines = Math.max(1, Math.min(MAX_READ_LINES, Number(args.maxLines ?? MAX_READ_LINES)))
+    const offset = Math.max(0, Math.trunc(Number(args.offset ?? 0)) || 0)
+    const result = await this.readFileInternal(args.path, { maxLines, offset }) as Record<string, unknown>
+    if (!result.success || !result.hasMore) return result
+    // 明确告诉模型「你没读全」：只加在工具链路上，UI 打开文件走 readFileForUi，正文不能被塞进提示
+    const nextOffset = Number(result.offset || 0) + Number(result.returnedLines || 0)
+    const remaining = Math.max(0, Number(result.lineCount || 0) - nextOffset)
+    return {
+      ...result,
+      truncationNotice: `只返回了第 ${Number(result.offset || 0) + 1}-${nextOffset} 行，文件还有 ${remaining} 行没读。`
+        + `需要后续内容时用同一 path 加 offset=${nextOffset} 继续读，不要基于半个文件下结论。`,
+    }
+  }
+
+  /**
+   * 读文件公共实现。maxLines 为 null 时读全文（UI 打开文件用：截断内容一旦被编辑写回就会截断源文件），
+   * 二进制判定、敏感文件审批、单文件字节上限对两条链路一致。
+   */
+  private async readFileInternal(
+    inputPath: unknown,
+    opts: { maxLines: number | null; offset?: number },
+  ): Promise<unknown> {
+    const target = await this.resolvePath(inputPath)
     if (this.isBinaryPath(target.absPath)) return { success: false, error: '二进制文件不会进入模型上下文', path: target.displayPath }
     if (this.isSensitivePath(target.displayPath)) {
       const approved = await this.requestApproval({
@@ -653,14 +905,20 @@ export class CodeWorkspaceService {
     if (buffer.includes(0)) return { success: false, error: '疑似二进制文件，拒绝读取', path: target.displayPath }
     const text = buffer.toString('utf8')
     const lines = text.split(/\r?\n/)
-    const maxLines = Math.max(1, Math.min(MAX_READ_LINES, Number(args.maxLines ?? MAX_READ_LINES)))
+    const offset = Math.max(0, Math.min(opts.offset ?? 0, Math.max(0, lines.length - 1)))
+    const slice = opts.maxLines === null ? lines.slice(offset) : lines.slice(offset, offset + opts.maxLines)
+    const hasMore = offset + slice.length < lines.length
     return {
       success: true,
       path: target.displayPath,
-      content: lines.slice(0, maxLines).join('\n'),
+      content: slice.join('\n'),
+      /** 文件总行数（不是本次返回的行数） */
       lineCount: lines.length,
+      offset,
+      returnedLines: slice.length,
+      hasMore,
       sizeBytes: stat.size,
-      truncated: lines.length > maxLines,
+      truncated: hasMore,
     }
   }
 

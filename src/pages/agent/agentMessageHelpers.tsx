@@ -37,6 +37,7 @@ export const TOOL_LABELS: Record<string, string> = {
   update_plan: '更新计划',
   code_workspace_status: '查看工作区状态',
   code_list_files: '列出文件',
+  code_search: '搜索代码',
   code_read_file: '读取文件',
   code_get_dev_server_logs: '查看开发服务器日志',
   code_get_browser_diagnostics: '查看浏览器诊断',

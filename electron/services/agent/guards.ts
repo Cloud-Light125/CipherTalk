@@ -55,6 +55,8 @@ const TOOL_TIMEOUT_OVERRIDES: Record<string, number> = {
   canvas_rename: 120_000,
   code_read_file: 120_000,
   code_list_files: 120_000,
+  code_search: 120_000, // 内置遍历有 10s 预算、rg 有 20s 上限，这里只是兜底
+
   code_workspace_status: 120_000,
   code_replace_in_file: 600_000, // 可能等待用户审批
   code_write_file: 600_000,
