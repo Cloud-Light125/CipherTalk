@@ -795,6 +795,7 @@ export class WcdbCore {
       case -13: return '请勿使用盗版'
       case -14: return '您已被禁用'
       case -15: return '已停用'
+      case -16: return '云端授权服务请求失败'
       default: return `WCDB 错误码: ${code}`
     }
   }

@@ -792,6 +792,7 @@ export class WcdbCore {
       case -13: return '请勿使用盗版'
       case -14: return '您已被禁用'
       case -15: return '已停用'
+      case -16: return '云端授权服务请求失败'
       default: return `WCDB 错误码: ${code}`
     }
   }
@@ -806,6 +807,7 @@ export class WcdbCore {
     if (code === -13) return `${prefix}: ${code}（请勿使用盗版）`
     if (code === -14) return `${prefix}: ${code}（您已被禁用）`
     if (code === -15) return `${prefix}: ${code}（已停用）`
+    if (code === -16) return `${prefix}: ${code}（云端授权服务请求失败）`
     if (code === -3) return `${prefix}: ${code}（消息数据库未找到）`
     return `${prefix}: ${code}`
   }
