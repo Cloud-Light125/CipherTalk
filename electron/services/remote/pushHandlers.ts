@@ -87,6 +87,14 @@ export function registerRemotePushHandlers(configService: ConfigService, log: Pu
     return { success: true }
   })
 
+  // 手机端「设置 → 通知」里的测试按钮：让本机经真实推送链路发一条回去，
+  // 手机锁屏也能收到才说明全链路（加密 → 中转 → APNs → 解密扩展）都通了
+  agentRpcHandlers.set('push:test', async () => {
+    if (!hasPushTargets()) return { success: false, error: '本机还没有登记任何推送令牌，先开一次通知开关' }
+    await pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。', group: '测试' })
+    return { success: true }
+  })
+
   agentRpcHandlers.set('push:unregister', (_event, payload?: unknown) => {
     const input = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
     const pushToken = String(input.token || '')
