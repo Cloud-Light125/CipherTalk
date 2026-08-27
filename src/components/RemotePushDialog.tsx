@@ -11,7 +11,8 @@ type PushConfig = {
 }
 
 /**
- * 手机推送设置弹窗。两条通道：Bark（免费）/ APNs 密钥（需付费开发者账号）。
+ * 手机推送设置弹窗。默认通道是内置的信令 Worker 中转——手机开通知开关即可，
+ * 零配置、内容端到端加密；Bark 是免费备用，自填 APNs 密钥是高级直连。
  * 从「密语 App」配对弹窗里的按钮打开，独立成一个对话框，别把配对界面挤成一锅粥。
  */
 export function RemotePushDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -115,12 +116,33 @@ export function RemotePushDialog({ isOpen, onClose }: { isOpen: boolean; onClose
             <Modal.Body>
               <div className="flex flex-col gap-3 pb-2">
                 <p className="text-xs text-muted">
-                  手机切到后台后直连会断开，新消息只能靠推送送达。两条通道任选其一，都配则同时发。
+                  手机切到后台后直连会断开，新消息只能靠推送送达。
                 </p>
 
                 <div className="flex flex-col gap-2 rounded-xl bg-default-100 p-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">方式一：Bark（免费，推荐）</span>
+                    <span className="text-sm font-medium text-foreground">自带推送（默认，无需配置）</span>
+                    {(config?.deviceCount ?? 0) > 0 && (
+                      <Chip size="sm" variant="soft" color="success">{config?.deviceCount} 台手机已登记</Chip>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted">
+                    在手机密语 App 的「设置 → 通知」里打开开关就能收推送，这里不用配任何东西。
+                    通知内容在本机加密后才出门，中转服务器和苹果只见密文，真实内容由手机本地解密展示。
+                    需要 App Store / TestFlight 安装的正式版（免费侧载证书收不到推送，请用下面的 Bark）。
+                  </p>
+                  {(config?.deviceCount ?? 0) > 0 && (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="tertiary" isDisabled={busy} onPress={() => void test()}>
+                        发送测试
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2 rounded-xl bg-default-100 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">备用：Bark（免费）</span>
                     {config?.barkUrl && (
                       <Chip size="sm" variant="soft" color="success">
                         {config.barkEncrypted ? '已启用 · 加密' : '已启用'}
@@ -155,16 +177,15 @@ export function RemotePushDialog({ isOpen, onClose }: { isOpen: boolean; onClose
 
                 <div className="flex flex-col gap-2 rounded-xl bg-default-100 p-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">方式二：APNs 密钥（需付费开发者账号）</span>
+                    <span className="text-sm font-medium text-foreground">高级：APNs 直连（自备付费开发者账号）</span>
                     {config?.configured && (
-                      <Chip size="sm" variant="soft" color="success">
-                        {config.deviceCount > 0 ? `${config.deviceCount} 台手机已登记` : '已配置，等待手机开启'}
-                      </Chip>
+                      <Chip size="sm" variant="soft" color="success">已启用直连</Chip>
                     )}
                   </div>
                   <p className="text-xs text-muted">
-                    通知由本机直接发往苹果，链路上没有任何第三方。需要苹果开发者账号在后台生成
-                    APNs 密钥（.p8），且安装包必须用该账号的证书签名——免费侧载证书不行，请用方式一。
+                    填了自己的 APNs 密钥后，通知改由本机直接发往苹果，连中转也不经过。需要苹果
+                    开发者账号在后台生成 .p8 密钥，且安装包必须用该账号的证书签名。绝大多数人用
+                    默认的自带推送即可，不用填这里。
                   </p>
                   <div className="flex gap-2">
                     <input

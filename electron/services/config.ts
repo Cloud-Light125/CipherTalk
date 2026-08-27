@@ -296,6 +296,11 @@ interface ConfigSchema {
     pushPlatform?: string
     /** APNs 的 apns-topic，即手机 App 的 bundle id */
     pushBundleId?: string
+    /**
+     * 推送端到端加密密钥（base64，32 字节）。手机生成后经 DataChannel（DTLS）交来，
+     * 走中转推送时本机用它加密通知内容，中转只见密文；空 = 旧版手机，降级发通用文案
+     */
+    pushKey?: string
   }>
   // APNs 推送凭据：苹果开发者后台生成的 .p8 私钥内容 + Key ID + Team ID。
   // 手机把令牌交给本机后，通知由本机直接发往苹果，不经任何第三方推送中转。

@@ -8,6 +8,7 @@ import type { ConfigService } from '../config'
 import { agentRpcHandlers } from './agentRpcRegistry'
 import { sendApnsMessage, type ApnsCredentials } from './applePush'
 import { sendBarkMessage, type BarkConfig } from './barkPush'
+import { sendRelayMessage } from './relayPush'
 
 type PushLogger = {
   info(category: string, message: string, data?: any): void
@@ -48,7 +49,7 @@ function clearPushToken(match: (device: { token: string; pushToken?: string }) =
   const next = devices.map((device) => {
     if (!match(device)) return device
     changed = true
-    const { pushToken: _t, pushPlatform: _p, pushBundleId: _b, ...rest } = device
+    const { pushToken: _t, pushPlatform: _p, pushBundleId: _b, pushKey: _k, ...rest } = device
     return rest
   })
   if (changed) configRef?.set('remoteDevices', next)
@@ -70,23 +71,19 @@ export function registerRemotePushHandlers(configService: ConfigService, log: Pu
       // Android 要走 FCM，是另一套凭据和另一套协议，目前没实现
       return { success: false, error: '电脑端目前只支持 iOS 推送' }
     }
-    if (!isApnsConfigured()) {
-      return {
-        success: false,
-        error: isBarkConfigured()
-          ? '电脑端使用 Bark 推送，通知会发到手机上的 Bark App，无需开启此开关'
-          : '电脑端还没配置推送（设置 → 连接手机 → 推送通知，可用免费的 Bark 或 APNs 密钥）',
-      }
-    }
+    // 不再要求本机配 APNs 密钥——默认走信令 Worker 中转，密钥在 Worker 上，零配置
 
     const devices = configService.get('remoteDevices') ?? []
     const index = devices.findIndex((device) => device.token === deviceToken)
     if (index < 0) return { success: false, error: '设备未配对或已被吊销' }
 
+    // pushKey 是手机生成的端到端加密密钥，经 DataChannel（DTLS）送来，不过信令服务器。
+    // 老版本 App 不带它——降级为通用文案推送，别把这条注册拒了
+    const pushKey = String(input.pushKey || '')
     const next = [...devices]
-    next[index] = { ...next[index], pushToken, pushPlatform: platform, pushBundleId: bundleId }
+    next[index] = { ...next[index], pushToken, pushPlatform: platform, pushBundleId: bundleId, pushKey }
     configService.set('remoteDevices', next)
-    logger?.warn('RemotePush', '已登记推送令牌', { device: next[index].name })
+    logger?.warn('RemotePush', '已登记推送令牌', { device: next[index].name, e2e: Boolean(pushKey) })
     return { success: true }
   })
 
@@ -119,18 +116,30 @@ export async function pushToRemoteDevices(input: {
   }
 
   const devices = (configRef?.get('remoteDevices') ?? []).filter((device) => device.pushToken)
-  if (devices.length === 0 || !isApnsConfigured()) return
+  if (devices.length === 0) return
 
+  // 配了自己的 APNs 密钥就直连苹果（链路上没有第三方，内容可以明文发）；
+  // 没配走信令 Worker 中转——内容用手机交来的密钥加密，中转只见密文
+  const direct = isApnsConfigured()
   const creds = credentials()
   for (const device of devices) {
-    const result = await sendApnsMessage(creds, {
-      token: String(device.pushToken),
-      bundleId: String(device.pushBundleId || ''),
-      title: input.title,
-      body: input.body,
-      route: input.route,
-      group: input.group,
-    })
+    const result = direct
+      ? await sendApnsMessage(creds, {
+          token: String(device.pushToken),
+          bundleId: String(device.pushBundleId || ''),
+          title: input.title,
+          body: input.body,
+          route: input.route,
+          group: input.group,
+        })
+      : await sendRelayMessage({
+          token: String(device.pushToken),
+          pushKey: String(device.pushKey || ''),
+          title: input.title,
+          body: input.body,
+          route: input.route,
+          group: input.group,
+        })
     if (result.ok) continue
     if (result.gone) {
       logger?.warn('RemotePush', '推送令牌已失效，已移除', { device: device.name, reason: result.reason })
@@ -144,5 +153,6 @@ export async function pushToRemoteDevices(input: {
 /** 有没有手机等着收通知——没有的话调用方可以整段跳过，不用白算 */
 export function hasPushTargets(): boolean {
   if (isBarkConfigured()) return true
-  return isApnsConfigured() && (configRef?.get('remoteDevices') ?? []).some((device) => device.pushToken)
+  // 中转默认可用，登记过令牌的手机就是目标，不再要求本机配 APNs 密钥
+  return (configRef?.get('remoteDevices') ?? []).some((device) => device.pushToken)
 }

@@ -139,17 +139,13 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
     configService.set('remoteApnsKeyP8', '')
     configService.set('remoteApnsKeyId', '')
     configService.set('remoteApnsTeamId', '')
-    // 凭据没了，留着手机上报的推送令牌也没意义
-    configService.set(
-      'remoteDevices',
-      (configService.get('remoteDevices') ?? []).map(({ pushToken: _t, pushPlatform: _p, pushBundleId: _b, ...rest }) => rest)
-    )
+    // 推送令牌保留：清掉自己的 APNs 密钥只是退回默认的中转通道，推送照常能发
     return { success: true }
   })
 
   ipcMain.handle('deviceConnect:remote:testPush', async () => {
     const { pushToRemoteDevices, hasPushTargets } = await import('../../services/remote/pushHandlers')
-    if (!hasPushTargets()) return { success: false, error: '还没有可用的推送通道：配置 Bark 地址，或填 APNs 密钥后在手机上打开通知开关' }
+    if (!hasPushTargets()) return { success: false, error: '还没有可用的推送通道：在手机的「设置 → 通知」里打开开关（或配置 Bark 地址）' }
     await pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。', group: '测试' })
     return { success: true }
   })
