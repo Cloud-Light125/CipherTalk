@@ -176,10 +176,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       hasPassword: () => ipcRenderer.invoke('deviceConnect:remote:hasPassword') as Promise<{ success: boolean; hasPassword: boolean }>,
       setPassword: (payload: { password: string; currentPassword?: string }) => ipcRenderer.invoke('deviceConnect:remote:setPassword', payload) as Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>,
       unlock: (password: string) => ipcRenderer.invoke('deviceConnect:remote:unlock', password) as Promise<{ success: boolean; error?: string; info?: RemoteControlInfo }>,
-      getPushConfig: () => ipcRenderer.invoke('deviceConnect:remote:getPushConfig') as Promise<{ success: boolean; configured: boolean; keyId: string; teamId: string; deviceCount: number; barkUrl: string; barkEncrypted: boolean }>,
-      setBarkConfig: (payload: { url?: string; key?: string }) => ipcRenderer.invoke('deviceConnect:remote:setBarkConfig', payload) as Promise<{ success: boolean; error?: string }>,
-      setPushConfig: (payload: { keyP8?: string; keyId?: string; teamId?: string }) => ipcRenderer.invoke('deviceConnect:remote:setPushConfig', payload) as Promise<{ success: boolean; error?: string }>,
-      clearPushConfig: () => ipcRenderer.invoke('deviceConnect:remote:clearPushConfig') as Promise<{ success: boolean; error?: string }>,
       testPush: () => ipcRenderer.invoke('deviceConnect:remote:testPush') as Promise<{ success: boolean; error?: string }>,
       onStatus: (callback: (payload: { connected: boolean }) => void) => {
         const listener = (_: any, payload: { connected: boolean }) => callback(payload)

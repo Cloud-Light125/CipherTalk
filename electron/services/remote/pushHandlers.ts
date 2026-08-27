@@ -1,13 +1,15 @@
 /**
  * 手机推送：登记令牌 + 在手机断开时把通知发过去。
  *
+ * 只有一条通道：信令 Worker 中转（relayPush.ts）。用户零配置——手机开一次
+ * 通知开关即可；内容用手机配对时交来的密钥端到端加密，中转只见密文。
+ *
  * 推送令牌挂在 remoteDevices 里对应的那台设备上，而不是单独存一张表——
  * 这样「吊销设备」自然就把推送一起吊销了，不会出现手机被踢了还在收通知。
  */
 import type { ConfigService } from '../config'
 import { agentRpcHandlers } from './agentRpcRegistry'
-import { sendApnsMessage, type ApnsCredentials } from './applePush'
-import { sendBarkMessage, type BarkConfig } from './barkPush'
+import { sendRelayMessage } from './relayPush'
 
 type PushLogger = {
   info(category: string, message: string, data?: any): void
@@ -17,30 +19,6 @@ type PushLogger = {
 let configRef: ConfigService | null = null
 let logger: PushLogger = null
 
-function credentials(): ApnsCredentials {
-  return {
-    keyP8: String(configRef?.get('remoteApnsKeyP8') || ''),
-    keyId: String(configRef?.get('remoteApnsKeyId') || ''),
-    teamId: String(configRef?.get('remoteApnsTeamId') || ''),
-  }
-}
-
-export function isApnsConfigured(): boolean {
-  const { keyP8, keyId, teamId } = credentials()
-  return Boolean(keyP8 && keyId && teamId)
-}
-
-function barkConfig(): BarkConfig {
-  return {
-    url: String(configRef?.get('remoteBarkUrl') || ''),
-    key: String(configRef?.get('remoteBarkKey') || ''),
-  }
-}
-
-export function isBarkConfigured(): boolean {
-  return Boolean(barkConfig().url)
-}
-
 /** 把某台设备的推送令牌抹掉（令牌失效或用户关掉开关） */
 function clearPushToken(match: (device: { token: string; pushToken?: string }) => boolean): void {
   const devices = configRef?.get('remoteDevices') ?? []
@@ -48,7 +26,7 @@ function clearPushToken(match: (device: { token: string; pushToken?: string }) =
   const next = devices.map((device) => {
     if (!match(device)) return device
     changed = true
-    const { pushToken: _t, pushPlatform: _p, pushBundleId: _b, ...rest } = device
+    const { pushToken: _t, pushPlatform: _p, pushBundleId: _b, pushKey: _k, ...rest } = device
     return rest
   })
   if (changed) configRef?.set('remoteDevices', next)
@@ -70,23 +48,26 @@ export function registerRemotePushHandlers(configService: ConfigService, log: Pu
       // Android 要走 FCM，是另一套凭据和另一套协议，目前没实现
       return { success: false, error: '电脑端目前只支持 iOS 推送' }
     }
-    if (!isApnsConfigured()) {
-      return {
-        success: false,
-        error: isBarkConfigured()
-          ? '电脑端使用 Bark 推送，通知会发到手机上的 Bark App，无需开启此开关'
-          : '电脑端还没配置推送（设置 → 连接手机 → 推送通知，可用免费的 Bark 或 APNs 密钥）',
-      }
-    }
 
     const devices = configService.get('remoteDevices') ?? []
     const index = devices.findIndex((device) => device.token === deviceToken)
     if (index < 0) return { success: false, error: '设备未配对或已被吊销' }
 
+    // pushKey 是手机生成的端到端加密密钥，经 DataChannel（DTLS）送来，不过信令服务器。
+    // 老版本 App 不带它——降级为通用文案推送，别把这条注册拒了
+    const pushKey = String(input.pushKey || '')
     const next = [...devices]
-    next[index] = { ...next[index], pushToken, pushPlatform: platform, pushBundleId: bundleId }
+    next[index] = { ...next[index], pushToken, pushPlatform: platform, pushBundleId: bundleId, pushKey }
     configService.set('remoteDevices', next)
-    logger?.warn('RemotePush', '已登记推送令牌', { device: next[index].name })
+    logger?.warn('RemotePush', '已登记推送令牌', { device: next[index].name, e2e: Boolean(pushKey) })
+    return { success: true }
+  })
+
+  // 手机端「设置 → 通知」里的测试按钮：让本机经真实推送链路发一条回去，
+  // 手机锁屏也能收到才说明全链路（加密 → 中转 → APNs → 解密扩展）都通了
+  agentRpcHandlers.set('push:test', async () => {
+    if (!hasPushTargets()) return { success: false, error: '本机还没有登记任何推送令牌，先开一次通知开关' }
+    await pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。', group: '测试' })
     return { success: true }
   })
 
@@ -108,24 +89,14 @@ export async function pushToRemoteDevices(input: {
   body: string
   /** 点通知后手机跳到哪，形如 /chat/12 */
   route?: string
-  /** 通知分组：Bark 的 group / APNs 的 thread-id，同组折叠 */
+  /** 通知分组（APNs thread-id），同组折叠 */
   group?: string
 }): Promise<void> {
-  // Bark 通道：一台电脑对一个 Bark 地址，与设备表无关（Bark 自己就是那台手机）
-  if (isBarkConfigured()) {
-    const result = await sendBarkMessage(barkConfig(), input)
-    if (result.ok) logger?.warn('RemotePush', 'Bark 推送已发出', { title: input.title, group: input.group || '' })
-    else logger?.warn('RemotePush', 'Bark 推送失败', { reason: result.reason })
-  }
-
   const devices = (configRef?.get('remoteDevices') ?? []).filter((device) => device.pushToken)
-  if (devices.length === 0 || !isApnsConfigured()) return
-
-  const creds = credentials()
   for (const device of devices) {
-    const result = await sendApnsMessage(creds, {
+    const result = await sendRelayMessage({
       token: String(device.pushToken),
-      bundleId: String(device.pushBundleId || ''),
+      pushKey: String(device.pushKey || ''),
       title: input.title,
       body: input.body,
       route: input.route,
@@ -143,6 +114,5 @@ export async function pushToRemoteDevices(input: {
 
 /** 有没有手机等着收通知——没有的话调用方可以整段跳过，不用白算 */
 export function hasPushTargets(): boolean {
-  if (isBarkConfigured()) return true
-  return isApnsConfigured() && (configRef?.get('remoteDevices') ?? []).some((device) => device.pushToken)
+  return (configRef?.get('remoteDevices') ?? []).some((device) => device.pushToken)
 }

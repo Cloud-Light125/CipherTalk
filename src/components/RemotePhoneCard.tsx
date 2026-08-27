@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Button, Chip, Spinner, toast } from '@heroui/react'
 import { ArrowDownToLine, CirclePlay, FileText, QrCode } from '@gravity-ui/icons'
 import { formatDisplayVersion } from '../lib/appVersion'
-import { RemotePushDialog } from './RemotePushDialog'
 
 type RemoteDeviceSummary = {
   id: string
@@ -48,7 +47,21 @@ export function RemotePhoneCard() {
   const [pwInput, setPwInput] = useState('')
   const [pwConfirm, setPwConfirm] = useState('')
   const [pwError, setPwError] = useState('')
-  const [pushOpen, setPushOpen] = useState(false)
+  const [testingPush, setTestingPush] = useState(false)
+
+  // 推送零配置（中转 + 端到端加密），这里只需要能验证链路通不通
+  const sendTestPush = async () => {
+    setTestingPush(true)
+    try {
+      const result = await window.electronAPI.deviceConnect.remote.testPush()
+      if (result.success) toast.success('已发出测试通知，几秒内会送达手机')
+      else toast.danger(result.error || '发送失败')
+    } catch (e) {
+      toast.danger(e instanceof Error ? e.message : '发送失败')
+    } finally {
+      setTestingPush(false)
+    }
+  }
 
   // 卡片显示期间才允许新手机配对：关掉弹窗就关闸（同时后端重新上锁），
   // 被吊销的手机没法自己配回来
@@ -367,11 +380,10 @@ export function RemotePhoneCard() {
       </div>
 
       {running && (
-        <Button variant="tertiary" fullWidth onPress={() => setPushOpen(true)}>
-          推送通知设置…
+        <Button variant="tertiary" fullWidth isDisabled={testingPush} onPress={() => void sendTestPush()}>
+          {testingPush ? '发送中…' : '发送测试通知'}
         </Button>
       )}
-      <RemotePushDialog isOpen={pushOpen} onClose={() => setPushOpen(false)} />
 
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-default-200 pt-3 text-xs">
         {APP_LINKS.map((link) => (

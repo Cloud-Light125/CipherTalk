@@ -296,17 +296,12 @@ interface ConfigSchema {
     pushPlatform?: string
     /** APNs 的 apns-topic，即手机 App 的 bundle id */
     pushBundleId?: string
+    /**
+     * 推送端到端加密密钥（base64，32 字节）。手机生成后经 DataChannel（DTLS）交来，
+     * 走中转推送时本机用它加密通知内容，中转只见密文；空 = 旧版手机，降级发通用文案
+     */
+    pushKey?: string
   }>
-  // APNs 推送凭据：苹果开发者后台生成的 .p8 私钥内容 + Key ID + Team ID。
-  // 手机把令牌交给本机后，通知由本机直接发往苹果，不经任何第三方推送中转。
-  // 和 AI 服务的密钥一样明文存本地配置库，威胁模型也一样：能读到这里就已经拿到本机权限了
-  remoteApnsKeyP8: string
-  remoteApnsKeyId: string
-  remoteApnsTeamId: string
-  // Bark 推送（免费方案，不需要苹果开发者账号）：设备推送地址 + 可选的端到端加密密钥。
-  // 配了密钥时 Bark 服务器和 APNs 只见密文，密钥只在本机和手机上的 Bark App 里
-  remoteBarkUrl: string
-  remoteBarkKey: string
   // 查看配对二维码的密码，格式 scrypt$<saltHex>$<hashHex>。
   // 存哈希不存密文：只需要验证不需要还原，加密的话密钥也在本机、等于没锁
   remotePairingPasswordHash: string
@@ -526,11 +521,6 @@ const defaults: ConfigSchema = {
   remoteSignalingUrl: '',
   remotePairingId: '',
   remoteDevices: [],
-  remoteApnsKeyP8: '',
-  remoteApnsKeyId: '',
-  remoteApnsTeamId: '',
-  remoteBarkUrl: '',
-  remoteBarkKey: '',
   remotePairingPasswordHash: ''
 }
 
