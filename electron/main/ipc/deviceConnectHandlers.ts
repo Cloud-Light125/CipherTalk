@@ -70,79 +70,8 @@ export function registerDeviceConnectHandlers(ctx: MainProcessContext): void {
     return { success: true, info: await getRemoteControlInfo(ctx) }
   })
 
-  // 推送凭据：.p8 私钥内容只进不出，读接口只回「配没配」和 Key/Team ID，
-  // 免得渲染层或日志里出现私钥全文
-  ipcMain.handle('deviceConnect:remote:getPushConfig', () => {
-    const configService = ctx.getConfigService()
-    return {
-      success: true,
-      configured: Boolean(
-        configService?.get('remoteApnsKeyP8')
-        && configService?.get('remoteApnsKeyId')
-        && configService?.get('remoteApnsTeamId')
-      ),
-      keyId: String(configService?.get('remoteApnsKeyId') || ''),
-      teamId: String(configService?.get('remoteApnsTeamId') || ''),
-      deviceCount: (configService?.get('remoteDevices') ?? []).filter((device) => device.pushToken).length,
-      barkUrl: String(configService?.get('remoteBarkUrl') || ''),
-      barkEncrypted: Boolean(configService?.get('remoteBarkKey')),
-    }
-  })
-
-  ipcMain.handle('deviceConnect:remote:setBarkConfig', async (_event, payload: { url?: string; key?: string }) => {
-    const configService = ctx.getConfigService()
-    if (!configService) return { success: false, error: '配置服务未就绪' }
-    const url = String(payload?.url ?? '').trim()
-    if (url && !/^https?:\/\//.test(url)) {
-      return { success: false, error: 'Bark 地址应以 http(s):// 开头，在 Bark App 首页可以复制' }
-    }
-    // key 为 undefined 表示「保持原密钥」，空串才是显式清除——UI 靠这个区分
-    // 「用户没动密钥框」和「用户想去掉加密」
-    if (payload?.key !== undefined) {
-      const key = String(payload.key).trim()
-      const { isValidBarkKey } = await import('../../services/remote/barkPush')
-      if (!isValidBarkKey(key)) {
-        return { success: false, error: '加密密钥必须是 16、24 或 32 个字符（对应 AES-128/192/256）' }
-      }
-      configService.set('remoteBarkKey', key)
-    }
-    configService.set('remoteBarkUrl', url)
-    if (!url) configService.set('remoteBarkKey', '')
-    return { success: true }
-  })
-
-  ipcMain.handle('deviceConnect:remote:setPushConfig', (_event, payload: {
-    keyP8?: string
-    keyId?: string
-    teamId?: string
-  }) => {
-    const configService = ctx.getConfigService()
-    if (!configService) return { success: false, error: '配置服务未就绪' }
-    const keyP8 = String(payload?.keyP8 ?? '').trim()
-    const keyId = String(payload?.keyId ?? '').trim()
-    const teamId = String(payload?.teamId ?? '').trim()
-    // keyP8 传空串表示「不改」，避免每次保存都要用户重新粘一遍私钥
-    if (keyP8) {
-      if (!keyP8.includes('BEGIN PRIVATE KEY')) {
-        return { success: false, error: '这不像 .p8 私钥内容，应包含 BEGIN PRIVATE KEY' }
-      }
-      configService.set('remoteApnsKeyP8', keyP8)
-    }
-    configService.set('remoteApnsKeyId', keyId)
-    configService.set('remoteApnsTeamId', teamId)
-    return { success: true }
-  })
-
-  ipcMain.handle('deviceConnect:remote:clearPushConfig', () => {
-    const configService = ctx.getConfigService()
-    if (!configService) return { success: false, error: '配置服务未就绪' }
-    configService.set('remoteApnsKeyP8', '')
-    configService.set('remoteApnsKeyId', '')
-    configService.set('remoteApnsTeamId', '')
-    // 推送令牌保留：清掉自己的 APNs 密钥只是退回默认的中转通道，推送照常能发
-    return { success: true }
-  })
-
+  // 推送只有一条通道（信令 Worker 中转，端到端加密），没有任何要配置的东西，
+  // 所以这里只剩「发送测试通知」
   ipcMain.handle('deviceConnect:remote:testPush', async () => {
     const { pushToRemoteDevices, hasPushTargets } = await import('../../services/remote/pushHandlers')
     if (!hasPushTargets()) return { success: false, error: '还没有可用的推送通道：在手机的「设置 → 通知」里打开开关（或配置 Bark 地址）' }
