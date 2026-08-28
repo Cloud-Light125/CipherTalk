@@ -112,6 +112,10 @@ export class WcdbService extends EventEmitter {
     }
   }
 
+  async checkLicense(): Promise<{ success: boolean; error?: string }> {
+    return this.call('checkLicense', {})
+  }
+
   async open(dbPath: string, hexKey: string, wxid: string): Promise<boolean> {
     this.shuttingDown = false
     const payload = { dbPath, hexKey, wxid }

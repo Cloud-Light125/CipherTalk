@@ -33,6 +33,7 @@ export class WcdbCore {
   private currentDbStoragePath: string | null = null
   private resourcesPath: string | null = null
   private userDataPath: string | null = null
+  private appVersion = ''
 
   // 已暴露的 C 符号
   private wcdbInit: any = null
@@ -55,6 +56,8 @@ export class WcdbCore {
   private wcdbStopMonitorPipe: any = null
   private wcdbGetMonitorPipeName: any = null
   private wcdbSetMyWxid: any = null
+  private wcdbSetClientInfo: any = null
+  private wcdbCheckLicense: any = null
 
   // 管道监控状态
   private monitorPipeClient: any = null
@@ -62,9 +65,10 @@ export class WcdbCore {
   private monitorReconnectTimer: any = null
   private monitorPipePath: string = ''
 
-  setPaths(resourcesPath: string, userDataPath: string): void {
+  setPaths(resourcesPath: string, userDataPath: string, appVersion: string): void {
     this.resourcesPath = resourcesPath
     this.userDataPath = userDataPath
+    this.appVersion = appVersion
   }
 
   getUserDataPath(): string | null { return this.userDataPath }
@@ -132,6 +136,15 @@ export class WcdbCore {
       this.wcdbStopMonitorPipe = tryBind('int32 wcdb_stop_monitor_pipe()')
       this.wcdbGetMonitorPipeName = tryBind('int32 wcdb_get_monitor_pipe_name(_Out_ void** outName)')
       this.wcdbSetMyWxid = tryBind('int32 wcdb_set_my_wxid(int64 handle, const char* wxid)')
+      this.wcdbSetClientInfo = tryBind('int32 wcdb_set_client_info(const char* applicationId, const char* clientType, const char* appVersion)')
+      this.wcdbCheckLicense = tryBind('int32 wcdb_check_license()')
+      if (!this.wcdbSetClientInfo || !this.wcdbCheckLicense) {
+        return { success: false, error: 'WCDB 原生库版本过旧，请升级到 1.1.0 或更高版本' }
+      }
+      const clientInfoResult = this.wcdbSetClientInfo('ciphertalk', 'cli', this.appVersion)
+      if (clientInfoResult !== 0) return { success: false, error: this.mapStatusCode(clientInfoResult) }
+      const licenseResult = this.wcdbCheckLicense()
+      if (licenseResult !== 0) return { success: false, error: this.mapStatusCode(licenseResult) }
       const initResult = this.wcdbInit()
       if (initResult !== 0) {
         return { success: false, error: this.mapStatusCode(initResult) }
@@ -142,6 +155,10 @@ export class WcdbCore {
     } catch (e: any) {
       return { success: false, error: `WCDB 初始化异常: ${e.message || String(e)}` }
     }
+  }
+
+  async checkLicense(): Promise<{ success: boolean; error?: string }> {
+    return this.initialize()
   }
 
   // ============== 路径解析 ==============
@@ -793,6 +810,8 @@ export class WcdbCore {
       case -14: return '您已被禁用'
       case -15: return '已停用'
       case -16: return '云端授权服务请求失败'
+      case -17: return '当前 CipherTalk CLI 版本不受支持，请更新后重试'
+      case -18: return '当前 WCDB 原生库版本不受支持，请更新 CLI 后重试'
       default: return `WCDB 错误码: ${code}`
     }
   }
@@ -808,6 +827,8 @@ export class WcdbCore {
     if (code === -14) return `${prefix}: ${code}（您已被禁用）`
     if (code === -15) return `${prefix}: ${code}（已停用）`
     if (code === -16) return `${prefix}: ${code}（云端授权服务请求失败）`
+    if (code === -17) return `${prefix}: ${code}（当前 CLI 版本不受支持）`
+    if (code === -18) return `${prefix}: ${code}（当前 WCDB 原生库版本不受支持）`
     if (code === -3) return `${prefix}: ${code}（消息数据库未找到）`
     return `${prefix}: ${code}`
   }

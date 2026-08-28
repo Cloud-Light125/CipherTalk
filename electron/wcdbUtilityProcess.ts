@@ -48,6 +48,9 @@ async function handleMessage(msg: any) {
       case 'testConnection':
         result = await core.testConnection(payload.dbPath, payload.hexKey, payload.wxid)
         break
+      case 'checkLicense':
+        result = await core.checkLicense()
+        break
       case 'open':
         result = await core.open(payload.dbPath, payload.hexKey, payload.wxid)
         break

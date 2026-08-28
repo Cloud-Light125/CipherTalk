@@ -63,11 +63,16 @@ export function registerRemotePushHandlers(configService: ConfigService, log: Pu
     return { success: true }
   })
 
-  // 手机端「设置 → 通知」里的测试按钮：让本机经真实推送链路发一条回去，
-  // 手机锁屏也能收到才说明全链路（加密 → 中转 → APNs → 解密扩展）都通了
-  agentRpcHandlers.set('push:test', async () => {
+  // 手机端「设置 → 通知」里的测试按钮：让本机经真实推送链路发一条回去。
+  // delayMs 给用户留出锁屏时间——前台收通知走 App 内的呈现逻辑，
+  // 锁屏收才是系统原生的横幅+声音路径，测试横幅必须锁屏收
+  agentRpcHandlers.set('push:test', (_event, payload?: unknown) => {
     if (!hasPushTargets()) return { success: false, error: '本机还没有登记任何推送令牌，先开一次通知开关' }
-    await pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。', group: '测试' })
+    const input = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
+    const delayMs = Math.min(Math.max(Number(input.delayMs) || 0, 0), 15000)
+    setTimeout(() => {
+      void pushToRemoteDevices({ title: '密语', body: '推送已连通，这是一条测试通知。', group: '测试' })
+    }, delayMs)
     return { success: true }
   })
 
