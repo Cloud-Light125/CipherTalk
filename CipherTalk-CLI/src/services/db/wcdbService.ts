@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { WcdbCore } from './wcdbCore.js'
 import { getNativeRoot, getUserDataPath } from '../../runtimePaths.js'
+import { CLI_VERSION } from '../../version.js'
 
 type QueryResult = { success: boolean; rows?: any[]; error?: string }
 
@@ -9,16 +10,16 @@ export class WcdbService extends EventEmitter {
 
   constructor() {
     super()
-    this.core.setPaths(getNativeRoot(), getUserDataPath())
+    this.core.setPaths(getNativeRoot(), getUserDataPath(), CLI_VERSION)
   }
 
   async testConnection(dbPath: string, hexKey: string, wxid = ''): Promise<{ success: boolean; error?: string; sessionCount?: number }> {
-    this.core.setPaths(getNativeRoot(), getUserDataPath())
+    this.core.setPaths(getNativeRoot(), getUserDataPath(), CLI_VERSION)
     return this.core.testConnection(dbPath, hexKey, wxid)
   }
 
   async open(dbPath: string, hexKey: string, wxid = ''): Promise<boolean> {
-    this.core.setPaths(getNativeRoot(), getUserDataPath())
+    this.core.setPaths(getNativeRoot(), getUserDataPath(), CLI_VERSION)
     return this.core.open(dbPath, hexKey, wxid)
   }
 
@@ -32,6 +33,12 @@ export class WcdbService extends EventEmitter {
 
   isConnected(): boolean {
     return this.core.isConnected()
+  }
+
+  async checkLicense(): Promise<void> {
+    this.core.setPaths(getNativeRoot(), getUserDataPath(), CLI_VERSION)
+    const result = await this.core.checkLicense()
+    if (!result.success) throw new Error(result.error || 'WCDB 授权检查失败')
   }
 
   async execQuery(kind: string, path: string, sql: string): Promise<QueryResult> {

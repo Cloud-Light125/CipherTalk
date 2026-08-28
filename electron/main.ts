@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, type Tray } from 'electron'
+import { app, BrowserWindow, dialog, protocol, shell, type Tray } from 'electron'
 import { randomBytes } from 'crypto'
 import { autoUpdater } from 'electron-updater'
 import {
@@ -17,6 +17,7 @@ import { registerModularIpcHandlers } from './main/ipc/register'
 import { registerLocalProtocols, registerPluginProtocol } from './main/protocols'
 import { registerPluginNavigationGuard } from './main/pluginNavigationGuard'
 import { pluginManagerService } from './services/pluginManagerService'
+import { wcdbService } from './services/wcdbService'
 import { initAiTelemetry } from './services/ai/telemetry'
 import {
   checkAndConnectOnStartup,
@@ -249,6 +250,27 @@ if (gotSingleInstanceLock) {
     }
 
     ctx.getWindowManager().setDockIcon()
+
+    markStartupMilestone('startup:license-check-start')
+    const license = await wcdbService.checkLicense().catch((error) => ({ success: false, error: String(error) }))
+    markStartupMilestone('startup:license-check-done', { success: license.success })
+    if (!license.success) {
+      const result = await dialog.showMessageBox({
+        type: 'error',
+        title: 'CipherTalk 授权检查失败',
+        message: '当前软件无法继续启动',
+        detail: license.error || '授权服务返回未知错误',
+        buttons: ['检查更新', '退出'],
+        defaultId: 0,
+        cancelId: 1,
+        noLink: true,
+      })
+      if (result.response === 0) {
+        await shell.openExternal('https://github.com/ILoveBingLu/CipherTalk/releases/latest')
+      }
+      app.quit()
+      return
+    }
 
     if (!configService.get('mcpProxyToken')) {
       markStartupMilestone('startup:mcp-token-create-start')
