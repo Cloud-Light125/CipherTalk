@@ -922,6 +922,20 @@ function connectSignaling() {
 }
 
 async function onOffer(msg) {
+  // ICE restart：同一台手机的既有会话换路重连——复用 PeerConnection，
+  // DTLS 密钥与数据通道原地保留，只重新协商网络路径，恢复只要一两个往返
+  if (pc && msg.restart) {
+    try {
+      await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp })
+      const answer = await pc.createAnswer()
+      await pc.setLocalDescription(answer)
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'answer', sdp: pc.localDescription.sdp }))
+      log('ICE restart 应答已发出')
+      return
+    } catch (e) {
+      log('ICE restart 失败，回退全量协商: ' + e)
+    }
+  }
   log('收到 offer，建立新 PeerConnection')
   candidateKinds = new Set()
   if (pc) { try { pc.close() } catch {} abortAll() }
