@@ -15,7 +15,9 @@ import { registerRemotePushHandlers } from './pushHandlers'
 import { registerRemoteTranscribeHandlers } from './transcribeHandlers'
 import { persistDetachedRun } from './detachedRun'
 
-const DEFAULT_SIGNALING_URL = 'wss://ctapp.aiqji.com'
+// 默认走国内 CDN（阿里云 ESA，回源 Cloudflare Worker）：境内 TLS 握手快一个量级。
+// 桥接页和手机端都内置了 .cn/.com 互为兜底的交替重连，CDN 抽风不至于连不上
+const DEFAULT_SIGNALING_URL = 'wss://ctapp.aiqji.cn'
 
 let bridgeWindow: BrowserWindow | null = null
 /**

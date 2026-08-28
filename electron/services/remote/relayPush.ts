@@ -16,7 +16,16 @@
  */
 import { createCipheriv, randomBytes } from 'crypto'
 
-const RELAY_URL = 'https://ctapp.aiqji.com/push'
+/**
+ * 同一个 Worker 的两个门口：国内 CDN（阿里云 ESA）在前，Cloudflare 直连兜底。
+ * 哪个门通就记住哪个；「通」的判据是拿到了合同内的 JSON 应答——
+ * Worker 返回的业务失败（如 BadDeviceToken）也算链路通，只有网络层挂了才换门。
+ */
+const RELAY_URLS = [
+  'https://ctapp.aiqji.cn/push',
+  'https://ctapp.aiqji.com/push',
+]
+let preferredRelay = 0
 
 export type RelayMessage = {
   /** 十六进制 APNs device token */
@@ -77,26 +86,35 @@ export async function sendRelayMessage(message: RelayMessage): Promise<RelayResu
   const known = envByToken.get(message.token)
   if (known) request.apnsEnv = known
 
-  let response: Response
-  try {
-    response = await fetch(RELAY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-      signal: AbortSignal.timeout(15_000),
-    })
-  } catch (error) {
-    return {
-      ok: false,
-      gone: false,
-      reason: `推送中转不可达：${error instanceof Error ? error.message : String(error)}`,
+  let response: Response | null = null
+  let data: { success?: boolean; env?: string; error?: string } | null = null
+  let lastFailure = ''
+  for (const index of [preferredRelay, 1 - preferredRelay]) {
+    try {
+      const attempt = await fetch(RELAY_URLS[index], {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(15_000),
+      })
+      const parsed = await attempt.json().catch(() => null) as typeof data
+      // CDN 自身故障（525 等）没有合同内的 JSON，换下一个门口；
+      // 有 success 字段说明已经到达 Worker，无论成败都不用再试另一边
+      if (!parsed || typeof parsed.success !== 'boolean') {
+        lastFailure = `HTTP ${attempt.status}`
+        continue
+      }
+      response = attempt
+      data = parsed
+      preferredRelay = index
+      break
+    } catch (error) {
+      lastFailure = error instanceof Error ? error.message : String(error)
     }
   }
-
-  let data: { success?: boolean; env?: string; error?: string } | null = null
-  try {
-    data = await response.json() as typeof data
-  } catch { /* 非 JSON 就按状态码兜底 */ }
+  if (!response) {
+    return { ok: false, gone: false, reason: `推送中转不可达：${lastFailure}` }
+  }
 
   if (response.ok && data?.success) {
     if (data.env === 'production' || data.env === 'sandbox') envByToken.set(message.token, data.env)

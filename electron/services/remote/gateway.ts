@@ -894,12 +894,22 @@ async function initCert() {
   }).catch(() => {})
 }
 
+// 同一信令服务的两个门口：国内 CDN（阿里云 ESA）和 Cloudflare 直连。
+// 连不上时交替换门重试，CDN 抽风或没备案环境都能自愈
+const SIGNALING_FALLBACK = {
+  'wss://ctapp.aiqji.cn': 'wss://ctapp.aiqji.com',
+  'wss://ctapp.aiqji.com': 'wss://ctapp.aiqji.cn',
+}
+let signalingAttempt = 0
 function connectSignaling() {
   if (!signalingUrl || !room) { log('缺少 signaling/room 参数'); return }
+  const primary = signalingUrl.replace(/\\/+$/, '')
+  const alias = SIGNALING_FALLBACK[primary]
+  const base = alias && signalingAttempt % 2 === 1 ? alias : primary
   // role=desktop：信令房间按角色占位，重连时顶掉自己的僵尸连接而不是把手机挤掉
-  const wsUrl = signalingUrl.replace(/\\/+$/, '') + '/ws?room=' + encodeURIComponent(room) + '&role=desktop'
+  const wsUrl = base + '/ws?room=' + encodeURIComponent(room) + '&role=desktop'
   ws = new WebSocket(wsUrl)
-  ws.onopen = () => log('信令已连接: ' + wsUrl)
+  ws.onopen = () => { signalingAttempt = 0; log('信令已连接: ' + wsUrl) }
   ws.onmessage = (e) => {
     let msg = null
     try { msg = JSON.parse(e.data) } catch { return }
@@ -907,7 +917,7 @@ function connectSignaling() {
     else if (msg.type === 'candidate' && pc) pc.addIceCandidate(msg.candidate).catch(() => {})
     else if (msg.t === 'peerLeft') log('手机端离开信令')
   }
-  ws.onclose = () => { log('信令断开，5 秒后重连'); setTimeout(connectSignaling, 5000) }
+  ws.onclose = () => { signalingAttempt += 1; log('信令断开，5 秒后重连'); setTimeout(connectSignaling, 5000) }
   ws.onerror = () => {}
 }
 
