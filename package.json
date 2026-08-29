@@ -54,6 +54,7 @@
     "test:agent-context-reset": "node --experimental-strip-types scripts/test-agent-context-reset.ts",
     "test:codex-models": "node --experimental-strip-types scripts/test-codex-models-payload.ts",
     "test:video-lookup": "node --experimental-strip-types scripts/test-video-lookup.ts",
+    "test:server-id-precision": "node --experimental-strip-types scripts/test-server-id-precision.ts",
     "test:nvidia-prompt-cache": "node --experimental-strip-types scripts/test-nvidia-prompt-cache.ts",
     "test:file-attachment-locator": "node --experimental-strip-types scripts/test-file-attachment-locator.ts",
     "test:agent-conversation-schema": "node scripts/run-electron-node-test.cjs scripts/test-agent-conversation-schema.ts",

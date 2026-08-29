@@ -10,6 +10,15 @@ export function coerceRowNumber(value: any, fallback = 0): number {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+/**
+ * JSON.parse 会把 17-19 位的微信 server_id 压成 IEEE-754 双精度（53 位尾数），
+ * 末几位被静默舍入为 0。parse 前给这类长整数加引号，使其以字符串形式保留精度。
+ */
+export function quoteInt64ServerIds(json: string): string {
+  if (!/"(?:server_id|msg_svr_id|msgSvrId|MsgSvrID)"\s*:\s*-?\d{16,}/.test(json)) return json
+  return json.replace(/("(?:server_id|msg_svr_id|msgSvrId|MsgSvrID)"\s*:\s*)(-?\d{16,})/g, '$1"$2"')
+}
+
 export function coerceRowString(value: any): string | undefined {
   if (value === null || value === undefined) return undefined
   if (Buffer.isBuffer(value)) return value.toString('utf-8')

@@ -1,6 +1,6 @@
 import { basename, delimiter, dirname, join } from 'path'
 import { existsSync, readdirSync, statSync } from 'fs'
-import { decodeMessageContent, getRowField, coerceRowNumber } from './chat/rowDecoders'
+import { decodeMessageContent, getRowField, coerceRowNumber, quoteInt64ServerIds } from './chat/rowDecoders'
 import { formatWcdbOpenFailure } from './wcdbOpenFailure'
 
 // 消息表 local_type 列在不同微信版本下的可能列名
@@ -9,6 +9,9 @@ const MSG_TYPE_COLUMNS = [
   'msg_type', 'msgType', 'MsgType',
   'message_type', 'messageType', 'WCDB_CT_local_type'
 ]
+
+// server_id 列的可能列名；64 位值超出 JS Number 安全范围，需以字符串透传
+const SERVER_ID_COLUMNS = ['server_id', 'msg_svr_id', 'msgSvrId', 'MsgSvrID']
 
 /**
  * WcdbCore —— 直连微信加密数据库的底层封装。
@@ -510,7 +513,7 @@ export class WcdbCore {
         if (rc === 0 && outJson[0]) {
           const jsonStr = this.koffi.decode(outJson[0], 'char', -1)
           this.wcdbFreeString(outJson[0])
-          const parsed = JSON.parse(jsonStr)
+          const parsed = JSON.parse(quoteInt64ServerIds(jsonStr))
           return { success: true, rows: parsed.rows || [], lastRid: parsed.lastRid, done: !!parsed.done }
         }
       } catch { /* 回退 JS 实现 */ }
@@ -531,12 +534,13 @@ export class WcdbCore {
       const cols = new Set(pragma.rows.map((r: any) => String(r.name)))
       hasCreateTime = cols.has('create_time')
       const wanted = [
-        'local_id', 'localId', 'server_id', 'msg_svr_id', 'msgSvrId', 'MsgSvrID',
+        'local_id', 'localId', ...SERVER_ID_COLUMNS,
         'create_time', 'is_send', 'message_content', 'compress_content'
       ]
       pickedExtras = extraCols.filter(c => cols.has(c))
       const picked = [...new Set([...wanted.filter(c => cols.has(c)), ...MSG_TYPE_COLUMNS.filter(c => cols.has(c)), ...pickedExtras])]
-      if (picked.length > 0) selectCols = picked.map(c => `m."${c}"`).join(', ')
+      // server_id 在 SQL 层转 TEXT，避免行 JSON 经 JSON.parse 后 64 位整数丢精度
+      if (picked.length > 0) selectCols = picked.map(c => SERVER_ID_COLUMNS.includes(c) ? `CAST(m."${c}" AS TEXT) AS "${c}"` : `m."${c}"`).join(', ')
     }
 
     let sql: string
@@ -560,10 +564,12 @@ export class WcdbCore {
       const rows = batch.rows || []
       if (rows.length === 0) { done = true; break }
       for (const row of rows) {
+        const serverIdRaw = row.server_id ?? row.msg_svr_id ?? row.msgSvrId ?? row.MsgSvrID ?? null
         const compact: Record<string, any> = {
           __rid: row.__rid,
           local_id: row.local_id ?? row.localId ?? null,
-          server_id: row.server_id ?? row.msg_svr_id ?? row.msgSvrId ?? row.MsgSvrID ?? null,
+          // CAST AS TEXT 后缺失的 server_id 表现为 '0'，归一为 null 保持缺失语义
+          server_id: serverIdRaw === 0 || serverIdRaw === '0' ? null : serverIdRaw,
           create_time: coerceRowNumber(row.create_time, 0),
           is_send: row.is_send ?? null,
           sender_username: row.sender_username ?? null,

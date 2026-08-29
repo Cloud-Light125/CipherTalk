@@ -815,8 +815,9 @@ class ExportService {
               actualSender = isSend ? cleanedMyWxid : senderUsername
             }
 
-            // 提取消息ID (local_id 或 server_id)
-            const platformMessageId = row.server_id ? String(row.server_id) : (row.local_id ? String(row.local_id) : undefined)
+            // 提取消息ID：server_id 以字符串透传保住 64 位精度；缺失时不回退 local_id，
+            // 两者不是同一 ID 空间，混用会污染下游按 platformMessageId 去重的逻辑
+            const platformMessageId = row.server_id ? String(row.server_id) : undefined
 
             // 提取引用消息ID (从 type 57 的 XML 中解析)
             let replyToMessageId: string | undefined
@@ -1549,8 +1550,8 @@ class ExportService {
               source = msgsourceMatch[0]
             }
 
-            // 提取消息ID
-            const platformMessageId = row.server_id ? String(row.server_id) : (row.local_id ? String(row.local_id) : undefined)
+            // 提取消息ID：server_id 以字符串透传保住 64 位精度；缺失时不回退 local_id（localId 另有字段）
+            const platformMessageId = row.server_id ? String(row.server_id) : undefined
 
             // 提取引用消息ID
             let replyToMessageId: string | undefined
