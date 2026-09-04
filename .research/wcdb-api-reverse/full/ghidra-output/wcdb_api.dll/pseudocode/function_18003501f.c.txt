@@ -1,0 +1,13 @@
+/* 18003501f CipherConfig */
+
+void __thiscall
+WCDB::CipherConfig::CipherConfig(CipherConfig *this,UnsafeData *param_1,int param_2,int param_3)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x00018003501f. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  CipherConfig(this,param_1,param_2,param_3);
+  return;
+}
+
+

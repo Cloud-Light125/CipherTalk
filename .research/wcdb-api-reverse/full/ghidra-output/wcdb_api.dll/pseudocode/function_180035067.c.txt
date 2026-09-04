@@ -1,0 +1,12 @@
+/* 180035067 getBLOB */
+
+void __thiscall WCDB::InnerHandle::getBLOB(InnerHandle *this,int param_1)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180035067. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  getBLOB(this,param_1);
+  return;
+}
+
+

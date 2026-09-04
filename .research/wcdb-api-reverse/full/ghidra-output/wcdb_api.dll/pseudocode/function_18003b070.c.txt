@@ -1,0 +1,24 @@
+/* 18003b070 FUN_18003b070 */
+
+void FUN_18003b070(void)
+
+{
+  char cVar1;
+  longlong *plVar2;
+  longlong *_Memory;
+  
+  cVar1 = *(char *)((longlong)*(longlong **)((longlong)DAT_18004bc70 + 8) + 0x19);
+  _Memory = *(longlong **)((longlong)DAT_18004bc70 + 8);
+  while (cVar1 == '\0') {
+    FUN_1800041f0(&DAT_18004bc70,&DAT_18004bc70,(longlong *)_Memory[2]);
+    plVar2 = (longlong *)*_Memory;
+    FUN_18000cf20(_Memory + 8);
+    free(_Memory);
+    _Memory = plVar2;
+    cVar1 = *(char *)((longlong)plVar2 + 0x19);
+  }
+  free(DAT_18004bc70);
+  return;
+}
+
+

@@ -9,106 +9,21 @@ import {
   type BrowserWindowConstructorOptions,
   type MenuItemConstructorOptions
 } from 'electron'
-import { createHash } from 'crypto'
 import { join } from 'path'
-import { existsSync, readFileSync } from 'fs'
-import { autoUpdater } from 'electron-updater'
+import { existsSync } from 'fs'
 import { DatabaseService } from '../../services/database'
 import { ConfigService } from '../../services/config'
 import { LogService } from '../../services/logService'
-import { appUpdateService } from '../../services/appUpdateService'
 import { mcpProxyService } from '../../services/mcp/proxyService'
 import { voiceTranscribeServiceWhisper } from '../../services/voiceTranscribeServiceWhisper'
 import { attachWindowStartupDiagnostics, markStartupMilestone, logStartupError } from '../startupDiagnostics'
 import type { ImageViewerOpenOptions, MainProcessContext, ReplyTileEntry, WindowManager } from '../context'
 import { anchorNativeWindowAboveWeChat, probeWeChatWindow, watchWeChatWindowEvents } from '../../services/wechatWindowTracker'
 
-type ReleaseAnnouncementPayload = {
-  version: string
-  releaseBody?: string
-  releaseNotes?: string
-  generatedAt?: string
-}
-
 const MAIN_WINDOW_ROUTES = new Set(['/home', '/agent', '/settings', '/pets', '/diary', '/export'])
 
 function supportsReplyTileWindow(): boolean {
   return process.platform === 'win32' || process.platform === 'darwin'
-}
-
-function getReleaseAnnouncementPath(): string {
-  const isDev = !!process.env.VITE_DEV_SERVER_URL
-  return isDev
-    ? join(__dirname, '../.tmp/release-announcement.json')
-    : join(process.resourcesPath, 'release-announcement.json')
-}
-
-function buildReleaseAnnouncementContentId(releaseBody: string, releaseNotes: string): string {
-  return createHash('sha256')
-    .update(releaseBody)
-    .update('\n')
-    .update(releaseNotes)
-    .digest('hex')
-    .slice(0, 16)
-}
-
-function buildReleaseAnnouncementId(payload: ReleaseAnnouncementPayload, releaseBody: string, releaseNotes: string): string {
-  const version = String(payload.version || '').trim()
-  const generatedAt = String(payload.generatedAt || '').trim()
-  if (generatedAt) return `${version}:${generatedAt}`
-
-  return `${version}:${buildReleaseAnnouncementContentId(releaseBody, releaseNotes)}`
-}
-
-function syncPackagedReleaseAnnouncement(ctx: MainProcessContext) {
-  const configService = ctx.getConfigService()
-  if (!configService) return
-
-  const announcementPath = getReleaseAnnouncementPath()
-  if (!existsSync(announcementPath)) return
-
-  try {
-    const raw = readFileSync(announcementPath, 'utf8')
-    const payload = JSON.parse(raw) as ReleaseAnnouncementPayload
-    if (!payload || typeof payload !== 'object') return
-
-    const version = String(payload.version || '').trim()
-    if (!version || version !== app.getVersion()) return
-
-    const releaseBody = String(payload.releaseBody || '').trim()
-    const releaseNotes = String(payload.releaseNotes || '').trim()
-    const announcementId = buildReleaseAnnouncementId(payload, releaseBody, releaseNotes)
-    const announcementContentId = buildReleaseAnnouncementContentId(releaseBody, releaseNotes)
-
-    const storedVersion = configService.get('releaseAnnouncementVersion')
-    const storedId = configService.get('releaseAnnouncementId')
-    const storedContentId = configService.get('releaseAnnouncementContentId')
-    const storedBody = configService.get('releaseAnnouncementBody')
-    const storedNotes = configService.get('releaseAnnouncementNotes')
-
-    if (
-      storedVersion === version &&
-      storedId === announcementId &&
-      storedContentId === announcementContentId &&
-      storedBody === releaseBody &&
-      storedNotes === releaseNotes
-    ) {
-      return
-    }
-
-    configService.set('releaseAnnouncementVersion', version)
-    configService.set('releaseAnnouncementId', announcementId)
-    configService.set('releaseAnnouncementContentId', announcementContentId)
-    configService.set('releaseAnnouncementBody', releaseBody)
-    configService.set('releaseAnnouncementNotes', releaseNotes)
-    ctx.getLogService()?.info('ReleaseAnnouncement', '已同步本地版本公告', {
-      version,
-      hasBody: Boolean(releaseBody),
-      hasNotes: Boolean(releaseNotes)
-    })
-  } catch (error) {
-    ctx.getLogService()?.warn('ReleaseAnnouncement', '同步本地版本公告失败', { error: String(error) })
-  }
 }
 
 function getThemeQueryParams(ctx: MainProcessContext): string {
@@ -277,7 +192,6 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
   let chatWindow: BrowserWindow | null = null
   let momentsWindow: BrowserWindow | null = null
   let agreementWindow: BrowserWindow | null = null
-  let purchaseWindow: BrowserWindow | null = null
   let welcomeWindow: BrowserWindow | null = null
   let chatHistoryWindow: BrowserWindow | null = null
   let personaChatWindow: BrowserWindow | null = null
@@ -691,26 +605,7 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
 
       const logService = new LogService(configService)
       ctx.setLogService(logService)
-      syncPackagedReleaseAnnouncement(ctx)
       mcpProxyService.setLogger(logService)
-      autoUpdater.logger = {
-        info(message: string) {
-          logService.info('AppUpdate', message)
-          appUpdateService.noteUpdaterMessage(String(message), 'info')
-        },
-        warn(message: string) {
-          logService.warn('AppUpdate', message)
-          appUpdateService.noteUpdaterMessage(String(message), 'warn')
-        },
-        error(message: string) {
-          logService.error('AppUpdate', message)
-          appUpdateService.noteUpdaterMessage(String(message), 'error')
-        },
-        debug(message: string) {
-          logService.debug('AppUpdate', message)
-          appUpdateService.noteUpdaterMessage(String(message), 'info')
-        }
-      }
       logService.info('App', '应用启动', { version: app.getVersion() })
       markStartupMilestone('window:main-services-init-done')
 
@@ -724,12 +619,6 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
       })
 
       win.on('close', (event) => {
-        const updateInfo = appUpdateService.getCachedUpdateInfo()
-        if (updateInfo?.forceUpdate || ctx.getIsInstallingUpdate()) {
-          ctx.appWithQuitFlag.isQuitting = true
-          return
-        }
-
         if (ctx.appWithQuitFlag.isQuitting) return
 
         const closeToTray = ctx.getConfigService()?.get('closeToTray')
@@ -1323,38 +1212,6 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
         welcomeWindow = null
       })
       return welcomeWindow
-    },
-
-    openPurchaseWindow() {
-      if (purchaseWindow && !purchaseWindow.isDestroyed()) {
-        purchaseWindow.focus()
-        return purchaseWindow
-      }
-
-      purchaseWindow = new BrowserWindow({
-        width: 1000,
-        height: 700,
-        minWidth: 800,
-        minHeight: 600,
-        ...getWindowIconOptions(ctx),
-        webPreferences: {
-          devTools: ctx.allowDevTools,
-          contextIsolation: true,
-          nodeIntegration: false,
-          webSecurity: false
-        },
-        title: '获取激活码 - 密语',
-        show: false,
-        backgroundColor: '#FFFFFF',
-        autoHideMenuBar: true
-      })
-
-      purchaseWindow.once('ready-to-show', () => purchaseWindow?.show())
-      purchaseWindow.loadURL('https://pay.ldxp.cn/shop/aiqiji')
-      purchaseWindow.on('closed', () => {
-        purchaseWindow = null
-      })
-      return purchaseWindow
     },
 
     openImageViewerWindow(imagePath: string, liveVideoPath?: string, options?: ImageViewerOpenOptions) {

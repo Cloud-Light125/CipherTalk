@@ -22,10 +22,6 @@ function getExtraResources(buildTarget) {
       filter: ['**/*']
     },
     {
-      from: '.tmp/release-announcement.json',
-      to: 'release-announcement.json'
-    },
-    {
       from: 'public/miyuji',
       to: 'builtin-pets/miyuji',
       filter: ['**/*']
@@ -192,24 +188,13 @@ function getAsarUnpack(buildTarget) {
   return baseAsarUnpack
 }
 
-function getDmg(buildTarget) {
-  if (buildTarget === 'mac') {
-    return {
-      ...(base.dmg || {}),
-      writeUpdateInfo: false
-    }
-  }
-
-  return base.dmg
-}
-
 module.exports = {
   ...base,
+  publish: null,
   win: target === 'win' ? { ...(base.win || {}), files: [] } : base.win,
   mac: target === 'mac' ? { ...(base.mac || {}), files: [] } : base.mac,
   files: getFiles(target),
   asarUnpack: getAsarUnpack(target),
-  dmg: getDmg(target),
   extraResources: getExtraResources(target),
   extraFiles: getExtraFiles(target)
 }

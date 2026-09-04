@@ -1,6 +1,5 @@
-import { app, BrowserWindow, dialog, protocol, shell, type Tray } from 'electron'
+import { app, BrowserWindow, protocol, type Tray } from 'electron'
 import { randomBytes } from 'crypto'
-import { autoUpdater } from 'electron-updater'
 import {
   getStartupDiagnosticsLogPath,
   installElectronStartupDiagnostics,
@@ -17,11 +16,9 @@ import { registerModularIpcHandlers } from './main/ipc/register'
 import { registerLocalProtocols, registerPluginProtocol } from './main/protocols'
 import { registerPluginNavigationGuard } from './main/pluginNavigationGuard'
 import { pluginManagerService } from './services/pluginManagerService'
-import { wcdbService } from './services/wcdbService'
 import { initAiTelemetry } from './services/ai/telemetry'
 import {
   checkAndConnectOnStartup,
-  checkForUpdatesOnStartup,
   startBackgroundSync,
   startLocalIntegrationServices,
   startNightlyMemoryConsolidation,
@@ -116,18 +113,10 @@ protocol.registerSchemesAsPrivileged([
 ])
 markStartupMilestone('startup:privileged-protocols-registered')
 
-// 配置自动更新
-autoUpdater.autoDownload = false
-// macOS 使用自定义 DMG 下载并打开流程，不交给 MacUpdater 安装。
-autoUpdater.autoInstallOnAppQuit = process.platform !== 'darwin'
-autoUpdater.disableDifferentialDownload = true  // 禁用差分更新，统一使用全量安装包
-markStartupMilestone('startup:auto-updater-configured')
-
 // 单例服务
 
 // 系统托盘实例
 let tray: Tray | null = null
-let isInstallingUpdate = false
 
 // 主窗口引用
 let mainWindow: BrowserWindow | null = null
@@ -175,10 +164,6 @@ const ctx: MainProcessContext = {
   getStartupDbConnected: () => startupDbConnected,
   setStartupDbConnected: (connected) => {
     startupDbConnected = connected
-  },
-  getIsInstallingUpdate: () => isInstallingUpdate,
-  setIsInstallingUpdate: (installing) => {
-    isInstallingUpdate = installing
   },
   broadcastToWindows: (channel, ...args) => {
     BrowserWindow.getAllWindows().forEach(win => {
@@ -250,27 +235,6 @@ if (gotSingleInstanceLock) {
     }
 
     ctx.getWindowManager().setDockIcon()
-
-    markStartupMilestone('startup:license-check-start')
-    const license = await wcdbService.checkLicense().catch((error) => ({ success: false, error: String(error) }))
-    markStartupMilestone('startup:license-check-done', { success: license.success })
-    if (!license.success) {
-      const result = await dialog.showMessageBox({
-        type: 'error',
-        title: 'CipherTalk 授权检查失败',
-        message: '当前软件无法继续启动',
-        detail: license.error || '授权服务返回未知错误',
-        buttons: ['检查更新', '退出'],
-        defaultId: 0,
-        cancelId: 1,
-        noLink: true,
-      })
-      if (result.response === 0) {
-        await shell.openExternal('https://github.com/ILoveBingLu/CipherTalk/releases/latest')
-      }
-      app.quit()
-      return
-    }
 
     if (!configService.get('mcpProxyToken')) {
       markStartupMilestone('startup:mcp-token-create-start')
@@ -348,9 +312,6 @@ if (gotSingleInstanceLock) {
 
     // 如果显示了启动屏，主窗口会在启动屏关闭后自动显示（通过 ready-to-show 事件）
     // 如果没有显示启动屏，主窗口会正常显示（通过 ready-to-show 事件）
-
-    // 启动时检测更新
-    checkForUpdatesOnStartup(ctx)
 
     // 后台预热 AI Agent 子进程，消除首次提问的冷启动等待
     warmupAgentProcess(ctx)

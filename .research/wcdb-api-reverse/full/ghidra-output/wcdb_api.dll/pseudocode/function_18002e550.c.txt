@@ -1,0 +1,85 @@
+/* 18002e550 FUN_18002e550 */
+
+ulonglong FUN_18002e550(undefined8 *param_1)
+
+{
+  char cVar1;
+  int iVar2;
+  longlong *_Memory;
+  longlong *plVar3;
+  void *pvVar4;
+  code *pcVar5;
+  ulonglong in_RAX;
+  longlong *plVar6;
+  void *_Memory_00;
+  int *extraout_RAX;
+  int *piVar7;
+  undefined1 *puVar8;
+  undefined1 auStack_28 [8];
+  undefined1 auStack_20 [24];
+  
+  puVar8 = auStack_28;
+  if (param_1[1] == 0) {
+    return in_RAX & 0xffffffffffffff00;
+  }
+  plVar6 = (longlong *)FUN_1800373b0(0x10);
+  if (plVar6 == (longlong *)0x0) {
+    plVar6 = (longlong *)0x0;
+  }
+  else {
+    plVar6 = FUN_180028cc0(plVar6);
+  }
+  piVar7 = (int *)*param_1;
+  iVar2 = *piVar7;
+  *piVar7 = 5;
+  _Memory = *(longlong **)(piVar7 + 2);
+  *(longlong **)(piVar7 + 2) = plVar6;
+  if (iVar2 == 3) {
+    if (_Memory == (longlong *)0x0) goto LAB_18002e6ad;
+    puVar8 = auStack_28;
+    if (0xf < (ulonglong)_Memory[3]) {
+      pvVar4 = (void *)*_Memory;
+      puVar8 = auStack_28;
+      _Memory_00 = pvVar4;
+      if ((0xfff < _Memory[3] + 1U) &&
+         (_Memory_00 = *(void **)((longlong)pvVar4 + -8), puVar8 = auStack_28,
+         0x1f < (ulonglong)((longlong)pvVar4 + (-8 - (longlong)_Memory_00)))) {
+        pcVar5 = (code *)swi(0x29);
+        _Memory_00 = (void *)(*pcVar5)(5);
+        puVar8 = auStack_20;
+      }
+      *(undefined8 *)(puVar8 + -8) = 0x18002e68d;
+      free(_Memory_00);
+    }
+    _Memory[2] = 0;
+    _Memory[3] = 0xf;
+    *(undefined1 *)_Memory = 0;
+  }
+  else if (iVar2 == 4) {
+    if (_Memory == (longlong *)0x0) goto LAB_18002e6ad;
+    FUN_18002a2d0(_Memory);
+  }
+  else {
+    if ((iVar2 != 5) || (_Memory == (longlong *)0x0)) goto LAB_18002e6ad;
+    cVar1 = *(char *)((longlong)*(longlong **)(*_Memory + 8) + 0x19);
+    plVar6 = *(longlong **)(*_Memory + 8);
+    while (cVar1 == '\0') {
+      FUN_180026f50(_Memory,_Memory,(longlong *)plVar6[2]);
+      plVar3 = (longlong *)*plVar6;
+      FUN_180029950((int *)(plVar6 + 8));
+      FUN_18000d070(plVar6 + 4);
+      free(plVar6);
+      plVar6 = plVar3;
+      cVar1 = *(char *)((longlong)plVar3 + 0x19);
+    }
+    free((void *)*_Memory);
+    puVar8 = auStack_28;
+  }
+  *(undefined8 *)(puVar8 + -8) = 0x18002e6ad;
+  free(_Memory);
+  piVar7 = extraout_RAX;
+LAB_18002e6ad:
+  return CONCAT71((int7)((ulonglong)piVar7 >> 8),1);
+}
+
+

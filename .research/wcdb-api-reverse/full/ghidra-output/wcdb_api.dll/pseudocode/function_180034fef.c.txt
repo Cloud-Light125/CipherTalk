@@ -1,0 +1,12 @@
+/* 180034fef immutable */
+
+void __cdecl WCDB::UnsafeData::immutable(uchar *param_1,__uint64 param_2)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180034fef. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  immutable(param_1,param_2);
+  return;
+}
+
+

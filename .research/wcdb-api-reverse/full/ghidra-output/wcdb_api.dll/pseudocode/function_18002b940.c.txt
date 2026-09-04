@@ -1,0 +1,156 @@
+/* 18002b940 FUN_18002b940 */
+
+undefined4 * FUN_18002b940(undefined4 *param_1,longlong param_2,char param_3)
+
+{
+  ulonglong uVar1;
+  ulonglong uVar2;
+  code *pcVar3;
+  size_t _Size;
+  char *pcVar4;
+  undefined8 uVar5;
+  ulonglong uVar6;
+  longlong lVar7;
+  ulonglong uVar8;
+  undefined1 *puVar9;
+  undefined8 *_Src;
+  undefined8 uStack_60;
+  undefined1 auStack_58 [48];
+  
+  puVar9 = auStack_58;
+  pcVar4 = (char *)0x0;
+  if (DAT_18004b448 == '\0') {
+    *param_1 = 0xfffffff5;
+    *(undefined8 *)(param_1 + 2) = 0;
+    *(undefined8 *)(param_1 + 4) = 0;
+    *(undefined8 *)(param_1 + 6) = 0;
+    *(undefined8 *)(param_1 + 8) = 0;
+    *(undefined8 *)(param_1 + 10) = 0;
+    pcVar4 = (char *)FUN_1800373b0(0x30);
+    *(char **)(param_1 + 4) = pcVar4;
+    *(undefined8 *)(param_1 + 8) = 0x2b;
+    *(undefined8 *)(param_1 + 10) = 0x2f;
+    builtin_strncpy(pcVar4,"cloud license requires network on first use",0x2c);
+    return param_1;
+  }
+  if (param_2 < DAT_18004b418) {
+    param_2 = DAT_18004b418;
+  }
+  if (DAT_18004b2b0 != '\0') {
+    if (DAT_18004b428 <= param_2) {
+      *param_1 = 0xfffffff7;
+      *(longlong *)(param_1 + 2) = DAT_18004b418;
+      *(undefined8 *)(param_1 + 4) = 0;
+      *(undefined8 *)(param_1 + 6) = 0;
+      *(undefined8 *)(param_1 + 8) = 0;
+      *(undefined8 *)(param_1 + 10) = 0;
+      pcVar4 = (char *)FUN_1800373b0(0x20);
+      *(char **)(param_1 + 4) = pcVar4;
+      *(undefined8 *)(param_1 + 8) = 0x15;
+      *(undefined8 *)(param_1 + 10) = 0x1f;
+      builtin_strncpy(pcVar4,"cloud license expired",0x16);
+      return param_1;
+    }
+    if ((param_3 != '\0') && (DAT_18004b438 <= param_2)) {
+      *param_1 = 0xfffffff5;
+      *(longlong *)(param_1 + 2) = DAT_18004b418;
+      *(undefined8 *)(param_1 + 4) = 0;
+      *(undefined8 *)(param_1 + 6) = 0;
+      *(undefined8 *)(param_1 + 8) = 0;
+      *(undefined8 *)(param_1 + 10) = 0;
+      pcVar4 = (char *)FUN_1800373b0(0x30);
+      *(char **)(param_1 + 4) = pcVar4;
+      *(undefined8 *)(param_1 + 8) = 0x23;
+      *(undefined8 *)(param_1 + 10) = 0x2f;
+      builtin_strncpy(pcVar4,"cloud license offline grace expired",0x24);
+      return param_1;
+    }
+    *param_1 = 0;
+    *(longlong *)(param_1 + 2) = DAT_18004b418;
+    *(undefined8 *)(param_1 + 4) = 0;
+    *(undefined8 *)(param_1 + 6) = 0;
+    *(undefined8 *)(param_1 + 8) = 0;
+    if (param_3 == '\0') {
+      *(undefined8 *)(param_1 + 10) = 0xf;
+      *(undefined1 *)(param_1 + 4) = 0;
+      return param_1;
+    }
+    *(undefined8 *)(param_1 + 10) = 0;
+    pcVar4 = (char *)FUN_1800373b0(0x40);
+    *(char **)(param_1 + 4) = pcVar4;
+    *(undefined8 *)(param_1 + 8) = 0x30;
+    *(undefined8 *)(param_1 + 10) = 0x3f;
+    builtin_strncpy(pcVar4,"cloud license refresh failed; using signed cache",0x31);
+    return param_1;
+  }
+  uVar5 = FUN_18002f580((longlong *)&DAT_18004b2b8);
+  *param_1 = (int)uVar5;
+  *(longlong *)(param_1 + 2) = DAT_18004b418;
+  _Size = DAT_18004b2c8;
+  if (0x7fffffffffffffff - DAT_18004b2c8 < 0x16) {
+                    /* WARNING: Subroutine does not return */
+    FUN_18000d170();
+  }
+  uVar1 = DAT_18004b2c8 + 0x16;
+  _Src = &DAT_18004b2b8;
+  if (0xf < DAT_18004b2d0) {
+    _Src = DAT_18004b2b8;
+  }
+  *(undefined8 *)(param_1 + 4) = 0;
+  *(undefined8 *)(param_1 + 6) = 0;
+  *(undefined8 *)(param_1 + 8) = 0;
+  *(undefined8 *)(param_1 + 10) = 0;
+  if (uVar1 < 0x10) {
+    uVar6 = 0xf;
+    pcVar4 = (char *)(param_1 + 4);
+  }
+  else {
+    uVar6 = uVar1 | 0xf;
+    puVar9 = auStack_58;
+    if (uVar6 < 0x8000000000000000) goto LAB_18002ba7f;
+    uVar8 = 0x8000000000000027;
+    puVar9 = auStack_58;
+    uVar6 = 0x7fffffffffffffff;
+    while( true ) {
+      *(undefined8 *)(puVar9 + -8) = 0x18002ba73;
+      lVar7 = FUN_1800373b0(uVar8);
+      if (lVar7 != 0) {
+        pcVar4 = (char *)(lVar7 + 0x27U & 0xffffffffffffffe0);
+        *(longlong *)(pcVar4 + -8) = lVar7;
+        *(char **)(param_1 + 4) = pcVar4;
+        goto LAB_18002bada;
+      }
+      pcVar3 = (code *)swi(0x29);
+      uVar6 = (*pcVar3)(5);
+      puVar9 = puVar9 + 8;
+LAB_18002ba7f:
+      if (uVar6 < 0x16) {
+        uVar6 = 0x16;
+      }
+      uVar2 = uVar6 + 1;
+      if (uVar2 == 0) break;
+      if (uVar2 < 0x1000) {
+        *(undefined8 *)(puVar9 + -8) = 0x18002bac8;
+        pcVar4 = (char *)FUN_1800373b0(uVar2);
+        break;
+      }
+      uVar8 = uVar6 + 0x28;
+      if (uVar8 <= uVar2) {
+                    /* WARNING: Subroutine does not return */
+        *(undefined **)(puVar9 + -8) = &UNK_18002bcb7;
+        FUN_18000cdd0();
+      }
+    }
+    *(char **)(param_1 + 4) = pcVar4;
+  }
+LAB_18002bada:
+  *(ulonglong *)(param_1 + 8) = uVar1;
+  *(ulonglong *)(param_1 + 10) = uVar6;
+  builtin_strncpy(pcVar4,"cloud license denied: ",0x16);
+  *(undefined8 *)(puVar9 + -8) = 0x18002bb08;
+  memcpy(pcVar4 + 0x16,_Src,_Size);
+  pcVar4[uVar1] = '\0';
+  return param_1;
+}
+
+

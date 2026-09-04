@@ -13,7 +13,6 @@ import { registerMomentsCommand } from './commands/moments.js'
 import { registerSearchCommand } from './commands/search.js'
 import { registerSessionsCommand } from './commands/sessions.js'
 import { registerStatusCommand } from './commands/status.js'
-import { wcdbService } from './services/db/wcdbService.js'
 import { CLI_VERSION } from './version.js'
 
 export interface CreateProgramOptions {
@@ -44,13 +43,6 @@ export function createProgram(options: CreateProgramOptions = {}): Command {
     .option('--limit <n>', '结果条数限制')
     .option('--ui', '强制进入交互界面')
     .option('--quiet', '仅输出数据，不打印状态信息')
-
-  // Commander 的 preAction 只在实际命令执行时触发，--help/--version 不会触发授权联网。
-  if (!options.services) {
-    program.hook('preAction', async () => {
-      await wcdbService.checkLicense()
-    })
-  }
 
   registerInitCommand(program, context)
   registerConfigCommand(program, context)

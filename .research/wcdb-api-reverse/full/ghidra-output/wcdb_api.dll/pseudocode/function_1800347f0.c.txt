@@ -1,0 +1,16 @@
+/* 1800347f0 FUN_1800347f0 */
+
+ulonglong FUN_1800347f0(PUCHAR param_1,longlong param_2)
+
+{
+  uint uVar1;
+  ulonglong in_RAX;
+  
+  if ((param_1 != (PUCHAR)0x0) && (in_RAX = param_2 - 1, in_RAX < 0xffffffff)) {
+    uVar1 = BCryptGenRandom((BCRYPT_ALG_HANDLE)0x0,param_1,(ULONG)param_2,2);
+    return (ulonglong)(uVar1 >> 0x1f) ^ 1;
+  }
+  return in_RAX & 0xffffffffffffff00;
+}
+
+

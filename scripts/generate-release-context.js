@@ -4,8 +4,8 @@ const { execSync } = require('child_process')
 
 const rootDir = path.resolve(__dirname, '..')
 const releaseDir = path.join(rootDir, 'release')
-const owner = process.env.GITHUB_REPOSITORY_OWNER || 'ILoveBingLu'
-const repo = (process.env.GITHUB_REPOSITORY || `${owner}/CipherTalk`).split('/')[1] || 'CipherTalk'
+const owner = process.env.GITHUB_REPOSITORY_OWNER || 'Cloud-Light125'
+const repo = (process.env.GITHUB_REPOSITORY || `${owner}/CipherTalk-SafeFork-1`).split('/')[1] || 'CipherTalk-SafeFork-1'
 const currentTag = process.env.RELEASE_TAG || process.env.GITHUB_REF_NAME || ''
 const pkg = require(path.join(rootDir, 'package.json'))
 
@@ -65,14 +65,6 @@ function safeJsonParse(value, fallback) {
   } catch {
     return fallback
   }
-}
-
-function parseList(value) {
-  if (!value) return []
-  return String(value)
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
 }
 
 function getPreviousTag() {
@@ -179,10 +171,6 @@ async function main() {
     repository: {
       owner,
       repo
-    },
-    forceUpdate: {
-      minimumSupportedVersion: process.env.FORCE_UPDATE_MIN_VERSION || null,
-      blockedVersions: parseList(process.env.FORCE_UPDATE_BLOCKED_VERSIONS)
     },
     commits,
     pullRequests: prs

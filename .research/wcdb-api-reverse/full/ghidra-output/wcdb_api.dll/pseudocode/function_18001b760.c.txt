@@ -1,0 +1,27 @@
+/* 18001b760 FUN_18001b760 */
+
+int FUN_18001b760(basic_streambuf<char,std::char_traits<char>_> *param_1,int param_2)
+
+{
+  char *pcVar1;
+  char *pcVar2;
+  
+  pcVar1 = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+  if (((pcVar1 != (char *)0x0) &&
+      (pcVar2 = std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1), pcVar2 < pcVar1)
+      ) && ((param_2 == -1 || (((char)param_2 == pcVar1[-1] || (((byte)param_1[0x70] & 2) == 0))))))
+  {
+    std::basic_streambuf<char,std::char_traits<char>_>::gbump(param_1,-1);
+    if (param_2 == -1) {
+      param_2 = 0;
+    }
+    else {
+      pcVar1 = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+      *pcVar1 = (char)param_2;
+    }
+    return param_2;
+  }
+  return -1;
+}
+
+

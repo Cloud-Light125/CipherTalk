@@ -1,0 +1,59 @@
+/* 18000a0f0 FUN_18000a0f0 */
+
+uint * FUN_18000a0f0(uint *param_1,uint *param_2,uint *param_3)
+
+{
+  short sVar1;
+  longlong lVar2;
+  uint *local_38;
+  longlong local_30;
+  undefined1 local_28;
+  uint *local_20;
+  longlong local_18;
+  
+  local_18 = *(longlong *)(param_3 + 4);
+  local_20 = param_3;
+  if (7 < *(ulonglong *)(param_3 + 6)) {
+    local_20 = *(uint **)param_3;
+  }
+  if (((local_18 == 0) ||
+      (((3 < local_18 * 2 && ((*local_20 & 0xffffffdf) - 0x3a0041 < 0x1a)) ||
+       ((short)*local_20 == 0x5c)))) || ((short)*local_20 == 0x2f)) {
+    FUN_1800081a0((undefined8 *)param_1,(undefined8 *)param_2);
+    FUN_18000aab0(param_1,param_3);
+    return param_1;
+  }
+  local_30 = *(longlong *)(param_2 + 4);
+  if (7 < *(ulonglong *)(param_2 + 6)) {
+    param_2 = *(uint **)param_2;
+  }
+  if (local_30 == 2) {
+    if (0x19 < (*param_2 & 0xffffffdf) - 0x3a0041) {
+LAB_18000a211:
+      sVar1 = *(short *)((longlong)param_2 + local_30 * 2 + -2);
+      if ((sVar1 != 0x5c) && (sVar1 != 0x2f)) {
+        local_28 = 1;
+        lVar2 = 1;
+        goto LAB_18000a18e;
+      }
+    }
+  }
+  else if (local_30 != 0) goto LAB_18000a211;
+  local_28 = 0;
+  lVar2 = 0;
+LAB_18000a18e:
+  param_1[0] = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  param_1[4] = 0;
+  param_1[5] = 0;
+  param_1[6] = 7;
+  param_1[7] = 0;
+  *(undefined2 *)param_1 = 0;
+  local_38 = param_2;
+  FUN_180006c80((undefined8 *)param_1,local_30 + lVar2 + local_18,&local_38);
+  return param_1;
+}
+
+

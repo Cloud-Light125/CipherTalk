@@ -1,0 +1,13 @@
+/* 180038d70 FUN_180038d70 */
+
+void FUN_180038d70(undefined8 param_1,longlong param_2)
+
+{
+  if ((*(uint *)(param_2 + 0x44) & 0x100) != 0) {
+    *(uint *)(param_2 + 0x44) = *(uint *)(param_2 + 0x44) & 0xfffffeff;
+    thunk_FUN_18000d070((longlong *)(param_2 + 0x140));
+  }
+  return;
+}
+
+

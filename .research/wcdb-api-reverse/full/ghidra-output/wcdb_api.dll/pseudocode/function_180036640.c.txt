@@ -1,0 +1,17 @@
+/* 180036640 FUN_180036640 */
+
+uint FUN_180036640(void)
+
+{
+  UINT UVar1;
+  BOOL BVar2;
+  
+  UVar1 = ___lc_codepage_func();
+  if (UVar1 == 0xfde9) {
+    return 0xfde9;
+  }
+  BVar2 = AreFileApisANSI();
+  return (uint)(BVar2 == 0);
+}
+
+

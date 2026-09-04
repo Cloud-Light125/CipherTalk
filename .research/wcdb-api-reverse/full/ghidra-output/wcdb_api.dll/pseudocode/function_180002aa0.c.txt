@@ -1,0 +1,138 @@
+/* 180002aa0 FUN_180002aa0 */
+
+undefined8 * FUN_180002aa0(longlong *param_1,undefined8 *param_2,undefined8 *param_3)
+
+{
+  ulonglong uVar1;
+  longlong lVar2;
+  undefined8 *puVar3;
+  code *pcVar4;
+  undefined8 uVar5;
+  undefined8 *puVar6;
+  undefined8 *puVar7;
+  undefined8 *puVar8;
+  ulonglong uVar9;
+  size_t sVar10;
+  longlong lVar11;
+  undefined1 *puVar12;
+  undefined1 *puVar13;
+  ulonglong uVar14;
+  undefined8 *puVar15;
+  undefined8 *puVar16;
+  undefined1 auStack_98 [8];
+  undefined1 auStack_90 [80];
+  
+  puVar12 = auStack_98;
+  puVar13 = auStack_98;
+  lVar2 = *param_1;
+  lVar11 = param_1[1] - lVar2 >> 5;
+  if (lVar11 == 0x7ffffffffffffff) {
+                    /* WARNING: Subroutine does not return */
+    FUN_18000d190();
+  }
+  uVar9 = param_1[2] - lVar2 >> 5;
+  if (uVar9 <= 0x7ffffffffffffff - (uVar9 >> 1)) {
+    uVar1 = lVar11 + 1;
+    uVar9 = (uVar9 >> 1) + uVar9;
+    uVar14 = uVar1;
+    if (uVar1 <= uVar9) {
+      uVar14 = uVar9;
+    }
+    if (uVar14 < 0x800000000000000) {
+      sVar10 = uVar14 * 0x20;
+      if (sVar10 == 0) {
+        puVar15 = (undefined8 *)0x0;
+        puVar13 = auStack_98;
+      }
+      else if (sVar10 < 0x1000) {
+        puVar15 = (undefined8 *)FUN_1800373b0(sVar10);
+      }
+      else {
+        if (sVar10 + 0x27 <= sVar10) goto LAB_180002cb4;
+        lVar11 = FUN_1800373b0(sVar10 + 0x27);
+        if (lVar11 == 0) {
+          pcVar4 = (code *)swi(0x29);
+          lVar11 = (*pcVar4)(5);
+          puVar12 = auStack_90;
+        }
+        puVar15 = (undefined8 *)(lVar11 + 0x27U & 0xffffffffffffffe0);
+        puVar15[-1] = lVar11;
+        puVar13 = puVar12;
+      }
+      puVar16 = (undefined8 *)
+                (((longlong)param_2 - lVar2 & 0xffffffffffffffe0U) + (longlong)puVar15);
+      puVar6 = puVar16 + 4;
+      *(longlong **)(puVar13 + 0x20) = param_1;
+      *(undefined8 **)(puVar13 + 0x28) = puVar15;
+      *(ulonglong *)(puVar13 + 0x30) = uVar14;
+      *(undefined8 **)(puVar13 + 0x38) = puVar6;
+      *(undefined8 **)(puVar13 + 0x40) = puVar6;
+      *(undefined8 *)(puVar13 + -8) = 0x180002b9b;
+      FUN_180007c00(puVar16,param_3);
+      puVar3 = (undefined8 *)param_1[1];
+      puVar8 = (undefined8 *)*param_1;
+      puVar7 = puVar15;
+      if (param_2 == puVar3) {
+        for (; puVar8 != puVar3; puVar8 = puVar8 + 4) {
+          *puVar7 = 0;
+          puVar7[1] = 0;
+          puVar7[2] = 0;
+          puVar7[3] = 0;
+          uVar5 = puVar8[1];
+          *puVar7 = *puVar8;
+          puVar7[1] = uVar5;
+          uVar5 = puVar8[3];
+          puVar7[2] = puVar8[2];
+          puVar7[3] = uVar5;
+          puVar8[2] = 0;
+          puVar8[3] = 0xf;
+          *(undefined1 *)puVar8 = 0;
+          puVar7 = puVar7 + 4;
+        }
+      }
+      else {
+        for (; puVar8 != param_2; puVar8 = puVar8 + 4) {
+          *puVar7 = 0;
+          puVar7[1] = 0;
+          puVar7[2] = 0;
+          puVar7[3] = 0;
+          uVar5 = puVar8[1];
+          *puVar7 = *puVar8;
+          puVar7[1] = uVar5;
+          uVar5 = puVar8[3];
+          puVar7[2] = puVar8[2];
+          puVar7[3] = uVar5;
+          puVar8[2] = 0;
+          puVar8[3] = 0xf;
+          *(undefined1 *)puVar8 = 0;
+          puVar7 = puVar7 + 4;
+        }
+        puVar3 = (undefined8 *)param_1[1];
+        for (; param_2 != puVar3; param_2 = param_2 + 4) {
+          *puVar6 = 0;
+          puVar6[1] = 0;
+          puVar6[2] = 0;
+          puVar6[3] = 0;
+          uVar5 = param_2[1];
+          *puVar6 = *param_2;
+          puVar6[1] = uVar5;
+          uVar5 = param_2[3];
+          puVar6[2] = param_2[2];
+          puVar6[3] = uVar5;
+          param_2[2] = 0;
+          param_2[3] = 0xf;
+          *(undefined1 *)param_2 = 0;
+          puVar6 = puVar6 + 4;
+        }
+      }
+      *(undefined8 *)(puVar13 + -8) = 0x180002c99;
+      FUN_18000b7f0(param_1,(longlong)puVar15,uVar1,uVar14);
+      return puVar16;
+    }
+  }
+LAB_180002cb4:
+                    /* WARNING: Subroutine does not return */
+  FUN_18000cdd0();
+}
+
+

@@ -1,0 +1,9 @@
+/* 18000c500 FUN_18000c500 */
+
+undefined8 FUN_18000c500(void)
+
+{
+  return 0;
+}
+
+

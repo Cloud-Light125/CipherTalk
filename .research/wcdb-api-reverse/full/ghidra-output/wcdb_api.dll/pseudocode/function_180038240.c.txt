@@ -1,0 +1,12 @@
+/* 180038240 FUN_180038240 */
+
+void FUN_180038240(void)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180038247. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  InitializeSListHead(&DAT_18004bd50);
+  return;
+}
+
+

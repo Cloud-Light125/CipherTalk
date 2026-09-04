@@ -1,0 +1,14 @@
+/* 1800350a9 BCryptCloseAlgorithmProvider */
+
+NTSTATUS __stdcall BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE hAlgorithm,ULONG dwFlags)
+
+{
+  NTSTATUS NVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x0001800350a9. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  NVar1 = BCryptCloseAlgorithmProvider(hAlgorithm,dwFlags);
+  return NVar1;
+}
+
+

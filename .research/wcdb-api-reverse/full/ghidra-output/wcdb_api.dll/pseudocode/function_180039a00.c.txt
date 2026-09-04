@@ -1,0 +1,39 @@
+/* 180039a00 __l1::dtor$3 */
+
+/* Library Function - Multiple Matches With Same Base Name
+    int `private: class money_get<unsigned short,class std::istreambuf_iterator<unsigned
+   short,struct std::char_traits<unsigned short> > >::basic_string<unsigned short,struct
+   std::char_traits<unsigned short>,class std::allocator<unsigned short> > __cdecl
+   std::money_get<unsigned short,class std::istreambuf_iterator<unsigned short,struct
+   std::char_traits<unsigned short> > >::_Getmfld(class money_get<unsigned short,class
+   std::istreambuf_iterator<unsigned short,struct std::char_traits<unsigned short> >
+   >::istreambuf_iterator<unsigned short,struct std::char_traits<unsigned short> > & __ptr64,class
+   money_get<unsigned short,class std::istreambuf_iterator<unsigned short,struct
+   std::char_traits<unsigned short> > >::istreambuf_iterator<unsigned short,struct
+   std::char_traits<unsigned short> > & __ptr64,bool,class money_get<unsigned short,class
+   std::istreambuf_iterator<unsigned short,struct std::char_traits<unsigned short> > >::ios_base &
+   __ptr64)const __ptr64'::`1'::dtor$3
+    int `private: class money_get<wchar_t,class std::istreambuf_iterator<wchar_t,struct
+   std::char_traits<wchar_t> > >::basic_string<wchar_t,struct std::char_traits<wchar_t>,class
+   std::allocator<wchar_t> > __cdecl std::money_get<wchar_t,class
+   std::istreambuf_iterator<wchar_t,struct std::char_traits<wchar_t> > >::_Getmfld(class
+   money_get<wchar_t,class std::istreambuf_iterator<wchar_t,struct std::char_traits<wchar_t> >
+   >::istreambuf_iterator<wchar_t,struct std::char_traits<wchar_t> > & __ptr64,class
+   money_get<wchar_t,class std::istreambuf_iterator<wchar_t,struct std::char_traits<wchar_t> >
+   >::istreambuf_iterator<wchar_t,struct std::char_traits<wchar_t> > & __ptr64,bool,class
+   money_get<wchar_t,class std::istreambuf_iterator<wchar_t,struct std::char_traits<wchar_t> >
+   >::ios_base & __ptr64)const __ptr64'::`1'::dtor$3
+   
+   Library: Visual Studio 2010 Release */
+
+void __l1__dtor_3(undefined8 param_1,longlong param_2)
+
+{
+  if ((*(uint *)(param_2 + 0x44) & 1) != 0) {
+    *(uint *)(param_2 + 0x44) = *(uint *)(param_2 + 0x44) & 0xfffffffe;
+    FUN_180009550(*(longlong **)(param_2 + 0xb8));
+  }
+  return;
+}
+
+

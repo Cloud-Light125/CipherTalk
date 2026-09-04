@@ -28,7 +28,7 @@ import { useAuthStore } from '../stores/authStore'
 import { resolveWelcomeConfig } from './welcomeConfig'
 import './WelcomePage.css'
 
-const GUIDE_URL = 'https://ilovebinglu.notion.site/ciphertalk'
+const PROJECT_HOME_URL = 'https://269332.xyz'
 
 const steps = [
   { id: 'intro', title: '欢迎', desc: '准备开始你的本地数据探索' },
@@ -219,8 +219,8 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     void handleAutoDetectPath(true)
   }, [currentStep.id, dbPath])
 
-  const handleOpenGuide = () => {
-    void window.electronAPI.shell.openExternal(GUIDE_URL)
+  const handleOpenProjectHome = () => {
+    void window.electronAPI.shell.openExternal(PROJECT_HOME_URL)
   }
 
   const handleResetCachePath = async () => {
@@ -1252,9 +1252,9 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                   <Typography.Paragraph size="sm" color="muted" className="truncate">{currentStep.desc}</Typography.Paragraph>
                 </div>
               </div>
-              <Button type="button" variant="secondary" size="sm" onPress={handleOpenGuide} className="shrink-0">
+              <Button type="button" variant="secondary" size="sm" onPress={handleOpenProjectHome} className="shrink-0">
                 <BookOpen width={16} height={16} />
-                使用教程
+                项目主页
               </Button>
             </div>
             <div className="flex min-w-0 flex-col gap-2">

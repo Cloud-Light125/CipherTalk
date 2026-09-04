@@ -35,12 +35,6 @@ export class WcdbService extends EventEmitter {
     return this.core.isConnected()
   }
 
-  async checkLicense(): Promise<void> {
-    this.core.setPaths(getNativeRoot(), getUserDataPath(), CLI_VERSION)
-    const result = await this.core.checkLicense()
-    if (!result.success) throw new Error(result.error || 'WCDB 授权检查失败')
-  }
-
   async execQuery(kind: string, path: string, sql: string): Promise<QueryResult> {
     return this.core.execQuery(kind, path, sql)
   }

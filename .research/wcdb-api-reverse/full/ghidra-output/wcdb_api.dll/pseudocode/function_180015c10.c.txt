@@ -1,0 +1,50 @@
+/* 180015c10 FUN_180015c10 */
+
+undefined8 *
+FUN_180015c10(undefined8 *param_1,longlong param_2,undefined8 param_3,undefined8 param_4)
+
+{
+  char cVar1;
+  int iVar2;
+  longlong *plVar3;
+  longlong *plVar4;
+  longlong *plVar5;
+  
+  iVar2 = _Mtx_lock(&DAT_18004b000);
+  if (iVar2 != 0) {
+                    /* WARNING: Subroutine does not return */
+    std::_Throw_Cpp_error(5);
+  }
+  if (DAT_18004b04c != 0x7fffffff) {
+    plVar3 = (longlong *)DAT_18004bc80[1];
+    cVar1 = *(char *)((longlong)plVar3 + 0x19);
+    plVar5 = DAT_18004bc80;
+    while (cVar1 == '\0') {
+      plVar4 = plVar3;
+      if (plVar3[4] < param_2) {
+        plVar3 = plVar3 + 2;
+        plVar4 = plVar5;
+      }
+      plVar3 = (longlong *)*plVar3;
+      plVar5 = plVar4;
+      cVar1 = *(char *)((longlong)plVar3 + 0x19);
+    }
+    if ((*(char *)((longlong)plVar5 + 0x19) != '\0') || (param_2 < plVar5[4])) {
+      plVar5 = DAT_18004bc80;
+    }
+    if ((plVar5 == DAT_18004bc80) || (plVar5[0x19] == 0)) {
+      *(undefined1 *)(param_1 + 0x1c) = 0;
+    }
+    else {
+      FUN_180008830(param_1,plVar5 + 5,param_3,param_4);
+      *(undefined1 *)(param_1 + 0x1c) = 1;
+    }
+    _Mtx_unlock(&DAT_18004b000);
+    return param_1;
+  }
+  DAT_18004b04c = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+  std::_Throw_Cpp_error(6);
+}
+
+

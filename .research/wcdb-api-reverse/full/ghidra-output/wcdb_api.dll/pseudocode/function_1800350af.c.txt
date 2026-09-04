@@ -1,0 +1,16 @@
+/* 1800350af BCryptImportKeyPair */
+
+NTSTATUS __stdcall
+BCryptImportKeyPair(BCRYPT_ALG_HANDLE hAlgorithm,BCRYPT_KEY_HANDLE hImportKey,LPCWSTR pszBlobType,
+                   BCRYPT_KEY_HANDLE *phKey,PUCHAR pbInput,ULONG cbInput,ULONG dwFlags)
+
+{
+  NTSTATUS NVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x0001800350af. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  NVar1 = BCryptImportKeyPair(hAlgorithm,hImportKey,pszBlobType,phKey,pbInput,cbInput,dwFlags);
+  return NVar1;
+}
+
+

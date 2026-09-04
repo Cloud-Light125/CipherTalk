@@ -129,8 +129,6 @@ function buildFallbackBody(context) {
 
   const thanks = buildThanks(context)
   const references = buildReferences(context)
-  const blockedVersions = context.forceUpdate?.blockedVersions || []
-  const hasUpgradeReminder = Boolean(context.forceUpdate?.minimumSupportedVersion || blockedVersions.length > 0)
   const totalCommits = (context.commits || []).length
   const totalPrs = (context.pullRequests || []).length
   const touchedAreas = Object.entries(groups)
@@ -160,12 +158,6 @@ function buildFallbackBody(context) {
     '#### 调整',
     ...(groups.调整.length ? groups.调整 : ['- 本次主要是零散维护项']),
     '',
-    ...(hasUpgradeReminder ? [
-      '### 升级提醒',
-      ...(context.forceUpdate.minimumSupportedVersion ? [`- 最低安全版本：${context.forceUpdate.minimumSupportedVersion}`] : []),
-      ...(blockedVersions.length ? [`- 封禁版本：${blockedVersions.join(', ')}`] : []),
-      ''
-    ] : []),
     '### 感谢贡献者',
     ...(thanks.length ? thanks : ['- 本版本无新增外部贡献']),
     '',
@@ -212,7 +204,6 @@ async function generateAiBody(context) {
     '### 感谢贡献者',
     '### 相关提交与 PR',
     '如果上方有些内容没有，即可用一些涩话来填充，不要显得很死板或机械。',
-    '如果存在最低安全版本或封禁版本，增加 ### 升级提醒 章节。',
     '分类建议：可参考提交标题前缀 feat/fix 做粗分类到 新增/修复；其余放到 调整（如果标题无法判断，就放到 调整）。',
     '如果某个分类为空，不要反复写“无/未检测到”这种机械表达，可以改成更自然但仍然克制的表述。',
     '如果这次主要是 chore、ci、release、workflow、refactor，也要把这些工程改动翻译成用户能理解的影响，比如“发布链路更稳”“版本分发更顺”“维护成本更低”，但不能编造功能。',

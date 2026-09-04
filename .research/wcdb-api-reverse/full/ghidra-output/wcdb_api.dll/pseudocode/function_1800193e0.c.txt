@@ -1,0 +1,23 @@
+/* 1800193e0 FUN_1800193e0 */
+
+longlong * FUN_1800193e0(longlong *param_1)
+
+{
+  longlong lVar1;
+  longlong lVar2;
+  
+  lVar1 = _Query_perf_frequency();
+  lVar2 = _Query_perf_counter();
+  if (lVar1 == 10000000) {
+    *param_1 = lVar2 * 100;
+    return param_1;
+  }
+  if (lVar1 == 24000000) {
+    *param_1 = (lVar2 * 2) / 3 + lVar2 * 0x29;
+    return param_1;
+  }
+  *param_1 = ((lVar2 % lVar1) * 1000000000) / lVar1 + (lVar2 / lVar1) * 1000000000;
+  return param_1;
+}
+
+

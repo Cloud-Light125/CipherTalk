@@ -1,0 +1,25 @@
+/* 18003b1d0 FUN_18003b1d0 */
+
+/* WARNING: Function: _guard_dispatch_icall replaced with injection: guard_dispatch_icall */
+
+void FUN_18003b1d0(void)
+
+{
+  undefined8 *_Memory;
+  undefined8 *puVar1;
+  
+  _Memory = DAT_18004bce8;
+  while (_Memory != (undefined8 *)0x0) {
+    DAT_18004bce8 = (undefined8 *)*_Memory;
+    puVar1 = (undefined8 *)(**(code **)(*(longlong *)_Memory[1] + 0x10))();
+    if (puVar1 != (undefined8 *)0x0) {
+      (**(code **)*puVar1)(puVar1,1);
+    }
+    free(_Memory);
+    _Memory = DAT_18004bce8;
+  }
+  DAT_18004bce8 = _Memory;
+  return;
+}
+
+

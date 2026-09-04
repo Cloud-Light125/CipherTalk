@@ -1,0 +1,12 @@
+/* 1800363a1 _Xout_of_range */
+
+void __cdecl std::_Xout_of_range(char *param_1)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x0001800363a1. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  _Xout_of_range(param_1);
+  return;
+}
+
+

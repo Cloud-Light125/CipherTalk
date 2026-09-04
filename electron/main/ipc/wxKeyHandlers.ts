@@ -156,7 +156,13 @@ export function registerWxKeyHandlers(ctx: MainProcessContext): void {
           }
         }
 
-        ctx.getLogService()?.info('WxKey', 'macOS 数据库密钥获取成功', { keyLength: result.key?.length || 0 })
+        const macKeyLength = result.key?.length || 0
+        ctx.getLogService()?.info('WxKey', 'macOS 数据库密钥获取成功', {
+          keyPresent: Boolean(result.key),
+          keyLength: macKeyLength,
+          keyLengthExpected: 64,
+          keyLengthValid: macKeyLength === 64
+        })
         return result
       } catch (e) {
         wxKeyServiceMac.dispose()
@@ -216,7 +222,14 @@ export function registerWxKeyHandlers(ctx: MainProcessContext): void {
           }
           // 未做/未通过目录验证：不回填 validatedWxid（前端据此标记为“未验证”），
           // 但仍带回解析后的目录名供前端自动绑定目录。
-          ctx.getLogService()?.info('WxKey', '直接读取到账号信息（未通过目录验证），返回密钥与账号', { bindWxid })
+          ctx.getLogService()?.info('WxKey', '直接读取到账号信息（未通过目录验证），返回密钥与账号', {
+            bindWxid,
+            keyPresent: Boolean(account.dbKey),
+            keyLength: account.dbKey?.length || 0,
+            keyLengthExpected: 64,
+            keyLengthValid: account.dbKey?.length === 64,
+            keyFormatValid: /^[0-9a-fA-F]{64}$/.test(String(account.dbKey || ''))
+          })
           return { success: true, key: account.dbKey, account: outAccount }
         }
         if (options?.allowRestart === false) {
@@ -340,7 +353,14 @@ export function registerWxKeyHandlers(ctx: MainProcessContext): void {
             event.sender.send('wxkey:status', { status: `已捕获候选密钥，正在验证账号: ${wxid}`, level: 1 })
             const testResult = await wcdbService.testConnection(dbPath, diag.key, wxid)
             if (testResult.success) {
-              ctx.getLogService()?.info('WxKey', '内存扫描密钥获取成功', { wxid, keyLength: diag.key.length })
+          ctx.getLogService()?.info('WxKey', '内存扫描密钥获取成功', {
+            wxid,
+            keyPresent: true,
+            keyLength: diag.key.length,
+            keyLengthExpected: 64,
+            keyLengthValid: diag.key.length === 64,
+            keyFormatValid: /^[0-9a-fA-F]{64}$/.test(diag.key)
+          })
               return { success: true, key: diag.key, validatedWxid: wxid, account: account ?? null }
             }
             lastError = testResult.error || ''

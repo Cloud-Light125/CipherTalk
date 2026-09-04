@@ -1,0 +1,9 @@
+/* 1800193d0 FUN_1800193d0 */
+
+char * FUN_1800193d0(void)
+
+{
+  return "system";
+}
+
+

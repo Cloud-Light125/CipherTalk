@@ -1,0 +1,110 @@
+/* 1800046a0 FUN_1800046a0 */
+
+basic_ostream<char,std::char_traits<char>_> *
+FUN_1800046a0(basic_ostream<char,std::char_traits<char>_> *param_1,char *param_2,ulonglong param_3)
+
+{
+  bool bVar1;
+  char cVar2;
+  uint uVar3;
+  int iVar4;
+  __int64 _Var5;
+  ulonglong uVar6;
+  basic_streambuf<char,std::char_traits<char>_> *pbVar7;
+  basic_ostream<char,std::char_traits<char>_> *this;
+  int iVar8;
+  longlong lVar9;
+  
+  iVar8 = 0;
+  _Var5 = std::ios_base::width((ios_base *)(param_1 + *(int *)(*(longlong *)param_1 + 4)));
+  if ((_Var5 < 1) ||
+     (uVar6 = std::ios_base::width((ios_base *)(param_1 + *(int *)(*(longlong *)param_1 + 4))),
+     uVar6 <= param_3)) {
+    lVar9 = 0;
+  }
+  else {
+    _Var5 = std::ios_base::width((ios_base *)(param_1 + *(int *)(*(longlong *)param_1 + 4)));
+    lVar9 = _Var5 - param_3;
+  }
+  pbVar7 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                     ((basic_ios<char,std::char_traits<char>_> *)
+                      (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+  if (pbVar7 != (basic_streambuf<char,std::char_traits<char>_> *)0x0) {
+    (**(code **)(*(longlong *)pbVar7 + 8))(pbVar7);
+  }
+  bVar1 = std::ios_base::good((ios_base *)(param_1 + *(int *)(*(longlong *)param_1 + 4)));
+  if (bVar1) {
+    this = std::basic_ios<char,std::char_traits<char>_>::tie
+                     ((basic_ios<char,std::char_traits<char>_> *)
+                      (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+    if ((this == (basic_ostream<char,std::char_traits<char>_> *)0x0) || (this == param_1)) {
+      bVar1 = true;
+    }
+    else {
+      std::basic_ostream<char,std::char_traits<char>_>::flush(this);
+      bVar1 = std::ios_base::good((ios_base *)(param_1 + *(int *)(*(longlong *)param_1 + 4)));
+    }
+  }
+  else {
+    bVar1 = false;
+  }
+  if (bVar1 == false) {
+    iVar8 = 4;
+  }
+  else {
+    uVar3 = std::ios_base::flags((ios_base *)(param_1 + *(int *)(*(longlong *)param_1 + 4)));
+    if ((uVar3 & 0x1c0) != 0x40) {
+      for (; lVar9 != 0; lVar9 = lVar9 + -1) {
+        pbVar7 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                           ((basic_ios<char,std::char_traits<char>_> *)
+                            (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+        cVar2 = std::basic_ios<char,std::char_traits<char>_>::fill
+                          ((basic_ios<char,std::char_traits<char>_> *)
+                           (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+        iVar4 = std::basic_streambuf<char,std::char_traits<char>_>::sputc(pbVar7,cVar2);
+        if (iVar4 == -1) {
+          iVar8 = 4;
+          goto LAB_180004806;
+        }
+      }
+    }
+    pbVar7 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                       ((basic_ios<char,std::char_traits<char>_> *)
+                        (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+    uVar6 = std::basic_streambuf<char,std::char_traits<char>_>::sputn(pbVar7,param_2,param_3);
+    if (uVar6 == param_3) {
+LAB_180004806:
+      do {
+        if (lVar9 == 0) goto LAB_180004846;
+        pbVar7 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                           ((basic_ios<char,std::char_traits<char>_> *)
+                            (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+        cVar2 = std::basic_ios<char,std::char_traits<char>_>::fill
+                          ((basic_ios<char,std::char_traits<char>_> *)
+                           (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+        iVar4 = std::basic_streambuf<char,std::char_traits<char>_>::sputc(pbVar7,cVar2);
+        if (iVar4 == -1) break;
+        lVar9 = lVar9 + -1;
+      } while( true );
+    }
+    iVar8 = 4;
+LAB_180004846:
+    std::ios_base::width((ios_base *)(param_1 + *(int *)(*(longlong *)param_1 + 4)),0);
+  }
+  std::basic_ios<char,std::char_traits<char>_>::setstate
+            ((basic_ios<char,std::char_traits<char>_> *)
+             (param_1 + *(int *)(*(longlong *)param_1 + 4)),iVar8,false);
+  bVar1 = std::uncaught_exception();
+  if (!bVar1) {
+    std::basic_ostream<char,std::char_traits<char>_>::_Osfx(param_1);
+  }
+  pbVar7 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                     ((basic_ios<char,std::char_traits<char>_> *)
+                      (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+  if (pbVar7 != (basic_streambuf<char,std::char_traits<char>_> *)0x0) {
+    (**(code **)(*(longlong *)pbVar7 + 0x10))(pbVar7);
+  }
+  return param_1;
+}
+
+

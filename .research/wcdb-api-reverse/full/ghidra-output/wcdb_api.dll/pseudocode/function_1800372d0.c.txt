@@ -1,0 +1,20 @@
+/* 1800372d0 FUN_1800372d0 */
+
+/* WARNING: Function: _guard_dispatch_icall replaced with injection: guard_dispatch_icall */
+
+void FUN_1800372d0(longlong param_1,longlong param_2,longlong param_3,undefined *param_4)
+
+{
+  longlong lVar1;
+  
+  lVar1 = param_2 * param_3 + param_1;
+  while( true ) {
+    if (param_3 == 0) break;
+    lVar1 = lVar1 - param_2;
+    (*(code *)param_4)(lVar1);
+    param_3 = param_3 + -1;
+  }
+  return;
+}
+
+

@@ -1,0 +1,231 @@
+/* 180015270 FUN_180015270 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+undefined8 FUN_180015270(longlong *param_1,byte *param_2,longlong *param_3,undefined1 *param_4)
+
+{
+  longlong lVar1;
+  code *pcVar2;
+  undefined1 *puVar3;
+  bool bVar4;
+  undefined8 uVar5;
+  longlong *plVar6;
+  undefined8 ****ppppuVar7;
+  InnerHandle *this;
+  UnsafeStringView *pUVar8;
+  __uint64 _Var9;
+  char *pcVar10;
+  void *pvVar11;
+  void *pvVar12;
+  undefined1 *puVar13;
+  undefined1 *puVar14;
+  longlong *_Size;
+  longlong *_Src;
+  undefined8 uStackY_170;
+  undefined1 auStackY_168 [8];
+  undefined1 auStackY_160 [24];
+  undefined8 ***local_128;
+  longlong lStack_120;
+  longlong local_118;
+  ulonglong uStack_110;
+  undefined8 **local_108 [2];
+  __uint64 local_f8;
+  undefined8 **ppuStack_f0;
+  undefined1 local_e8;
+  undefined7 uStack_e7;
+  undefined8 local_d8;
+  ulonglong local_d0;
+  RecyclableHandle local_c8 [112];
+  ulonglong local_58;
+  
+  puVar14 = auStackY_168;
+  local_58 = DAT_18004b4c0 ^ (ulonglong)auStackY_168;
+  *param_4 = 0;
+  param_3[2] = 0;
+  plVar6 = param_3;
+  if (0xf < (ulonglong)param_3[3]) {
+    plVar6 = (longlong *)*param_3;
+  }
+  *(undefined1 *)plVar6 = 0;
+  if (*param_1 == 0) {
+    uVar5 = 0xfffffffc;
+    goto LAB_180015653;
+  }
+  plVar6 = FUN_18001fbd0((longlong *)&local_e8,param_2);
+  lVar1 = plVar6[2];
+  if ((ulonglong)(plVar6[3] - lVar1) < 0x43) {
+    plVar6 = FUN_1800062a0(plVar6,0x43,0,0,
+                           "SELECT name FROM sqlite_master WHERE type=\'table\' AND lower(name)=\'",
+                           0x43);
+  }
+  else {
+    plVar6[2] = lVar1 + 0x43;
+    _Src = plVar6;
+    if (0xf < (ulonglong)plVar6[3]) {
+      _Src = (longlong *)*plVar6;
+    }
+    if (((longlong *)0x18003d492 < _Src) ||
+       ((char *)((longlong)_Src + lVar1) <
+        "SELECT name FROM sqlite_master WHERE type=\'table\' AND lower(name)=\'")) {
+      _Size = (longlong *)0x43;
+    }
+    else if ("SELECT name FROM sqlite_master WHERE type=\'table\' AND lower(name)=\'" < _Src) {
+      _Size = _Src + -0x30007a8a;
+    }
+    else {
+      _Size = (longlong *)0x0;
+    }
+    memmove((char *)((longlong)_Src + 0x43),_Src,lVar1 + 1);
+    memcpy(_Src,"SELECT name FROM sqlite_master WHERE type=\'table\' AND lower(name)=\'",
+           (size_t)_Size);
+    memcpy((char *)((longlong)_Size + (longlong)_Src),(char *)((longlong)_Size + 0x18003d493),
+           0x43 - (longlong)_Size);
+  }
+  this = (InnerHandle *)0x0;
+  local_128 = (undefined8 ***)*plVar6;
+  lStack_120 = plVar6[1];
+  local_118 = plVar6[2];
+  uStack_110 = plVar6[3];
+  plVar6[2] = 0;
+  plVar6[3] = 0xf;
+  *(undefined1 *)plVar6 = 0;
+  if (uStack_110 - local_118 < 9) {
+    ppppuVar7 = (undefined8 ****)FUN_180006110(&local_128,9,0,"\' LIMIT 1",9);
+  }
+  else {
+    ppppuVar7 = &local_128;
+    if (0xf < uStack_110) {
+      ppppuVar7 = (undefined8 ****)local_128;
+    }
+    pvVar12 = (void *)((longlong)ppppuVar7 + local_118);
+    local_118 = local_118 + 9;
+    memmove(pvVar12,"\' LIMIT 1",9);
+    *(undefined1 *)((longlong)pvVar12 + 9) = 0;
+    ppppuVar7 = &local_128;
+  }
+  local_108[0] = (undefined8 **)0x0;
+  local_108[1] = (undefined8 **)0x0;
+  local_f8 = 0;
+  ppuStack_f0 = (undefined8 **)0x0;
+  local_108[0] = *ppppuVar7;
+  local_108[1] = ppppuVar7[1];
+  local_f8 = (__uint64)ppppuVar7[2];
+  ppuStack_f0 = ppppuVar7[3];
+  ppppuVar7[2] = (undefined8 ***)0x0;
+  ppppuVar7[3] = (undefined8 ***)0xf;
+  *(undefined1 *)ppppuVar7 = 0;
+  if (uStack_110 < 0x10) {
+LAB_1800154ba:
+    puVar13 = auStackY_168;
+    puVar14 = auStackY_168;
+    local_118 = 0;
+    uStack_110 = 0xf;
+    local_128 = (undefined8 ***)((ulonglong)local_128 & 0xffffffffffffff00);
+    if (0xf < local_d0) {
+      pvVar11 = (void *)CONCAT71(uStack_e7,local_e8);
+      pvVar12 = pvVar11;
+      if ((0xfff < local_d0 + 1) &&
+         (pvVar12 = *(void **)((longlong)pvVar11 + -8),
+         0x1f < (ulonglong)((longlong)pvVar11 + (-8 - (longlong)pvVar12)))) goto LAB_18001554a;
+      free(pvVar12);
+    }
+    local_d8 = 0;
+    local_d0 = 0xf;
+    local_e8 = 0;
+    WCDB::InnerDatabase::getHandle((InnerDatabase *)*param_1,SUB81(local_c8,0),false);
+    this = WCDB::RecyclableHandle::get(local_c8);
+    puVar3 = auStackY_168;
+    if (this != (InnerHandle *)0x0) goto LAB_180015551;
+    uVar5 = 0xfffffffd;
+  }
+  else {
+    ppppuVar7 = (undefined8 ****)local_128;
+    if ((uStack_110 + 1 < 0x1000) ||
+       (ppppuVar7 = (undefined8 ****)local_128[-1],
+       (ulonglong)((longlong)local_128 + (-8 - (longlong)ppppuVar7)) < 0x20)) {
+      free(ppppuVar7);
+      goto LAB_1800154ba;
+    }
+    pcVar2 = (code *)swi(0x29);
+    (*pcVar2)(5);
+    puVar13 = auStackY_160;
+LAB_18001554a:
+    pcVar2 = (code *)swi(0x29);
+    (*pcVar2)(5);
+    puVar3 = puVar13 + 8;
+LAB_180015551:
+    puVar14 = puVar3;
+    pcVar10 = puVar14 + 0x60;
+    if (0xf < *(ulonglong *)(puVar14 + 0x78)) {
+      pcVar10 = *(char **)(puVar14 + 0x60);
+    }
+    *(undefined8 *)(puVar14 + -8) = 0x180015571;
+    pUVar8 = (UnsafeStringView *)
+             WCDB::UnsafeStringView::UnsafeStringView
+                       ((UnsafeStringView *)(puVar14 + 0x40),pcVar10,*(__uint64 *)(puVar14 + 0x70));
+    *(undefined8 *)(puVar14 + -8) = 0x18001557d;
+    bVar4 = WCDB::InnerHandle::prepare(this,pUVar8);
+    *(undefined8 *)(puVar14 + -8) = 0x18001558a;
+    WCDB::UnsafeStringView::~UnsafeStringView((UnsafeStringView *)(puVar14 + 0x40));
+    if (bVar4) {
+      *(undefined8 *)(puVar14 + -8) = 0x1800155a3;
+      bVar4 = WCDB::InnerHandle::step(this);
+      if (bVar4) {
+        *(undefined8 *)(puVar14 + -8) = 0x1800155bc;
+        bVar4 = WCDB::InnerHandle::done(this);
+        if (!bVar4) {
+          *(undefined8 *)(puVar14 + -8) = 0x1800155d0;
+          WCDB::InnerHandle::getText(this,(int)(puVar14 + 0x40));
+          *(undefined8 *)(puVar14 + -8) = 0x1800155db;
+          _Var9 = WCDB::UnsafeStringView::length((UnsafeStringView *)(puVar14 + 0x40));
+          *(undefined8 *)(puVar14 + -8) = 0x1800155e8;
+          pcVar10 = WCDB::UnsafeStringView::data((UnsafeStringView *)(puVar14 + 0x40));
+          *(undefined8 *)(puVar14 + -8) = 0x1800155f6;
+          FUN_180001d30(param_3,pcVar10,_Var9);
+          *param_4 = 1;
+          *(undefined8 *)(puVar14 + -8) = 0x180015603;
+          WCDB::UnsafeStringView::~UnsafeStringView((UnsafeStringView *)(puVar14 + 0x40));
+        }
+        pcVar2 = *(code **)(*(longlong *)this + 0x78);
+        *(undefined8 *)(puVar14 + -8) = 0x18001560c;
+        (*pcVar2)(this);
+        uVar5 = 0;
+      }
+      else {
+        pcVar2 = *(code **)(*(longlong *)this + 0x78);
+        *(undefined8 *)(puVar14 + -8) = 0x1800155b0;
+        (*pcVar2)();
+        uVar5 = 0xfffffffb;
+      }
+    }
+    else {
+      pcVar2 = *(code **)(*(longlong *)this + 0x78);
+      *(undefined8 *)(puVar14 + -8) = 0x180015597;
+      (*pcVar2)();
+      uVar5 = 0xfffffffb;
+    }
+  }
+  *(undefined8 *)(puVar14 + -8) = 0x180015617;
+  WCDB::RecyclableHandle::~RecyclableHandle(local_c8);
+  if (0xf < *(ulonglong *)(puVar14 + 0x78)) {
+    pvVar12 = *(void **)(puVar14 + 0x60);
+    pvVar11 = pvVar12;
+    if ((0xfff < *(ulonglong *)(puVar14 + 0x78) + 1) &&
+       (pvVar11 = *(void **)((longlong)pvVar12 + -8),
+       0x1f < (ulonglong)((longlong)pvVar12 + (-8 - (longlong)pvVar11)))) {
+      pcVar2 = (code *)swi(0x29);
+      (*pcVar2)(5);
+      pcVar2 = (code *)swi(3);
+      uVar5 = (*pcVar2)();
+      return uVar5;
+    }
+    *(undefined8 *)(puVar14 + -8) = 0x180015651;
+    free(pvVar11);
+  }
+LAB_180015653:
+  *(undefined8 *)(puVar14 + -8) = 0x18001565f;
+  return uVar5;
+}
+
+

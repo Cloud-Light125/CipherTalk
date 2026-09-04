@@ -1,0 +1,45 @@
+/* 18001bd50 FUN_18001bd50 */
+
+void FUN_18001bd50(longlong *param_1,undefined8 *param_2)
+
+{
+  undefined8 *puVar1;
+  undefined8 uVar2;
+  
+  puVar1 = (undefined8 *)param_1[1];
+  if (puVar1 != (undefined8 *)param_1[2]) {
+    *puVar1 = 0;
+    puVar1[1] = 0;
+    puVar1[2] = 0;
+    puVar1[3] = 0;
+    uVar2 = param_2[1];
+    *puVar1 = *param_2;
+    puVar1[1] = uVar2;
+    uVar2 = param_2[3];
+    puVar1[2] = param_2[2];
+    puVar1[3] = uVar2;
+    param_2[2] = 0;
+    param_2[3] = 0xf;
+    *(undefined1 *)param_2 = 0;
+    puVar1[4] = 0;
+    puVar1[5] = 0;
+    puVar1[6] = 0;
+    puVar1[7] = 0;
+    uVar2 = param_2[5];
+    puVar1[4] = param_2[4];
+    puVar1[5] = uVar2;
+    uVar2 = param_2[7];
+    puVar1[6] = param_2[6];
+    puVar1[7] = uVar2;
+    param_2[6] = 0;
+    param_2[7] = 0xf;
+    *(undefined1 *)(param_2 + 4) = 0;
+    *(undefined1 *)(puVar1 + 8) = *(undefined1 *)(param_2 + 8);
+    param_1[1] = param_1[1] + 0x48;
+    return;
+  }
+  FUN_180003620(param_1,puVar1,param_2);
+  return;
+}
+
+

@@ -1,0 +1,44 @@
+/* 180037410 FUN_180037410 */
+
+ulonglong FUN_180037410(void)
+
+{
+  void *pvVar1;
+  bool bVar2;
+  undefined7 extraout_var;
+  void *pvVar3;
+  
+  bVar2 = FUN_180038130();
+  pvVar3 = (void *)CONCAT71(extraout_var,bVar2);
+  if ((int)pvVar3 != 0) {
+    pvVar3 = (void *)0x0;
+    LOCK();
+    bVar2 = DAT_18004bd00 == (void *)0x0;
+    pvVar1 = StackBase;
+    if (!bVar2) {
+      pvVar3 = DAT_18004bd00;
+      pvVar1 = DAT_18004bd00;
+    }
+    DAT_18004bd00 = pvVar1;
+    UNLOCK();
+    pvVar1 = DAT_18004bd00;
+    while (DAT_18004bd00 = pvVar1, !bVar2) {
+      if (StackBase == pvVar3) {
+        return CONCAT71((int7)((ulonglong)pvVar3 >> 8),1);
+      }
+      pvVar3 = (void *)0x0;
+      LOCK();
+      bVar2 = pvVar1 == (void *)0x0;
+      DAT_18004bd00 = StackBase;
+      if (!bVar2) {
+        pvVar3 = pvVar1;
+        DAT_18004bd00 = pvVar1;
+      }
+      UNLOCK();
+      pvVar1 = DAT_18004bd00;
+    }
+  }
+  return (ulonglong)pvVar3 & 0xffffffffffffff00;
+}
+
+

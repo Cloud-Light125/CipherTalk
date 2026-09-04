@@ -1,0 +1,45 @@
+/* 180004020 FUN_180004020 */
+
+void FUN_180004020(undefined8 param_1,undefined8 param_2,longlong *param_3)
+
+{
+  longlong *plVar1;
+  int *piVar2;
+  int iVar3;
+  char cVar4;
+  longlong *plVar5;
+  longlong *plVar6;
+  longlong lVar7;
+  
+  cVar4 = *(char *)((longlong)param_3 + 0x19);
+  while (cVar4 == '\0') {
+    FUN_180004020(param_1,param_2,(longlong *)param_3[2]);
+    plVar5 = (longlong *)param_3[9];
+    plVar6 = (longlong *)*param_3;
+    if (plVar5 != (longlong *)0x0) {
+      LOCK();
+      plVar1 = plVar5 + 1;
+      lVar7 = *plVar1;
+      *(int *)plVar1 = (int)*plVar1 + -1;
+      UNLOCK();
+      if ((int)lVar7 == 1) {
+        (**(code **)*plVar5)(plVar5);
+        LOCK();
+        piVar2 = (int *)((longlong)plVar5 + 0xc);
+        iVar3 = *piVar2;
+        *piVar2 = *piVar2 + -1;
+        UNLOCK();
+        if (iVar3 == 1) {
+          (**(code **)(*plVar5 + 8))(plVar5);
+        }
+      }
+    }
+    FUN_18000d070(param_3 + 4);
+    free(param_3);
+    param_3 = plVar6;
+    cVar4 = *(char *)((longlong)plVar6 + 0x19);
+  }
+  return;
+}
+
+

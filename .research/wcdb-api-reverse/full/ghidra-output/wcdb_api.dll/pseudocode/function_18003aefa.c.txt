@@ -1,0 +1,10 @@
+/* 18003aefa FUN_18003aefa */
+
+void FUN_18003aefa(void)
+
+{
+  FUN_180037600();
+  return;
+}
+
+

@@ -31,9 +31,6 @@ function HomePage() {
   const homeGlassBall = useThemeStore(s => s.homeGlassBall)
 
   const [showWhatsNew, setShowWhatsNew] = useState(false)
-  const [currentVersion, setCurrentVersion] = useState('')
-  const [currentAnnouncementId, setCurrentAnnouncementId] = useState('')
-  const [currentAnnouncementContentId, setCurrentAnnouncementContentId] = useState('')
   const [failedBackgroundKey, setFailedBackgroundKey] = useState('')
 
   const [randomSnippet, setRandomSnippet] = useState<RandomMomentSnippet | null>(null)
@@ -41,10 +38,6 @@ function HomePage() {
   const [randomSnippetFetched, setRandomSnippetFetched] = useState(false)
   const [momentHint, setMomentHint] = useState<string | null>(null)
   const randomSnippetRunRef = useRef(0)
-
-  useEffect(() => {
-    checkNewVersion()
-  }, [])
 
   const fetchRandomSnippet = useCallback(async () => {
     if (!isDbConnected) return
@@ -87,58 +80,6 @@ function HomePage() {
     }
     fetchRandomSnippet()
   }, [isDbConnected, fetchRandomSnippet])
-
-  const checkNewVersion = async () => {
-    try {
-      const version = await window.electronAPI.app.getVersion()
-      setCurrentVersion(version)
-
-      const [announcementVersion, announcementId, announcementContentId, seenVersion, seenId, seenContentId] = await Promise.all([
-        window.electronAPI.config.get('releaseAnnouncementVersion'),
-        window.electronAPI.config.get('releaseAnnouncementId'),
-        window.electronAPI.config.get('releaseAnnouncementContentId')
-          .catch(() => ''),
-        window.electronAPI.config.get('releaseAnnouncementSeenVersion')
-          .catch(() => ''),
-        window.electronAPI.config.get('releaseAnnouncementSeenId')
-          .catch(() => ''),
-        window.electronAPI.config.get('releaseAnnouncementSeenContentId')
-          .catch(() => '')
-      ])
-
-      const normalizedAnnouncementVersion = String(announcementVersion || '').trim()
-      const normalizedAnnouncementId = String(announcementId || '').trim()
-      const normalizedAnnouncementContentId = String(announcementContentId || '').trim()
-      const normalizedSeenVersion = String(seenVersion || '').trim()
-      const normalizedSeenId = String(seenId || '').trim()
-      const normalizedSeenContentId = String(seenContentId || '').trim()
-      setCurrentAnnouncementId(normalizedAnnouncementId)
-      setCurrentAnnouncementContentId(normalizedAnnouncementContentId)
-
-      const shouldShowAnnouncement = normalizedAnnouncementId
-        ? normalizedSeenId !== normalizedAnnouncementId
-        : normalizedSeenVersion !== version
-
-      if (normalizedAnnouncementVersion === version && shouldShowAnnouncement) {
-        setShowWhatsNew(true)
-      }
-    } catch (e) {
-      console.error('检查新版本失败:', e)
-    }
-  }
-
-  const handleCloseWhatsNew = () => {
-    setShowWhatsNew(false)
-    if (currentVersion) {
-      window.electronAPI.config.set('releaseAnnouncementSeenVersion', currentVersion)
-    }
-    if (currentAnnouncementId) {
-      window.electronAPI.config.set('releaseAnnouncementSeenId', currentAnnouncementId)
-    }
-    if (currentAnnouncementContentId) {
-      window.electronAPI.config.set('releaseAnnouncementSeenContentId', currentAnnouncementContentId)
-    }
-  }
 
   const momentLt = randomSnippet?.message.localType
   const isTextBubble = momentLt === MOMENT_TEXT_TYPE
@@ -200,8 +141,7 @@ function HomePage() {
       </button>
       {showWhatsNew && (
         <WhatsNewModal
-          version={currentVersion}
-          onClose={handleCloseWhatsNew}
+          onClose={() => setShowWhatsNew(false)}
         />
       )}
 

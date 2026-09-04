@@ -1,0 +1,12 @@
+/* 180037286 setprecision */
+
+void __cdecl std::setprecision(__int64 param_1)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180037286. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  setprecision(param_1);
+  return;
+}
+
+

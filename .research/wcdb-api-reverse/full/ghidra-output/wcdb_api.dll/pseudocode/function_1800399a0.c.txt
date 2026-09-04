@@ -1,0 +1,14 @@
+/* 1800399a0 FUN_1800399a0 */
+
+void FUN_1800399a0(undefined8 param_1,longlong param_2)
+
+{
+  if ((*(uint *)(param_2 + 0x30) & 8) != 0) {
+    *(uint *)(param_2 + 0x30) = *(uint *)(param_2 + 0x30) & 0xfffffff7;
+    std::basic_ios<char,std::char_traits<char>_>::~basic_ios<char,std::char_traits<char>_>
+              ((basic_ios<char,std::char_traits<char>_> *)(param_2 + 200));
+  }
+  return;
+}
+
+

@@ -1,0 +1,10 @@
+/* 180038250 FUN_180038250 */
+
+void FUN_180038250(void)
+
+{
+  __std_type_info_destroy_list(&DAT_18004bd50);
+  return;
+}
+
+

@@ -1,0 +1,22 @@
+/* 180037760 FUN_180037760 */
+
+int FUN_180037760(longlong param_1)
+
+{
+  int iVar1;
+  longlong lVar2;
+  
+  if (DAT_18004bd10 == -1) {
+    iVar1 = _crt_atexit();
+  }
+  else {
+    iVar1 = _register_onexit_function(&DAT_18004bd10);
+  }
+  lVar2 = 0;
+  if (iVar1 == 0) {
+    lVar2 = param_1;
+  }
+  return (lVar2 != 0) - 1;
+}
+
+

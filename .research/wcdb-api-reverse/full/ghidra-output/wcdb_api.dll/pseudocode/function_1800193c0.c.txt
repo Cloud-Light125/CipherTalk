@@ -1,0 +1,9 @@
+/* 1800193c0 FUN_1800193c0 */
+
+char * FUN_1800193c0(void)
+
+{
+  return "generic";
+}
+
+

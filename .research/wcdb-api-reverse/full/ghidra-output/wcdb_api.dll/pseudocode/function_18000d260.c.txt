@@ -1,0 +1,38 @@
+/* 18000d260 FUN_18000d260 */
+
+ulonglong FUN_18000d260(undefined8 param_1,ulonglong param_2)
+
+{
+  code *pcVar1;
+  longlong lVar2;
+  ulonglong uVar3;
+  size_t sVar4;
+  longlong lVar5;
+  
+  if (param_2 < 0x2aaaaaaaaaaaaab) {
+    sVar4 = param_2 * 0x60;
+    if (sVar4 == 0) {
+      return 0;
+    }
+    if (sVar4 < 0x1000) {
+      uVar3 = FUN_1800373b0(sVar4);
+      return uVar3;
+    }
+    if (sVar4 < sVar4 + 0x27) {
+      lVar2 = FUN_1800373b0(sVar4 + 0x27);
+      lVar5 = lVar2;
+      if (lVar2 == 0) {
+        lVar5 = 5;
+        pcVar1 = (code *)swi(0x29);
+        lVar2 = (*pcVar1)();
+      }
+      uVar3 = lVar2 + 0x27U & 0xffffffffffffffe0;
+      *(longlong *)(uVar3 - 8) = lVar5;
+      return uVar3;
+    }
+  }
+                    /* WARNING: Subroutine does not return */
+  FUN_18000cdd0();
+}
+
+

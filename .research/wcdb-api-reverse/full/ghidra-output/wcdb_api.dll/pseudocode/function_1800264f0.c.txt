@@ -1,0 +1,61 @@
+/* 1800264f0 wcdb_set_my_wxid */
+
+int wcdb_set_my_wxid(longlong param_1,char *param_2)
+
+{
+  char cVar1;
+  int iVar2;
+  longlong *plVar3;
+  size_t sVar4;
+  char *_Str;
+  longlong *plVar5;
+  longlong *plVar6;
+  
+                    /* 0x264f0  16  wcdb_set_my_wxid */
+  iVar2 = FUN_18001f250();
+  if (iVar2 == 0) {
+    iVar2 = _Mtx_lock(&DAT_18004b000);
+    if (iVar2 != 0) {
+                    /* WARNING: Subroutine does not return */
+      std::_Throw_Cpp_error(5);
+    }
+    if (DAT_18004b04c == 0x7fffffff) {
+      DAT_18004b04c = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+      std::_Throw_Cpp_error(6);
+    }
+    plVar3 = (longlong *)DAT_18004bc80[1];
+    cVar1 = *(char *)((longlong)plVar3 + 0x19);
+    plVar6 = DAT_18004bc80;
+    while (cVar1 == '\0') {
+      plVar5 = plVar3;
+      if (plVar3[4] < param_1) {
+        plVar3 = plVar3 + 2;
+        plVar5 = plVar6;
+      }
+      plVar3 = (longlong *)*plVar3;
+      plVar6 = plVar5;
+      cVar1 = *(char *)((longlong)plVar3 + 0x19);
+    }
+    if ((*(char *)((longlong)plVar6 + 0x19) != '\0') || (param_1 < plVar6[4])) {
+      plVar6 = DAT_18004bc80;
+    }
+    if (plVar6 == DAT_18004bc80) {
+      _Mtx_unlock(&DAT_18004b000);
+      iVar2 = -1;
+    }
+    else {
+      _Str = "";
+      if (param_2 != (char *)0x0) {
+        _Str = param_2;
+      }
+      sVar4 = strlen(_Str);
+      FUN_180001d30(plVar6 + 0x15,_Str,sVar4);
+      _Mtx_unlock(&DAT_18004b000);
+      iVar2 = 0;
+    }
+  }
+  return iVar2;
+}
+
+

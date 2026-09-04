@@ -1,0 +1,5 @@
+program=wcdb_api.dll
+language=x86:LE:64:default
+compiler=windows
+imageBase=180000000
+internalFunctionCount=718

@@ -1,0 +1,66 @@
+/* 180007ae0 FUN_180007ae0 */
+
+facet * FUN_180007ae0(locale *param_1)
+
+{
+  ulonglong uVar1;
+  longlong lVar2;
+  code *pcVar3;
+  _Locimp *p_Var4;
+  __uint64 _Var5;
+  facet *pfVar6;
+  facet *local_res8;
+  _Lockit local_res10 [8];
+  facet *local_res18;
+  
+  std::_Lockit::_Lockit(local_res10,0);
+  pcVar3 = id_exref;
+  local_res18 = DAT_18004bcd0;
+  if (*(longlong *)id_exref == 0) {
+    std::_Lockit::_Lockit((_Lockit *)&local_res8,0);
+    if (*(longlong *)pcVar3 == 0) {
+      *(int *)_Id_cnt_exref = *(int *)_Id_cnt_exref + 1;
+      *(longlong *)pcVar3 = (longlong)*(int *)_Id_cnt_exref;
+    }
+    std::_Lockit::~_Lockit((_Lockit *)&local_res8);
+  }
+  uVar1 = *(ulonglong *)pcVar3;
+  lVar2 = *(longlong *)(param_1 + 8);
+  if (uVar1 < *(ulonglong *)(lVar2 + 0x18)) {
+    pfVar6 = *(facet **)(uVar1 * 8 + *(longlong *)(lVar2 + 0x10));
+    if (pfVar6 != (facet *)0x0) goto LAB_180007bd3;
+  }
+  else {
+    pfVar6 = (facet *)0x0;
+  }
+  if (*(char *)(lVar2 + 0x24) == '\0') {
+LAB_180007b89:
+    if (pfVar6 != (facet *)0x0) goto LAB_180007bd3;
+  }
+  else {
+    p_Var4 = std::locale::_Getgloballocale();
+    if (uVar1 < *(ulonglong *)(p_Var4 + 0x18)) {
+      pfVar6 = *(facet **)(uVar1 * 8 + *(longlong *)(p_Var4 + 0x10));
+      goto LAB_180007b89;
+    }
+  }
+  pfVar6 = local_res18;
+  if (local_res18 == (facet *)0x0) {
+    _Var5 = std::codecvt<char,char,_Mbstatet>::_Getcat(&local_res18,param_1);
+    pfVar6 = local_res18;
+    if (_Var5 == 0xffffffffffffffff) {
+                    /* WARNING: Subroutine does not return */
+      FUN_18000cdf0();
+    }
+    local_res8 = local_res18;
+    FUN_1800364d0(local_res18);
+    (**(code **)(*(longlong *)pfVar6 + 8))(pfVar6);
+    DAT_18004bcd0 = local_res18;
+    pfVar6 = local_res18;
+  }
+LAB_180007bd3:
+  std::_Lockit::~_Lockit(local_res10);
+  return pfVar6;
+}
+
+

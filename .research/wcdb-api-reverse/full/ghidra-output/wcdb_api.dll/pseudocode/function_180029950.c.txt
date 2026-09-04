@@ -1,0 +1,35 @@
+/* 180029950 FUN_180029950 */
+
+void FUN_180029950(int *param_1)
+
+{
+  int iVar1;
+  longlong *plVar2;
+  
+  iVar1 = *param_1;
+  if (iVar1 == 3) {
+    plVar2 = *(longlong **)(param_1 + 2);
+    if (plVar2 != (longlong *)0x0) {
+      FUN_18000d070(plVar2);
+      free(plVar2);
+      return;
+    }
+  }
+  else if (iVar1 == 4) {
+    plVar2 = *(longlong **)(param_1 + 2);
+    if (plVar2 != (longlong *)0x0) {
+      FUN_18002a2d0(plVar2);
+      free(plVar2);
+      return;
+    }
+  }
+  else if ((iVar1 == 5) && (plVar2 = *(longlong **)(param_1 + 2), plVar2 != (longlong *)0x0)) {
+    FUN_180026f50(plVar2,plVar2,*(longlong **)(*plVar2 + 8));
+    free((void *)*plVar2);
+    free(plVar2);
+    return;
+  }
+  return;
+}
+
+

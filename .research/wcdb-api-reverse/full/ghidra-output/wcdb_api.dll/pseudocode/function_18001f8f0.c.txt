@@ -1,0 +1,35 @@
+/* 18001f8f0 FUN_18001f8f0 */
+
+longlong *
+FUN_18001f8f0(basic_streambuf<char,std::char_traits<char>_> *param_1,longlong *param_2,
+             longlong *param_3)
+
+{
+  longlong lVar1;
+  bool bVar2;
+  int iVar3;
+  longlong local_res8;
+  
+  local_res8 = param_3[1] + *param_3;
+  if (*(longlong *)(param_1 + 0x80) != 0) {
+    bVar2 = FUN_18000bc50((longlong *)param_1);
+    if (bVar2) {
+      iVar3 = fsetpos(*(FILE **)(param_1 + 0x80),&local_res8);
+      if (iVar3 == 0) {
+        *(longlong *)(param_1 + 0x74) = param_3[2];
+        FUN_18000ccd0(param_1);
+        lVar1 = *(longlong *)(param_1 + 0x74);
+        *param_2 = local_res8;
+        param_2[1] = 0;
+        param_2[2] = lVar1;
+        return param_2;
+      }
+    }
+  }
+  *param_2 = -1;
+  param_2[1] = 0;
+  param_2[2] = 0;
+  return param_2;
+}
+
+

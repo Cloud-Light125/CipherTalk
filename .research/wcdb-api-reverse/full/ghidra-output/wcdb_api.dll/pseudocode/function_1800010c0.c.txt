@@ -1,0 +1,82 @@
+/* 1800010c0 FUN_1800010c0 */
+
+undefined8 * FUN_1800010c0(undefined8 *param_1,void *param_2,void *param_3)
+
+{
+  ulonglong uVar1;
+  code *pcVar2;
+  ulonglong uVar3;
+  longlong lVar4;
+  void *_Dst;
+  ulonglong uVar5;
+  undefined1 *puVar6;
+  ulonglong _Size;
+  undefined8 uStack_50;
+  undefined1 auStack_48 [32];
+  
+  puVar6 = auStack_48;
+  _Dst = (void *)0x0;
+  *param_1 = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  if (param_2 == param_3) {
+    param_1[3] = 0xf;
+    *(undefined1 *)param_1 = 0;
+    return param_1;
+  }
+  _Size = (longlong)param_3 - (longlong)param_2;
+  if (0x7fffffffffffffff < _Size) {
+                    /* WARNING: Subroutine does not return */
+    FUN_18000d170();
+  }
+  if (_Size < 0x10) {
+    param_1[2] = _Size;
+    param_1[3] = 0xf;
+    memcpy(param_1,param_2,_Size);
+    *(undefined1 *)((longlong)param_1 + _Size) = 0;
+    return param_1;
+  }
+  uVar3 = _Size | 0xf;
+  if (uVar3 < 0x8000000000000000) goto LAB_18000116f;
+  uVar5 = 0x8000000000000027;
+  puVar6 = auStack_48;
+  uVar3 = 0x7fffffffffffffff;
+  while( true ) {
+    *(undefined8 *)(puVar6 + -8) = 0x180001163;
+    lVar4 = FUN_1800373b0(uVar5);
+    if (lVar4 != 0) break;
+    pcVar2 = (code *)swi(0x29);
+    uVar3 = (*pcVar2)(5);
+    puVar6 = puVar6 + 8;
+LAB_18000116f:
+    if (uVar3 < 0x16) {
+      uVar3 = 0x16;
+    }
+    uVar1 = uVar3 + 1;
+    if (uVar1 == 0) goto LAB_1800011b3;
+    if (uVar1 < 0x1000) {
+      *(undefined8 *)(puVar6 + -8) = 0x1800011b0;
+      _Dst = (void *)FUN_1800373b0(uVar1);
+      goto LAB_1800011b3;
+    }
+    uVar5 = uVar3 + 0x28;
+    if (uVar5 <= uVar1) {
+                    /* WARNING: Subroutine does not return */
+      *(undefined **)(puVar6 + -8) = &UNK_1800011e9;
+      FUN_18000cdd0();
+    }
+  }
+  _Dst = (void *)(lVar4 + 0x27U & 0xffffffffffffffe0);
+  *(longlong *)((longlong)_Dst - 8) = lVar4;
+LAB_1800011b3:
+  *param_1 = _Dst;
+  param_1[2] = _Size;
+  param_1[3] = uVar3;
+  *(undefined8 *)(puVar6 + -8) = 0x1800011cc;
+  memcpy(_Dst,param_2,_Size);
+  *(undefined1 *)((longlong)_Dst + _Size) = 0;
+  return param_1;
+}
+
+

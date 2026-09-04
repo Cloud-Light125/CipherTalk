@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Button, Chip, Modal, Toast, toast, Typography } from '@heroui/react'
 
@@ -18,7 +18,6 @@ import AgentPage from './pages/agent/AgentPage'
 import PersonasPage from './pages/PersonasPage'
 import DiaryPage from './pages/DiaryPage'
 import ExportPage from './pages/export/ExportPage'
-import ActivationPage from './pages/ActivationPage'
 import ImageWindow from './pages/ImageWindow'
 import VideoWindow from './pages/VideoWindow'
 import ChatSummaryWindow from './pages/ChatSummaryWindow'
@@ -34,55 +33,19 @@ import ReplyTileWindow from './pages/ReplyTileWindow'
 import PetsPage from './pages/PetsPage'
 import PluginViewPage from './features/plugins/PluginViewPage'
 import PluginHost from './features/plugins/PluginHost'
-import { formatDisplayVersion } from './lib/appVersion'
 import { useAppStore } from './stores/appStore'
 import { useThemeStore } from './stores/themeStore'
 import { useChatStore } from './stores/chatStore'
 import { useUpdateStatusStore } from './stores/updateStatusStore'
-import { useActivationStore } from './stores/activationStore'
 import * as configService from './services/config'
 import { testAndOpenWcdb } from './services/wcdbConnection'
 import { initTldList } from './utils/linkify'
 import LockScreen from './pages/LockScreen'
 import { useAuthStore } from './stores/authStore'
-import { Bulb, CircleDashed, Shield } from '@gravity-ui/icons'
+import { Bulb, Shield } from '@gravity-ui/icons'
 import { applyWindowChromeToDocument, syncWindowControlsOverlayToDocument } from './utils/windowChrome'
 import type { MemoryMigrationStatusInfo } from './types/electron'
 import './App.css'
-
-type AppUpdateInfo = {
-  hasUpdate: boolean
-  forceUpdate: boolean
-  currentVersion: string
-  version?: string
-  releaseNotes?: string
-  title?: string
-  message?: string
-  minimumSupportedVersion?: string
-  reason?: 'minimum-version' | 'blocked-version'
-  checkedAt: number
-  updateSource: 'r2' | 'github' | 'custom' | 'none'
-  policySource: 'r2' | 'github' | 'custom' | 'none'
-  diagnostics?: {
-    phase: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'failed'
-    strategy: 'unknown' | 'differential' | 'full'
-    fallbackToFull: boolean
-    lastError?: string
-    lastEvent?: string
-    progressPercent?: number
-    downloadedBytes?: number
-    totalBytes?: number
-    targetVersion?: string
-    lastUpdatedAt: number
-  }
-}
-
-type UpdateDownloadProgressPayload = {
-  percent: number
-  transferred: number
-  total: number
-  bytesPerSecond: number
-}
 
 const MAIN_WINDOW_NAV_ROUTES = new Set(['/home', '/agent', '/personas', '/settings', '/pets', '/diary', '/export'])
 
@@ -91,7 +54,6 @@ function App() {
   const location = useLocation()
   const { setDbConnected } = useAppStore()
   const { themeMode, navLayout, isLoaded, loadTheme } = useThemeStore()
-  const { status: activationStatus, checkStatus: checkActivationStatus, initialized: activationInitialized } = useActivationStore()
   const { isLocked, init: initAuth } = useAuthStore()
 
 
@@ -99,14 +61,6 @@ function App() {
   const [showAgreement, setShowAgreement] = useState(false)
   const [agreementLoading, setAgreementLoading] = useState(true)
 
-  // 激活状态
-  const [showActivation, setShowActivation] = useState(false)
-
-  // 更新提示状态
-  const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null)
-  const [downloadProgress, setDownloadProgress] = useState<UpdateDownloadProgressPayload | null>(null)
-  const updateToastIdRef = useRef<string | null>(null)
-  const suppressUpdateToastCloseRef = useRef(false)
   const [memoryMigrationStatus, setMemoryMigrationStatus] = useState<MemoryMigrationStatusInfo | null>(null)
   const [memoryMigrating, setMemoryMigrating] = useState(false)
   const [memoryMigrationError, setMemoryMigrationError] = useState('')
@@ -123,24 +77,6 @@ function App() {
     })
     return off
   }, [navigate])
-
-  const formatSpeed = (bytesPerSecond: number) => {
-    if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) return '计算中'
-    if (bytesPerSecond < 1024) return `${bytesPerSecond.toFixed(0)} B/s`
-    if (bytesPerSecond < 1024 * 1024) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`
-    return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`
-  }
-
-  const formatBytes = (bytes?: number) => {
-    if (!bytes || bytes <= 0) return '0 B'
-    if (bytes < 1024) return `${bytes.toFixed(0)} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
-  }
-
-  const isUpdateDownloading = updateInfo?.diagnostics?.phase === 'downloading' || updateInfo?.diagnostics?.phase === 'installing'
-  const progressPercent = downloadProgress?.percent ?? updateInfo?.diagnostics?.progressPercent ?? null
 
   // 加载主题配置
   useEffect(() => {
@@ -235,48 +171,14 @@ function App() {
   const handleAgree = async () => {
     await configService.acceptCurrentAgreement()
     setShowAgreement(false)
-    // 协议同意后检查激活状态
-    const status = await checkActivationStatus()
-    if (!status?.isActivated || (status.daysRemaining !== null && status.daysRemaining <= 0)) {
-      setShowActivation(true)
-    }
   }
 
   const handleDisagree = () => {
     window.electronAPI.window.close()
   }
 
-  // 检查激活状态（协议同意后）
+  // 监听数据库是否有更新和会话自动同步
   useEffect(() => {
-    if (!showAgreement && !agreementLoading && !activationInitialized) {
-      checkActivationStatus().then(status => {
-        if (!status?.isActivated || (status.daysRemaining !== null && status.daysRemaining <= 0)) {
-          setShowActivation(true)
-        }
-      })
-    }
-  }, [showAgreement, agreementLoading, activationInitialized])
-
-  const handleActivated = () => {
-    setShowActivation(false)
-  }
-
-  // 监听启动时的更新通知
-  useEffect(() => {
-    let mounted = true
-    window.electronAPI.app.getUpdateState?.().then((info) => {
-      if (mounted && info?.hasUpdate) {
-        setUpdateInfo(info)
-      }
-    }).catch((error) => {
-      console.error('获取更新状态失败:', error)
-    })
-
-    const removeUpdateListener = window.electronAPI.app.onUpdateAvailable?.((info) => {
-      setUpdateInfo(info)
-    })
-
-    // 监听数据库是否有更新（正在解密同步）
     const removeUpdateAvailableListener = window.electronAPI.dataManagement.onUpdateAvailable?.((hasUpdate) => {
       const time = new Date().toLocaleTimeString()
       if (hasUpdate) {
@@ -298,98 +200,10 @@ function App() {
     })
 
     return () => {
-      mounted = false
-      removeUpdateListener?.()
       removeSessionsListener?.()
       removeUpdateAvailableListener?.()
     }
   }, [])
-
-  // 监听下载进度
-  useEffect(() => {
-    const removeDownloadListener = window.electronAPI.app.onDownloadProgress?.((progress) => {
-      setDownloadProgress(progress)
-      setUpdateInfo((current) => {
-        if (!current) return current
-        return {
-          ...current,
-          diagnostics: {
-            phase: 'downloading',
-            strategy: current.diagnostics?.strategy || 'unknown',
-            fallbackToFull: current.diagnostics?.fallbackToFull || false,
-            lastError: current.diagnostics?.lastError,
-            lastEvent: current.diagnostics?.lastEvent,
-            progressPercent: progress.percent,
-            downloadedBytes: progress.transferred,
-            totalBytes: progress.total,
-            targetVersion: current.version || current.diagnostics?.targetVersion,
-            lastUpdatedAt: Date.now()
-          }
-        }
-      })
-    })
-    return () => {
-      removeDownloadListener?.()
-    }
-  }, [])
-
-  const closeUpdateToast = useCallback(() => {
-    if (!updateToastIdRef.current) return
-    suppressUpdateToastCloseRef.current = true
-    toast.close(updateToastIdRef.current)
-    updateToastIdRef.current = null
-  }, [])
-
-  const handleStartUpdate = useCallback(() => {
-    if (isUpdateDownloading) return
-    closeUpdateToast()
-    setUpdateInfo((current) => current ? {
-      ...current,
-      diagnostics: {
-        phase: 'downloading',
-        strategy: current.diagnostics?.strategy || 'unknown',
-        fallbackToFull: current.diagnostics?.fallbackToFull || false,
-        lastError: undefined,
-        lastEvent: '开始下载更新',
-        progressPercent: 0,
-        downloadedBytes: 0,
-        totalBytes: current.diagnostics?.totalBytes,
-        targetVersion: current.version || current.diagnostics?.targetVersion,
-        lastUpdatedAt: Date.now()
-      }
-    } : current)
-    window.electronAPI.app.downloadAndInstall()
-  }, [closeUpdateToast, isUpdateDownloading])
-
-  useEffect(() => {
-    if (!updateInfo || updateInfo.forceUpdate || isUpdateDownloading) {
-      closeUpdateToast()
-      return
-    }
-
-    if (updateToastIdRef.current) return
-
-    updateToastIdRef.current = toast.info('发现新版本', {
-      actionProps: {
-        children: '立即更新',
-        onPress: handleStartUpdate,
-        variant: 'secondary',
-      },
-      description: (
-        <>
-          <div>{formatDisplayVersion(updateInfo.version)} 已发布</div>
-          <div>更新源：{updateInfo.updateSource === 'r2' ? 'R2 镜像' : updateInfo.updateSource === 'github' ? 'GitHub Release' : '未知'}</div>
-        </>
-      ),
-      onClose: () => {
-        const suppressed = suppressUpdateToastCloseRef.current
-        suppressUpdateToastCloseRef.current = false
-        updateToastIdRef.current = null
-        if (!suppressed) setUpdateInfo(null)
-      },
-      timeout: 0,
-    })
-  }, [closeUpdateToast, handleStartUpdate, isUpdateDownloading, updateInfo])
 
   // 检查是否是独立聊天窗口
   const isChatWindow = location.pathname === '/chat-window'
@@ -698,8 +512,8 @@ function App() {
                 <p>2.2 所有解密、解析、统计、导出等操作均仅作用于用户本地文件，不会通过网络传输任何数据。</p>
 
                 <h4>3. 网络请求说明</h4>
-                <p>3.1 本软件仅在用户主动或默认启用"检查更新"功能时，访问网络以获取软件版本更新信息。</p>
-                <p>3.2 更新检查过程中，不会上传任何用户数据、设备数据或使用行为数据。</p>
+                <p>3.1 本软件的网络请求仅由用户主动使用的第三方 AI、模型/资源或本地集成功能触发，具体以相应功能配置为准。</p>
+                <p>3.2 上述功能仅向用户选择的相应服务发送完成请求所必需的数据，不会上传与该功能无关的聊天数据。</p>
 
                 <h4>4. 数据安全措施</h4>
                 <p>4.1 本软件不建立服务器端数据存储，因此不存在服务器端数据泄露风险。</p>
@@ -733,16 +547,6 @@ function App() {
             </div>
           </div>
         </div>
-      </div>
-    )
-  }
-
-  // 激活页面 - 未激活或已过期时显示
-  if (showActivation && !showAgreement) {
-    return (
-      <div className="app-container">
-        <TitleBar />
-        <ActivationPage onActivated={handleActivated} />
       </div>
     )
   }
@@ -810,57 +614,6 @@ function App() {
           </Modal.Container>
         </Modal.Backdrop>
       )}
-      {updateInfo?.forceUpdate && (
-        <div className="force-update-overlay">
-          <div className="force-update-card">
-            <div className="force-update-badge">
-              <Shield width={18} height={18} />
-              <span>强制更新</span>
-            </div>
-            <h2>{updateInfo.title || '必须更新后才能继续使用'}</h2>
-            <p className="force-update-desc">
-              {updateInfo.message || '当前版本已被标记为需要立即升级，应用将限制继续使用，直到安装最新版本。'}
-            </p>
-
-            <div className="force-update-meta">
-              <div>当前版本：{formatDisplayVersion(updateInfo.currentVersion)}</div>
-              {updateInfo.version && <div>目标版本：{formatDisplayVersion(updateInfo.version)}</div>}
-              {updateInfo.minimumSupportedVersion && <div>最低安全版本：{formatDisplayVersion(updateInfo.minimumSupportedVersion)}</div>}
-              <div>更新来源：{updateInfo.updateSource === 'r2' ? 'R2 镜像' : updateInfo.updateSource === 'github' ? 'GitHub Release' : '未检测到普通更新源'}</div>
-              <div>策略来源：{updateInfo.policySource === 'r2' ? 'R2 策略源' : updateInfo.policySource === 'github' ? 'GitHub 策略源' : updateInfo.policySource === 'custom' ? '自定义策略源' : '无'}</div>
-            </div>
-
-            {updateInfo.releaseNotes && (
-              <div className="force-update-notes">
-                <div className="force-update-notes-title">更新说明</div>
-                <pre>{updateInfo.releaseNotes}</pre>
-              </div>
-            )}
-
-            {progressPercent !== null && (
-              <div className="force-update-progress">
-                <div className="force-update-progress-label">
-                  <CircleDashed width={16} height={16} className="spin" />
-                  <span>正在下载更新... {progressPercent.toFixed(0)}%</span>
-                </div>
-                <div className="force-update-progress-bar">
-                  <div className="force-update-progress-fill" style={{ width: `${progressPercent}%` }} />
-                </div>
-              </div>
-            )}
-
-            <div className="force-update-actions">
-              <button className="btn btn-primary" onClick={handleStartUpdate} disabled={isUpdateDownloading}>
-                立即更新
-              </button>
-              <button className="btn btn-secondary" onClick={() => window.electronAPI.window.close()}>
-                退出应用
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <main
           className={`flex-1 min-w-0 ${(disableContentOverflow || isFullPage || isEdgeToEdge) ? 'overflow-hidden' : 'overflow-auto'} ${navLayout === 'sidebar' && !isEdgeToEdge ? 'bg-(--bg-primary) rounded-3xl mr-3 mb-3 ct-squircle' : ''}`}
@@ -897,30 +650,6 @@ function App() {
       </div>
       {navLayout === 'dock' && <BottomDock />}
       <DecryptProgressOverlay />
-      {progressPercent !== null && (
-        <div className="download-progress-capsule">
-          <div className="capsule-compact">
-            <CircleDashed className="spin" width={14} height={14} />
-            <span>更新中 {progressPercent.toFixed(0)}%</span>
-          </div>
-          <div className="capsule-detail">
-            <div className="capsule-detail-head">
-              <CircleDashed className="spin" width={14} height={14} />
-              <span className="capsule-detail-title">
-                正在下载更新{updateInfo?.version ? ` ${formatDisplayVersion(updateInfo.version)}` : ''}
-              </span>
-              <span className="capsule-detail-pct">{progressPercent.toFixed(0)}%</span>
-            </div>
-            <div className="progress-bar-bg">
-              <div className="progress-bar-fill" style={{ width: `${progressPercent}%` }} />
-            </div>
-            <div className="capsule-detail-meta">
-              <span>{formatBytes(downloadProgress?.transferred ?? updateInfo?.diagnostics?.downloadedBytes)} / {formatBytes(downloadProgress?.total ?? updateInfo?.diagnostics?.totalBytes)}</span>
-              <span>{formatSpeed(downloadProgress?.bytesPerSecond ?? 0)}</span>
-            </div>
-          </div>
-        </div>
-      )}
       {isLocked && <LockScreen />}
     </div>
   )

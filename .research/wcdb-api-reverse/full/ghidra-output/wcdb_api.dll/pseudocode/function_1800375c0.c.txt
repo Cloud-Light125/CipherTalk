@@ -1,0 +1,23 @@
+/* 1800375c0 FUN_1800375c0 */
+
+void FUN_1800375c0(void)
+
+{
+  bool bVar1;
+  undefined7 extraout_var;
+  undefined8 uVar2;
+  
+  bVar1 = FUN_180038130();
+  if ((int)CONCAT71(extraout_var,bVar1) != 0) {
+    _execute_onexit_table(&DAT_18004bd10);
+    return;
+  }
+  uVar2 = FUN_18000c500();
+  if ((int)uVar2 == 0) {
+    _cexit();
+    return;
+  }
+  return;
+}
+
+

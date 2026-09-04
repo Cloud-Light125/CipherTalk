@@ -1,0 +1,15 @@
+/* 180035097 setConfig */
+
+void __thiscall
+WCDB::InnerDatabase::setConfig
+          (InnerDatabase *this,UnsafeStringView *param_1,shared_ptr<WCDB::Config> *param_2,
+          int param_3)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180035097. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  setConfig(this,param_1,param_2,param_3);
+  return;
+}
+
+

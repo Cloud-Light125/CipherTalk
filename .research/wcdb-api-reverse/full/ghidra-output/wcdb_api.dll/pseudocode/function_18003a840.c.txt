@@ -1,0 +1,13 @@
+/* 18003a840 FUN_18003a840 */
+
+void FUN_18003a840(undefined8 param_1,longlong param_2)
+
+{
+  if ((*(uint *)(param_2 + 0x48) & 2) != 0) {
+    *(uint *)(param_2 + 0x48) = *(uint *)(param_2 + 0x48) & 0xfffffffd;
+    FUN_180029820((longlong *)(param_2 + 0x2e0));
+  }
+  return;
+}
+
+

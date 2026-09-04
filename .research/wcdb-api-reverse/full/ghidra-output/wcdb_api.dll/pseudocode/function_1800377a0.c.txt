@@ -1,0 +1,13 @@
+/* 1800377a0 FUN_1800377a0 */
+
+void FUN_1800377a0(void)
+
+{
+  code *pcVar1;
+  
+  pcVar1 = (code *)swi(0x29);
+  (*pcVar1)(2);
+  return;
+}
+
+

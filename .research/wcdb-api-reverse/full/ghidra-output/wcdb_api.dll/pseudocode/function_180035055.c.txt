@@ -1,0 +1,14 @@
+/* 180035055 getInteger */
+
+__int64 __thiscall WCDB::InnerHandle::getInteger(InnerHandle *this,int param_1)
+
+{
+  __int64 _Var1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180035055. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  _Var1 = getInteger(this,param_1);
+  return _Var1;
+}
+
+

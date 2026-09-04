@@ -1,0 +1,65 @@
+/* 180020310 FUN_180020310 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+ulonglong FUN_180020310(longlong *param_1,undefined8 *param_2,undefined1 *param_3)
+
+{
+  code *pcVar1;
+  void *pvVar2;
+  byte *pbVar3;
+  ulonglong uVar4;
+  void *pvVar5;
+  undefined1 auStack_98 [40];
+  undefined8 local_70 [4];
+  void *local_50;
+  undefined8 uStack_48;
+  undefined8 local_40;
+  ulonglong local_38;
+  undefined1 local_30;
+  undefined7 uStack_2f;
+  undefined8 local_20;
+  ulonglong local_18;
+  ulonglong local_10;
+  
+  local_10 = DAT_18004b4c0 ^ (ulonglong)auStack_98;
+  uStack_48 = 0;
+  local_40 = 0;
+  local_38 = 0xf;
+  local_50 = (void *)0x0;
+  pbVar3 = (byte *)FUN_180007c00(local_70,param_2);
+  pbVar3 = (byte *)FUN_180020450((undefined8 *)&local_30,pbVar3);
+  uVar4 = FUN_180015270(param_1,pbVar3,(longlong *)&local_50,param_3);
+  if (0xf < local_18) {
+    pvVar2 = (void *)CONCAT71(uStack_2f,local_30);
+    pvVar5 = pvVar2;
+    if ((0xfff < local_18 + 1) &&
+       (pvVar5 = *(void **)((longlong)pvVar2 + -8),
+       0x1f < (ulonglong)((longlong)pvVar2 + (-8 - (longlong)pvVar5)))) {
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      goto LAB_18002043e;
+    }
+    free(pvVar5);
+  }
+  local_20 = 0;
+  local_18 = 0xf;
+  local_30 = 0;
+  if (0xf < local_38) {
+    pvVar5 = local_50;
+    if ((0xfff < local_38 + 1) &&
+       (pvVar5 = *(void **)((longlong)local_50 + -8),
+       0x1f < (ulonglong)((longlong)local_50 + (-8 - (longlong)pvVar5)))) {
+LAB_18002043e:
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      pcVar1 = (code *)swi(3);
+      uVar4 = (*pcVar1)();
+      return uVar4;
+    }
+    free(pvVar5);
+  }
+  return uVar4 & 0xffffffff;
+}
+
+

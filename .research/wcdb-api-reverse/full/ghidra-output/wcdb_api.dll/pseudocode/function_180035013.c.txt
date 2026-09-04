@@ -1,0 +1,14 @@
+/* 180035013 data */
+
+char * __thiscall WCDB::UnsafeStringView::data(UnsafeStringView *this)
+
+{
+  char *pcVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180035013. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  pcVar1 = data(this);
+  return pcVar1;
+}
+
+

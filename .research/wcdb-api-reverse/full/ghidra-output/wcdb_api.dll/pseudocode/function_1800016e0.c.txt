@@ -1,0 +1,10 @@
+/* 1800016e0 FUN_1800016e0 */
+
+undefined8 * FUN_1800016e0(undefined8 *param_1,undefined8 *param_2,undefined8 *param_3)
+
+{
+  FUN_180007d60(param_1,(ulonglong)param_1 & 0xff,param_2,param_3);
+  return param_1;
+}
+
+

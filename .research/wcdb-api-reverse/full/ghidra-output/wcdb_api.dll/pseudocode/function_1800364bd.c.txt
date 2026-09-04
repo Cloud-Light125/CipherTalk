@@ -1,0 +1,14 @@
+/* 1800364bd _Winerror_map */
+
+int __cdecl std::_Winerror_map(int param_1)
+
+{
+  int iVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x0001800364bd. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  iVar1 = _Winerror_map(param_1);
+  return iVar1;
+}
+
+

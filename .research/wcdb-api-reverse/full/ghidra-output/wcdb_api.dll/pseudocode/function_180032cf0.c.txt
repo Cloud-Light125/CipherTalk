@@ -1,0 +1,221 @@
+/* 180032cf0 FUN_180032cf0 */
+
+longlong * FUN_180032cf0(longlong *param_1,PUCHAR param_2,ULONG param_3)
+
+{
+  void *pvVar1;
+  code *pcVar2;
+  NTSTATUS NVar3;
+  PUCHAR pUVar4;
+  longlong lVar5;
+  void *_Memory;
+  PUCHAR pUVar6;
+  undefined1 *puVar7;
+  undefined1 *puVar8;
+  PUCHAR pUVar9;
+  PUCHAR pUVar10;
+  PUCHAR pUVar11;
+  PUCHAR _Dst;
+  PUCHAR pUVar12;
+  uint local_res20 [2];
+  undefined8 uStackY_d0;
+  undefined1 auStackY_c8 [8];
+  undefined1 auStackY_c0 [24];
+  uint local_88;
+  ULONG local_84 [3];
+  BCRYPT_ALG_HANDLE local_78;
+  BCRYPT_HASH_HANDLE local_70;
+  PUCHAR local_68;
+  PUCHAR pUStack_60;
+  PUCHAR local_58;
+  
+  puVar7 = auStackY_c8;
+  pUVar12 = (PUCHAR)0x0;
+  local_78 = (BCRYPT_HANDLE)0x0;
+  local_70 = (BCRYPT_HASH_HANDLE)0x0;
+  local_88 = 0;
+  local_res20[0] = 0;
+  local_84[0] = 0;
+  local_68 = (PUCHAR)0x0;
+  pUStack_60 = (PUCHAR)0x0;
+  local_58 = (PUCHAR)0x0;
+  *param_1 = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  local_84[1] = 1;
+  NVar3 = BCryptOpenAlgorithmProvider(&local_78,L"SHA256",(LPCWSTR)0x0,0);
+  puVar8 = auStackY_c8;
+  if ((((NVar3 < 0) ||
+       (NVar3 = BCryptGetProperty(local_78,L"ObjectLength",(PUCHAR)&local_88,4,local_84,0),
+       puVar8 = auStackY_c8, NVar3 < 0)) ||
+      (NVar3 = BCryptGetProperty(local_78,L"HashDigestLength",(PUCHAR)local_res20,4,local_84,0),
+      pUVar4 = pUStack_60, puVar8 = auStackY_c8, NVar3 < 0)) ||
+     (puVar8 = auStackY_c8, local_res20[0] != 0x20)) goto LAB_1800330af;
+  _Dst = (PUCHAR)(ulonglong)local_88;
+  pUVar10 = pUStack_60 + -(longlong)local_68;
+  pUVar9 = (PUCHAR)0x7fffffffffffffff;
+  pUVar11 = (PUCHAR)0x8000000000000026;
+  if (_Dst < pUVar10) {
+    pUStack_60 = local_68 + (longlong)_Dst;
+LAB_180032f1b:
+    pUVar4 = (PUCHAR)(ulonglong)local_res20[0];
+    _Dst = (PUCHAR)param_1[1];
+    lVar5 = *param_1;
+    pUVar12 = _Dst + -lVar5;
+    if (pUVar4 < pUVar12) {
+      pUVar4 = pUVar4 + lVar5;
+    }
+    else {
+      puVar8 = auStackY_c8;
+      if (pUVar4 <= pUVar12) goto LAB_180033041;
+      pUVar10 = (PUCHAR)(param_1[2] - lVar5);
+      if (pUVar10 < pUVar4) {
+        if ((PUCHAR)(0x7fffffffffffffff - ((ulonglong)pUVar10 >> 1)) < pUVar10) {
+LAB_180032f8d:
+          lVar5 = FUN_1800373b0((size_t)pUVar11);
+          if (lVar5 == 0) goto LAB_180033005;
+          _Dst = (PUCHAR)(lVar5 + 0x27U & 0xffffffffffffffe0);
+          *(longlong *)(_Dst + -8) = lVar5;
+        }
+        else {
+          pUVar9 = pUVar4;
+          if (pUVar4 <= pUVar10 + ((ulonglong)pUVar10 >> 1)) {
+            pUVar9 = pUVar10 + ((ulonglong)pUVar10 >> 1);
+          }
+          if (pUVar9 == (PUCHAR)0x0) {
+            _Dst = (PUCHAR)0x0;
+          }
+          else {
+            if ((PUCHAR)0xfff < pUVar9) {
+              pUVar11 = pUVar9 + 0x27;
+              if (pUVar11 <= pUVar9) {
+LAB_180033124:
+                    /* WARNING: Subroutine does not return */
+                FUN_18000cdd0();
+              }
+              goto LAB_180032f8d;
+            }
+            _Dst = (PUCHAR)FUN_1800373b0((size_t)pUVar9);
+          }
+        }
+        memset(_Dst + (longlong)pUVar12,0,(longlong)pUVar4 - (longlong)pUVar12);
+        memcpy(_Dst,(void *)*param_1,param_1[1] - *param_1);
+        pvVar1 = (void *)*param_1;
+        if (pvVar1 != (void *)0x0) {
+          _Memory = pvVar1;
+          puVar7 = auStackY_c8;
+          if ((0xfff < (ulonglong)(param_1[2] - (longlong)pvVar1)) &&
+             (_Memory = *(void **)((longlong)pvVar1 + -8), puVar7 = auStackY_c8,
+             0x1f < (ulonglong)((longlong)pvVar1 + (-8 - (longlong)_Memory)))) goto LAB_180033005;
+          goto LAB_18003300f;
+        }
+        goto LAB_180033014;
+      }
+      memset(_Dst,0,(longlong)pUVar4 - (longlong)pUVar12);
+      pUVar4 = _Dst + ((longlong)pUVar4 - (longlong)pUVar12);
+    }
+    param_1[1] = (longlong)pUVar4;
+    puVar8 = auStackY_c8;
+  }
+  else {
+    if (_Dst <= pUVar10) goto LAB_180032f1b;
+    pUVar6 = local_58 + -(longlong)local_68;
+    if (_Dst <= pUVar6) {
+      memset(pUStack_60,0,(longlong)_Dst - (longlong)pUVar10);
+      pUStack_60 = pUVar4 + ((longlong)_Dst - (longlong)pUVar10);
+      goto LAB_180032f1b;
+    }
+    if (pUVar6 <= (PUCHAR)(0x7fffffffffffffff - ((ulonglong)pUVar6 >> 1))) {
+      pUVar4 = _Dst;
+      if (_Dst <= pUVar6 + ((ulonglong)pUVar6 >> 1)) {
+        pUVar4 = pUVar6 + ((ulonglong)pUVar6 >> 1);
+      }
+      if (pUVar4 != (PUCHAR)0x0) {
+        if ((PUCHAR)0xfff < pUVar4) {
+          pUVar12 = pUVar4 + 0x27;
+          if (pUVar12 <= pUVar4) goto LAB_180033124;
+          goto LAB_180032e66;
+        }
+        pUVar12 = (PUCHAR)FUN_1800373b0((size_t)pUVar4);
+      }
+LAB_180032e8d:
+      memset(pUVar12 + (longlong)pUVar10,0,(longlong)_Dst - (longlong)pUVar10);
+      memcpy(pUVar12,local_68,(longlong)pUStack_60 - (longlong)local_68);
+      if (local_68 != (PUCHAR)0x0) {
+        pUVar10 = local_68;
+        if ((0xfff < (ulonglong)((longlong)local_58 - (longlong)local_68)) &&
+           (pUVar10 = *(PUCHAR *)(local_68 + -8), (PUCHAR)0x1f < local_68 + (-8 - (longlong)pUVar10)
+           )) goto LAB_180033005;
+        free(pUVar10);
+      }
+      pUStack_60 = pUVar12 + (longlong)_Dst;
+      local_58 = pUVar4 + (longlong)pUVar12;
+      local_68 = pUVar12;
+      goto LAB_180032f1b;
+    }
+    pUVar4 = (PUCHAR)0x7fffffffffffffff;
+    pUVar12 = (PUCHAR)0x8000000000000026;
+LAB_180032e66:
+    lVar5 = FUN_1800373b0((size_t)pUVar12);
+    if (lVar5 != 0) {
+      pUVar12 = (PUCHAR)(lVar5 + 0x27U & 0xffffffffffffffe0);
+      *(longlong *)(pUVar12 + -8) = lVar5;
+      goto LAB_180032e8d;
+    }
+LAB_180033005:
+    pcVar2 = (code *)swi(0x29);
+    _Memory = (void *)(*pcVar2)(5);
+    puVar7 = auStackY_c0;
+LAB_18003300f:
+    *(undefined8 *)(puVar7 + -8) = 0x180033014;
+    free(_Memory);
+LAB_180033014:
+    *param_1 = (longlong)_Dst;
+    param_1[1] = (longlong)(_Dst + (longlong)pUVar4);
+    param_1[2] = (longlong)(pUVar9 + (longlong)_Dst);
+    puVar8 = puVar7;
+  }
+LAB_180033041:
+  *(undefined4 *)(puVar8 + 0x30) = 0;
+  *(undefined4 *)(puVar8 + 0x28) = 0;
+  *(undefined8 *)(puVar8 + 0x20) = 0;
+  *(undefined8 *)(puVar8 + -8) = 0x18003306f;
+  NVar3 = BCryptCreateHash(local_78,&local_70,local_68,local_88,*(PUCHAR *)(puVar8 + 0x20),
+                           *(ULONG *)(puVar8 + 0x28),*(ULONG *)(puVar8 + 0x30));
+  if (-1 < NVar3) {
+    *(undefined8 *)(puVar8 + -8) = 0x180033087;
+    NVar3 = BCryptHashData(local_70,param_2,param_3,0);
+    if (-1 < NVar3) {
+      pUVar12 = (PUCHAR)*param_1;
+      *(undefined8 *)(puVar8 + -8) = 0x18003309e;
+      NVar3 = BCryptFinishHash(local_70,pUVar12,local_res20[0],0);
+      if (-1 < NVar3) goto LAB_1800330af;
+    }
+    if (*param_1 != param_1[1]) {
+      param_1[1] = *param_1;
+    }
+  }
+LAB_1800330af:
+  if (local_70 != (BCRYPT_HASH_HANDLE)0x0) {
+    *(undefined8 *)(puVar8 + -8) = 0x1800330bd;
+    BCryptDestroyHash(local_70);
+  }
+  if (local_78 != (BCRYPT_ALG_HANDLE)0x0) {
+    *(undefined8 *)(puVar8 + -8) = 0x1800330cd;
+    BCryptCloseAlgorithmProvider(local_78,0);
+  }
+  if (local_68 != (PUCHAR)0x0) {
+    pUVar12 = local_68;
+    if ((0xfff < (ulonglong)((longlong)local_58 - (longlong)local_68)) &&
+       (pUVar12 = *(PUCHAR *)(local_68 + -8), (PUCHAR)0x1f < local_68 + (-8 - (longlong)pUVar12))) {
+      pcVar2 = (code *)swi(0x29);
+      pUVar12 = (PUCHAR)(*pcVar2)(5);
+      puVar8 = puVar8 + 8;
+    }
+    *(undefined8 *)(puVar8 + -8) = 0x18003310d;
+    free(pUVar12);
+  }
+  return param_1;
+}
+
+

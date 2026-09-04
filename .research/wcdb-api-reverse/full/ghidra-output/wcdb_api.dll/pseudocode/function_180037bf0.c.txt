@@ -1,0 +1,32 @@
+/* 180037bf0 FUN_180037bf0 */
+
+ulonglong FUN_180037bf0(byte param_1)
+
+{
+  code *pcVar1;
+  byte bVar2;
+  undefined8 uVar3;
+  ulonglong uVar4;
+  
+  if (DAT_18004bd40 < 1) {
+    return 0;
+  }
+  DAT_18004bd40 = DAT_18004bd40 + -1;
+  uVar3 = FUN_180037410();
+  if (DAT_18004bcf8 == 2) {
+    FUN_1800375c0();
+    FUN_180038250();
+    FUN_1800382f0();
+    DAT_18004bcf8 = 0;
+    FUN_180037700((char)uVar3);
+    bVar2 = FUN_180037730((ulonglong)param_1,'\0');
+    FUN_180037600();
+    return (ulonglong)bVar2;
+  }
+  FUN_180038140(7);
+  pcVar1 = (code *)swi(3);
+  uVar4 = (*pcVar1)();
+  return uVar4;
+}
+
+

@@ -1,0 +1,45 @@
+/* 18000a010 FUN_18000a010 */
+
+undefined8 * FUN_18000a010(undefined8 *param_1,undefined8 *param_2)
+
+{
+  int *piVar1;
+  longlong *plVar2;
+  int iVar3;
+  longlong *plVar4;
+  undefined8 uVar5;
+  longlong lVar6;
+  
+  if (param_2[1] != 0) {
+    LOCK();
+    piVar1 = (int *)(param_2[1] + 8);
+    *piVar1 = *piVar1 + 1;
+    UNLOCK();
+  }
+  plVar4 = (longlong *)param_1[1];
+  uVar5 = param_2[1];
+  *param_1 = *param_2;
+  param_1[1] = uVar5;
+  if (plVar4 != (longlong *)0x0) {
+    LOCK();
+    plVar2 = plVar4 + 1;
+    lVar6 = *plVar2;
+    *(int *)plVar2 = (int)*plVar2 + -1;
+    UNLOCK();
+    if ((int)lVar6 == 1) {
+      (**(code **)*plVar4)(plVar4);
+      LOCK();
+      piVar1 = (int *)((longlong)plVar4 + 0xc);
+      iVar3 = *piVar1;
+      *piVar1 = *piVar1 + -1;
+      UNLOCK();
+      if (iVar3 == 1) {
+        (**(code **)(*plVar4 + 8))(plVar4);
+      }
+    }
+    return param_1;
+  }
+  return param_1;
+}
+
+

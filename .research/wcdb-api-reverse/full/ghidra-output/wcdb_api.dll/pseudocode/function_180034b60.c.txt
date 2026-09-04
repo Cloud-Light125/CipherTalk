@@ -1,0 +1,16 @@
+/* 180034b60 FUN_180034b60 */
+
+longlong * FUN_180034b60(longlong *param_1,PUCHAR param_2)
+
+{
+  PUCHAR pUVar1;
+  
+  pUVar1 = param_2;
+  if (0xf < *(ulonglong *)(param_2 + 0x18)) {
+    pUVar1 = *(PUCHAR *)param_2;
+  }
+  FUN_180032cf0(param_1,pUVar1,(ULONG)*(undefined8 *)(param_2 + 0x10));
+  return param_1;
+}
+
+

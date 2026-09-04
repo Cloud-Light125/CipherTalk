@@ -1,0 +1,14 @@
+/* 18003505b getDouble */
+
+double __thiscall WCDB::InnerHandle::getDouble(InnerHandle *this,int param_1)
+
+{
+  double dVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x00018003505b. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  dVar1 = getDouble(this,param_1);
+  return dVar1;
+}
+
+

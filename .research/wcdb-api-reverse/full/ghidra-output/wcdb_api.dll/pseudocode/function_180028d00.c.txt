@@ -1,0 +1,22 @@
+/* 180028d00 FUN_180028d00 */
+
+undefined4 * FUN_180028d00(undefined4 *param_1)
+
+{
+  *param_1 = 1;
+  FUN_1800291f0((undefined1 *)(param_1 + 2));
+  *(undefined8 *)(param_1 + 0x68) = 0;
+  *(undefined8 *)(param_1 + 0x6a) = 0;
+  *(undefined8 *)(param_1 + 0x6c) = 0;
+  *(undefined8 *)(param_1 + 0x6e) = 0xf;
+  *(undefined1 *)(param_1 + 0x68) = 0;
+  param_1[0x70] = 0;
+  *(undefined8 *)(param_1 + 0x72) = 0;
+  *(undefined8 *)(param_1 + 0x74) = 0;
+  *(undefined8 *)(param_1 + 0x76) = 0;
+  *(undefined8 *)(param_1 + 0x78) = 0xf;
+  *(undefined1 *)(param_1 + 0x72) = 0;
+  return param_1;
+}
+
+

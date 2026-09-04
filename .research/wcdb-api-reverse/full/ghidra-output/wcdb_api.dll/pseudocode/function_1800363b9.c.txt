@@ -1,0 +1,12 @@
+/* 1800363b9 _Mtx_lock */
+
+void _Mtx_lock(void)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x0001800363b9. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  _Mtx_lock();
+  return;
+}
+
+

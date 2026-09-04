@@ -1,0 +1,149 @@
+/* 18000ea30 FUN_18000ea30 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+ulonglong FUN_18000ea30(uint *param_1,uint *param_2)
+
+{
+  uint *puVar1;
+  LPCWSTR pWVar2;
+  longlong lVar3;
+  code *pcVar4;
+  uint uVar5;
+  uint *puVar6;
+  LPCWSTR pWVar7;
+  ulonglong uVar8;
+  ulonglong uVar9;
+  uint *puVar10;
+  bool bVar11;
+  undefined1 auStackY_88 [32];
+  undefined8 local_58;
+  undefined8 uStack_50;
+  longlong local_48;
+  ulonglong local_40;
+  ulonglong local_38;
+  
+  local_38 = DAT_18004b4c0 ^ (ulonglong)auStackY_88;
+  lVar3 = *(longlong *)(param_1 + 4);
+  *(undefined ***)(param_2 + 2) = &PTR_vftable_18004b178;
+  if (lVar3 == 0) {
+    *param_2 = 3;
+    param_2[1] = local_58._4_4_;
+    uVar9 = ((ulonglong)local_58 >> 0x28) << 8;
+  }
+  else {
+    *param_2 = 0;
+    uStack_50 = 0;
+    local_48 = 0;
+    local_40 = 7;
+    local_58 = (LPCWSTR)0x0;
+    FUN_18001d760(&local_58,*(undefined1 **)(param_1 + 4));
+    puVar10 = param_1;
+    if (7 < *(ulonglong *)(param_1 + 6)) {
+      puVar10 = *(uint **)param_1;
+    }
+    puVar1 = (uint *)((longlong)puVar10 + *(longlong *)(param_1 + 4) * 2);
+    for (puVar6 = FUN_18000c190(puVar10,puVar1);
+        (puVar6 != puVar1 && (((short)*puVar6 == 0x5c || ((short)*puVar6 == 0x2f))));
+        puVar6 = (uint *)((longlong)puVar6 + 2)) {
+    }
+    if ((((puVar6 != puVar10) && (5 < (longlong)puVar1 - (longlong)puVar6)) &&
+        ((*puVar6 & 0xffffffdf) - 0x3a0041 < 0x1a)) &&
+       (((short)puVar6[1] == 0x5c || ((short)puVar6[1] == 0x2f)))) {
+      puVar6 = puVar6 + 1;
+    }
+    uVar8 = (longlong)puVar6 - (longlong)puVar10 >> 1;
+    if (local_40 - local_48 < uVar8) {
+      FUN_180006460(&local_58,uVar8,0,puVar10,uVar8);
+    }
+    else {
+      lVar3 = local_48 + uVar8;
+      pWVar7 = (LPCWSTR)&local_58;
+      if (7 < local_40) {
+        pWVar7 = local_58;
+      }
+      pWVar2 = pWVar7 + local_48;
+      local_48 = lVar3;
+      memmove(pWVar2,puVar10,uVar8 * 2);
+      pWVar7[lVar3] = L'\0';
+    }
+    uVar8 = 0;
+    puVar10 = puVar6;
+    if (puVar6 == puVar1) {
+      uVar9 = 0;
+      uVar5 = 0;
+    }
+    else {
+LAB_18000ebb3:
+      do {
+        if (((short)*puVar6 == 0x5c) || ((short)*puVar6 == 0x2f)) {
+          puVar6 = (uint *)((longlong)puVar6 + 2);
+          if (puVar6 != puVar1) goto LAB_18000ebb3;
+        }
+        for (; ((puVar6 != puVar1 && ((short)*puVar6 != 0x5c)) && ((short)*puVar6 != 0x2f));
+            puVar6 = (uint *)((longlong)puVar6 + 2)) {
+        }
+        uVar9 = (longlong)puVar6 - (longlong)puVar10 >> 1;
+        if (local_40 - local_48 < uVar9) {
+          FUN_180006460(&local_58,uVar9,0,puVar10,uVar9);
+        }
+        else {
+          lVar3 = local_48 + uVar9;
+          pWVar7 = (LPCWSTR)&local_58;
+          if (7 < local_40) {
+            pWVar7 = local_58;
+          }
+          pWVar2 = pWVar7 + local_48;
+          local_48 = lVar3;
+          memmove(pWVar2,puVar10,uVar9 * 2);
+          pWVar7[lVar3] = L'\0';
+        }
+        pWVar7 = (LPCWSTR)&local_58;
+        if (7 < local_40) {
+          pWVar7 = local_58;
+        }
+        uVar9 = FUN_1800367e0(pWVar7);
+        uVar5 = (uint)(uVar9 >> 0x20);
+        if (uVar5 != 0) {
+          if (uVar5 < 0x41) {
+            if (((uVar5 != 0x40) && (uVar5 != 2)) && (uVar5 != 3)) {
+              bVar11 = uVar5 == 0x35;
+LAB_18000ec93:
+              if (!bVar11) {
+                uVar8 = uVar9 >> 0x20;
+              }
+            }
+          }
+          else if ((uVar5 != 0x7b) && (uVar5 != 0xa1)) {
+            bVar11 = uVar5 == 0x10b;
+            goto LAB_18000ec93;
+          }
+        }
+        puVar10 = puVar6;
+      } while (puVar6 != puVar1);
+      if ((uVar5 != 0) && ((uint)uVar8 != 0)) {
+        uVar5 = (uint)uVar8;
+      }
+    }
+    *param_2 = uVar5;
+    param_2[1] = local_58._4_4_;
+    *(undefined ***)(param_2 + 2) = &PTR_vftable_18004b178;
+    if (7 < local_40) {
+      pWVar7 = local_58;
+      if ((0xfff < local_40 * 2 + 2) &&
+         (pWVar7 = *(LPCWSTR *)(local_58 + -4),
+         0x1f < (ulonglong)((longlong)local_58 + (-8 - (longlong)pWVar7)))) {
+        pcVar4 = (code *)swi(0x29);
+        (*pcVar4)(5);
+        pcVar4 = (code *)swi(3);
+        uVar8 = (*pcVar4)();
+        return uVar8;
+      }
+      free(pWVar7);
+    }
+    uVar9 = uVar9 & 0xff;
+  }
+  return uVar9;
+}
+
+

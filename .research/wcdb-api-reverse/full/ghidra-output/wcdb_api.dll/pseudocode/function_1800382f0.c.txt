@@ -1,0 +1,14 @@
+/* 1800382f0 FUN_1800382f0 */
+
+/* WARNING: Function: _guard_dispatch_icall replaced with injection: guard_dispatch_icall */
+/* WARNING: Removing unreachable block (ram,0x000180038310) */
+/* WARNING: Removing unreachable block (ram,0x000180038318) */
+/* WARNING: Removing unreachable block (ram,0x00018003831e) */
+
+void FUN_1800382f0(void)
+
+{
+  return;
+}
+
+

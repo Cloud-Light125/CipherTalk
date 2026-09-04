@@ -1,8 +1,13 @@
 {
   "name": "ciphertalk",
-  "version": "2026.829.0",
+  "version": "2026.904.0",
   "description": "密语 - 微信聊天记录查看工具",
-  "author": "ILoveBingLu",
+  "author": "Cloud-Light125",
+  "homepage": "https://269332.xyz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git"
+  },
   "license": "CC-BY-NC-SA-4.0",
   "main": "dist-electron/main.js",
   "allowScripts": {
@@ -26,17 +31,15 @@
     "native:image:sync": "node scripts/sync-image-native.cjs",
     "native:image:build:sync": "npm run native:image:build && npm run native:image:sync",
     "build:prepare:mac": "node scripts/patch-dmg-builder.cjs",
-    "build:prepare": "node scripts/update-readme-version.js && node scripts/prepare-release-announcement.js",
-    "prebuild": "node scripts/update-readme-version.js && node scripts/prepare-release-announcement.js",
-    "build": "node scripts/clean-dist-electron.cjs && NODE_OPTIONS=\"--max-old-space-size=4096\" tsc && vite build && electron-builder && node scripts/add-size-to-yml.js",
-    "build:win": "npm run build:prepare && node scripts/clean-dist-electron.cjs && tsc && vite build && node scripts/run-electron-builder.cjs win && node scripts/generate-update-manifest.js win && node scripts/add-size-to-yml.js",
-    "build:mac": "npm run build:prepare && npm run native:macos:check && npm run build:prepare:mac && node scripts/clean-dist-electron.cjs && tsc && vite build && node scripts/run-electron-builder.cjs mac && node scripts/generate-update-manifest.js mac && node scripts/add-size-to-yml.js",
-    "build:ci": "node scripts/prepare-release-announcement.js && node scripts/clean-dist-electron.cjs && tsc && vite build && electron-builder --publish never && node scripts/generate-update-manifest.js && node scripts/add-size-to-yml.js",
-    "build:mcp": "node scripts/clean-dist-electron.cjs && NODE_OPTIONS=\"--max-old-space-size=4096\" tsc && vite build",
-    "build:force-update-manifest": "node scripts/generate-force-update-manifest.js",
+    "build:prepare": "node scripts/update-readme-version.js",
+    "prebuild": "node scripts/update-readme-version.js",
+    "build": "node scripts/clean-dist-electron.cjs && node --max-old-space-size=4096 node_modules/typescript/bin/tsc && vite build && electron-builder",
+    "build:win": "npm run build:prepare && node scripts/clean-dist-electron.cjs && tsc && vite build && node scripts/run-electron-builder.cjs win",
+    "build:mac": "npm run build:prepare && npm run native:macos:check && npm run build:prepare:mac && node scripts/clean-dist-electron.cjs && tsc && vite build && node scripts/run-electron-builder.cjs mac",
+    "build:ci": "node scripts/clean-dist-electron.cjs && tsc && vite build && electron-builder --publish never",
+    "build:mcp": "node scripts/clean-dist-electron.cjs && node --max-old-space-size=4096 node_modules/typescript/bin/tsc && vite build",
     "build:release-context": "node scripts/generate-release-context.js",
     "build:release-body": "node scripts/generate-release-body.js",
-    "build:release-announcement": "node scripts/prepare-release-announcement.js",
     "build:models-snapshot": "node scripts/fetch-models-dev-snapshot.cjs",
     "build:models-logos": "node scripts/fetch-models-dev-logos.cjs",
     "notify:telegram": "node scripts/send-telegram-release.js",
@@ -97,7 +100,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "echarts": "^6.1.0",
-    "electron-updater": "^6.3.9",
     "exceljs": "^4.4.0",
     "ffmpeg-static": "^5.3.0",
     "framer-motion": "^12.40.0",
@@ -170,12 +172,6 @@
     "directories": {
       "output": "release"
     },
-    "publish": {
-      "provider": "github",
-      "owner": "ILoveBingLu",
-      "repo": "CipherTalk",
-      "publishAutoUpdate": false
-    },
     "win": {
       "icon": "public/icon.ico",
       "target": "nsis",
@@ -197,7 +193,6 @@
       "entitlementsInherit": "resources/macos/entitlements.mac.plist"
     },
     "nsis": {
-      "differentialPackage": false,
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
@@ -251,10 +246,6 @@
       {
         "from": "public/miyuji",
         "to": "builtin-pets/miyuji"
-      },
-      {
-        "from": ".tmp/release-announcement.json",
-        "to": "release-announcement.json"
       },
       {
         "from": "skills/ct-mcp-copilot",

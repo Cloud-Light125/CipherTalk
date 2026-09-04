@@ -1,0 +1,14 @@
+/* 1800350d3 BCryptDestroyHash */
+
+NTSTATUS __stdcall BCryptDestroyHash(BCRYPT_HASH_HANDLE hHash)
+
+{
+  NTSTATUS NVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x0001800350d3. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  NVar1 = BCryptDestroyHash(hHash);
+  return NVar1;
+}
+
+

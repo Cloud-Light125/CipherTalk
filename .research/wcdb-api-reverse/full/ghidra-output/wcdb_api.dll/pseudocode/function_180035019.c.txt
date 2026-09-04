@@ -1,0 +1,14 @@
+/* 180035019 length */
+
+__uint64 __thiscall WCDB::UnsafeStringView::length(UnsafeStringView *this)
+
+{
+  __uint64 _Var1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180035019. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  _Var1 = length(this);
+  return _Var1;
+}
+
+

@@ -1,0 +1,10 @@
+/* 180039a50 FUN_180039a50 */
+
+void FUN_180039a50(undefined8 param_1,longlong param_2)
+
+{
+  FUN_1800372d0(param_2 + 0xe0,0x20,1,thunk_FUN_18000d070);
+  return;
+}
+
+

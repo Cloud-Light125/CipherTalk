@@ -1,0 +1,20 @@
+/* 180028960 FUN_180028960 */
+
+void FUN_180028960(undefined8 *param_1,undefined8 *param_2)
+
+{
+  longlong *plVar1;
+  undefined8 *puVar2;
+  
+  plVar1 = param_1 + 2;
+  if (0xf < (ulonglong)param_1[3]) {
+    param_1 = (undefined8 *)*param_1;
+  }
+  puVar2 = (undefined8 *)(*plVar1 + (longlong)param_1);
+  for (; param_1 != puVar2; param_1 = (undefined8 *)((longlong)param_1 + 1)) {
+    FUN_18001b8a0(param_2,*(undefined1 *)param_1);
+  }
+  return;
+}
+
+

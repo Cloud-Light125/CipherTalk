@@ -1,0 +1,41 @@
+/* 180001a20 FUN_180001a20 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+uint * FUN_180001a20(uint *param_1,undefined8 *param_2)
+
+{
+  code *pcVar1;
+  uint *puVar2;
+  void *_Memory;
+  undefined1 auStack_58 [40];
+  void *local_30;
+  undefined8 uStack_28;
+  undefined8 local_20;
+  ulonglong local_18;
+  ulonglong local_10;
+  
+  local_10 = DAT_18004b4c0 ^ (ulonglong)auStack_58;
+  local_30 = (void *)0x0;
+  uStack_28 = 0;
+  local_20 = 0;
+  local_18 = 0;
+  FUN_180002440(&local_30,(void *)*param_2,param_2[1]);
+  puVar2 = FUN_18000aab0(param_1,(uint *)&local_30);
+  if (7 < local_18) {
+    _Memory = local_30;
+    if ((0xfff < local_18 * 2 + 2) &&
+       (_Memory = *(void **)((longlong)local_30 + -8),
+       0x1f < (ulonglong)((longlong)local_30 + (-8 - (longlong)_Memory)))) {
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      pcVar1 = (code *)swi(3);
+      puVar2 = (uint *)(*pcVar1)();
+      return puVar2;
+    }
+    free(_Memory);
+  }
+  return puVar2;
+}
+
+

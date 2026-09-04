@@ -1,0 +1,19 @@
+/* 180037260 FUN_180037260 */
+
+DWORD FUN_180037260(LPCWSTR param_1,LPCWSTR param_2)
+
+{
+  BOOL BVar1;
+  DWORD DVar2;
+  
+  BVar1 = MoveFileExW(param_1,param_2,3);
+  if (BVar1 != 0) {
+    return 0;
+  }
+                    /* WARNING: Could not recover jumptable at 0x00018003727f. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  DVar2 = GetLastError();
+  return DVar2;
+}
+
+

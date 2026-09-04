@@ -1,0 +1,14 @@
+/* 180034ff5 size */
+
+__uint64 __thiscall WCDB::UnsafeData::size(UnsafeData *this)
+
+{
+  __uint64 _Var1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180034ff5. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  _Var1 = size(this);
+  return _Var1;
+}
+
+

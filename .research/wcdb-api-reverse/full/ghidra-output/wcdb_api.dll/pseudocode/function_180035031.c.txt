@@ -1,0 +1,14 @@
+/* 180035031 decompressContent */
+
+void __thiscall
+WCDB::CompressionCenter::decompressContent
+          (CompressionCenter *this,UnsafeData *param_1,bool param_2,InnerHandle *param_3)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180035031. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  decompressContent(this,param_1,param_2,param_3);
+  return;
+}
+
+

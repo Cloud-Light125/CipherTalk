@@ -1,0 +1,10 @@
+/* 18000d190 FUN_18000d190 */
+
+void FUN_18000d190(void)
+
+{
+                    /* WARNING: Subroutine does not return */
+  std::_Xlength_error("vector too long");
+}
+
+

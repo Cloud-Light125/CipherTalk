@@ -1,0 +1,28 @@
+/* 180001780 FUN_180001780 */
+
+longlong * FUN_180001780(longlong *param_1,longlong *param_2,char *param_3)
+
+{
+  longlong lVar1;
+  size_t sVar2;
+  longlong *plVar3;
+  
+  sVar2 = strlen(param_3);
+  plVar3 = FUN_180001c10(param_2,param_3,sVar2);
+  *param_1 = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  lVar1 = plVar3[1];
+  *param_1 = *plVar3;
+  param_1[1] = lVar1;
+  lVar1 = plVar3[3];
+  param_1[2] = plVar3[2];
+  param_1[3] = lVar1;
+  plVar3[2] = 0;
+  plVar3[3] = 0xf;
+  *(undefined1 *)plVar3 = 0;
+  return param_1;
+}
+
+

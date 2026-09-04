@@ -1,0 +1,95 @@
+/* 180013f50 FUN_180013f50 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+void FUN_180013f50(ulonglong param_1)
+
+{
+  bool bVar1;
+  basic_streambuf<char,std::char_traits<char>_> *pbVar2;
+  wchar_t ****ppppwVar3;
+  undefined1 auStack_178 [32];
+  undefined4 local_158;
+  uint local_154;
+  undefined8 local_150;
+  undefined *local_148;
+  undefined **local_140;
+  basic_ostream<char,std::char_traits<char>_> local_138 [96];
+  undefined8 local_d8;
+  undefined1 local_cf;
+  undefined8 local_cc;
+  undefined1 local_c4;
+  undefined8 local_c0;
+  basic_ios<char,std::char_traits<char>_> local_a0 [112];
+  wchar_t ***local_30 [2];
+  longlong local_20;
+  ulonglong local_18;
+  ulonglong local_10;
+  
+  local_10 = DAT_18004b4c0 ^ (ulonglong)auStack_178;
+  local_158 = 0;
+  FUN_180016840((uint *)local_30);
+  if (local_20 != 0) {
+    local_150 = param_1 ^ 0x9e3779b97f4a7c15;
+    local_154 = (uint)(param_1 >> 0x20) ^ (uint)param_1 ^ 0x43544d31;
+    ppppwVar3 = local_30;
+    if (7 < local_18) {
+      ppppwVar3 = (wchar_t ****)local_30[0];
+    }
+    local_148 = &DAT_18003cfd8;
+    std::basic_ios<char,std::char_traits<char>_>::basic_ios<char,std::char_traits<char>_>(local_a0);
+    local_158 = 1;
+    std::basic_ostream<char,std::char_traits<char>_>::basic_ostream<char,std::char_traits<char>_>
+              ((basic_ostream<char,std::char_traits<char>_> *)&local_148,
+               (basic_streambuf<char,std::char_traits<char>_> *)&local_140,false);
+    *(undefined ***)((longlong)&local_148 + (longlong)*(int *)(local_148 + 4)) =
+         std::basic_ofstream<char,std::char_traits<char>_>::vftable;
+    *(int *)((longlong)&local_150 + (longlong)*(int *)(local_148 + 4) + 4) =
+         *(int *)(local_148 + 4) + -0xa8;
+    std::basic_streambuf<char,std::char_traits<char>_>::
+    basic_streambuf<char,std::char_traits<char>_>
+              ((basic_streambuf<char,std::char_traits<char>_> *)&local_140);
+    local_140 = std::basic_filebuf<char,std::char_traits<char>_>::vftable;
+    local_c4 = 0;
+    local_cf = 0;
+    std::basic_streambuf<char,std::char_traits<char>_>::_Init
+              ((basic_streambuf<char,std::char_traits<char>_> *)&local_140);
+    local_c0 = 0;
+    local_cc = DAT_18004bcd8;
+    local_d8 = 0;
+    pbVar2 = FUN_180019490((basic_streambuf<char,std::char_traits<char>_> *)&local_140,
+                           (wchar_t *)ppppwVar3,0x32,0x40);
+    if (pbVar2 == (basic_streambuf<char,std::char_traits<char>_> *)0x0) {
+      std::basic_ios<char,std::char_traits<char>_>::setstate
+                ((basic_ios<char,std::char_traits<char>_> *)
+                 ((longlong)&local_148 + (longlong)*(int *)(local_148 + 4)),2,false);
+    }
+    *(undefined ***)((longlong)&local_148 + (longlong)*(int *)(local_148 + 4)) =
+         std::basic_ofstream<char,std::char_traits<char>_>::vftable;
+    *(int *)((longlong)&local_150 + (longlong)*(int *)(local_148 + 4) + 4) =
+         *(int *)(local_148 + 4) + -0xa8;
+    bVar1 = std::ios_base::operator!
+                      ((ios_base *)((longlong)&local_148 + (longlong)*(int *)(local_148 + 4)));
+    if (!bVar1) {
+      std::basic_ostream<char,std::char_traits<char>_>::write
+                ((basic_ostream<char,std::char_traits<char>_> *)&local_148,&DAT_18003c904,4);
+      std::basic_ostream<char,std::char_traits<char>_>::write
+                ((basic_ostream<char,std::char_traits<char>_> *)&local_148,(char *)&local_150,8);
+      std::basic_ostream<char,std::char_traits<char>_>::write
+                ((basic_ostream<char,std::char_traits<char>_> *)&local_148,(char *)&local_154,4);
+    }
+    *(undefined ***)((longlong)&local_148 + (longlong)*(int *)(local_148 + 4)) =
+         std::basic_ofstream<char,std::char_traits<char>_>::vftable;
+    *(int *)((longlong)&local_150 + (longlong)*(int *)(local_148 + 4) + 4) =
+         *(int *)(local_148 + 4) + -0xa8;
+    FUN_180009290((basic_streambuf<char,std::char_traits<char>_> *)&local_140);
+    std::basic_ostream<char,std::char_traits<char>_>::~basic_ostream<char,std::char_traits<char>_>
+              (local_138);
+    std::basic_ios<char,std::char_traits<char>_>::~basic_ios<char,std::char_traits<char>_>(local_a0)
+    ;
+  }
+  FUN_18000d0e0((longlong *)local_30);
+  return;
+}
+
+

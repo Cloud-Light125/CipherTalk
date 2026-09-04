@@ -1,0 +1,57 @@
+/* 180008ed0 FUN_180008ed0 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+undefined8 ***** FUN_180008ed0(undefined8 *****param_1,undefined4 *param_2)
+
+{
+  undefined4 uVar1;
+  undefined4 uVar2;
+  undefined8 ****ppppuVar3;
+  code *pcVar4;
+  undefined8 *****pppppuVar5;
+  undefined8 *******_Memory;
+  undefined1 auStack_78 [32];
+  undefined8 ******local_58;
+  undefined1 local_50;
+  undefined8 ******local_48 [3];
+  ulonglong local_30;
+  ulonglong local_28;
+  
+  local_28 = DAT_18004b4c0 ^ (ulonglong)auStack_78;
+  ppppuVar3 = *(undefined8 *****)(param_2 + 2);
+  uVar1 = *param_2;
+  uVar2 = param_2[1];
+  local_58 = (undefined8 ******)param_1;
+  (*(code *)(*ppppuVar3)[2])(ppppuVar3,local_48,uVar1);
+  *param_1 = (undefined8 ****)std::exception::vftable;
+  local_50 = 1;
+  local_58 = local_48;
+  if (0xf < local_30) {
+    local_58 = local_48[0];
+  }
+  param_1[1] = (undefined8 ****)0x0;
+  param_1[2] = (undefined8 ****)0x0;
+  __std_exception_copy(&local_58);
+  *param_1 = (undefined8 ****)std::runtime_error::vftable;
+  if (0xf < local_30) {
+    _Memory = (undefined8 *******)local_48[0];
+    if ((0xfff < local_30 + 1) &&
+       (_Memory = (undefined8 *******)local_48[0][-1],
+       0x1f < (ulonglong)((longlong)local_48[0] + (-8 - (longlong)_Memory)))) {
+      pcVar4 = (code *)swi(0x29);
+      (*pcVar4)(5);
+      pcVar4 = (code *)swi(3);
+      pppppuVar5 = (undefined8 *****)(*pcVar4)();
+      return pppppuVar5;
+    }
+    free(_Memory);
+  }
+  *(undefined4 *)(param_1 + 3) = uVar1;
+  *param_1 = (undefined8 ****)std::system_error::vftable;
+  *(undefined4 *)((longlong)param_1 + 0x1c) = uVar2;
+  param_1[4] = ppppuVar3;
+  return param_1;
+}
+
+

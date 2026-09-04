@@ -1,0 +1,108 @@
+/* 180013ce0 FUN_180013ce0 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+ulonglong FUN_180013ce0(void)
+
+{
+  bool bVar1;
+  basic_streambuf<char,std::char_traits<char>_> *pbVar2;
+  wchar_t ****ppppwVar3;
+  ulonglong uVar4;
+  ulonglong uVar5;
+  undefined1 auStack_1a8 [32];
+  int local_188;
+  uint local_184 [3];
+  ulonglong local_178;
+  int iStack_16c;
+  undefined *local_168 [2];
+  undefined **local_158;
+  basic_istream<char,std::char_traits<char>_> local_150 [96];
+  undefined8 local_f0;
+  undefined1 local_e7;
+  undefined8 local_e4;
+  undefined1 local_dc;
+  undefined8 local_d8;
+  basic_ios<char,std::char_traits<char>_> local_b8 [104];
+  wchar_t ***local_50 [2];
+  longlong local_40;
+  ulonglong local_38;
+  ulonglong local_30;
+  
+  local_30 = DAT_18004b4c0 ^ (ulonglong)auStack_1a8;
+  uVar5 = 0;
+  local_184[1] = 0;
+  FUN_180016840((uint *)local_50);
+  if (local_40 == 0) goto LAB_180013f25;
+  ppppwVar3 = local_50;
+  if (7 < local_38) {
+    ppppwVar3 = (wchar_t ****)local_50[0];
+  }
+  local_168[0] = &DAT_18003cfc0;
+  std::basic_ios<char,std::char_traits<char>_>::basic_ios<char,std::char_traits<char>_>(local_b8);
+  local_184[1] = 1;
+  std::basic_istream<char,std::char_traits<char>_>::basic_istream<char,std::char_traits<char>_>
+            ((basic_istream<char,std::char_traits<char>_> *)local_168,
+             (basic_streambuf<char,std::char_traits<char>_> *)&local_158,false);
+  *(undefined ***)((longlong)local_168 + (longlong)*(int *)(local_168[0] + 4)) =
+       std::basic_ifstream<char,std::char_traits<char>_>::vftable;
+  *(int *)((longlong)&iStack_16c + (longlong)*(int *)(local_168[0] + 4)) =
+       *(int *)(local_168[0] + 4) + -0xb0;
+  std::basic_streambuf<char,std::char_traits<char>_>::basic_streambuf<char,std::char_traits<char>_>
+            ((basic_streambuf<char,std::char_traits<char>_> *)&local_158);
+  local_158 = std::basic_filebuf<char,std::char_traits<char>_>::vftable;
+  local_dc = 0;
+  local_e7 = 0;
+  std::basic_streambuf<char,std::char_traits<char>_>::_Init
+            ((basic_streambuf<char,std::char_traits<char>_> *)&local_158);
+  local_d8 = 0;
+  local_e4 = DAT_18004bcd8;
+  local_f0 = 0;
+  pbVar2 = FUN_180019490((basic_streambuf<char,std::char_traits<char>_> *)&local_158,
+                         (wchar_t *)ppppwVar3,0x21,0x40);
+  if (pbVar2 == (basic_streambuf<char,std::char_traits<char>_> *)0x0) {
+    std::basic_ios<char,std::char_traits<char>_>::setstate
+              ((basic_ios<char,std::char_traits<char>_> *)
+               ((longlong)local_168 + (longlong)*(int *)(local_168[0] + 4)),2,false);
+  }
+  *(undefined ***)((longlong)local_168 + (longlong)*(int *)(local_168[0] + 4)) =
+       std::basic_ifstream<char,std::char_traits<char>_>::vftable;
+  *(int *)((longlong)&iStack_16c + (longlong)*(int *)(local_168[0] + 4)) =
+       *(int *)(local_168[0] + 4) + -0xb0;
+  bVar1 = std::ios_base::operator!
+                    ((ios_base *)((longlong)local_168 + (longlong)*(int *)(local_168[0] + 4)));
+  if (bVar1) {
+LAB_180013ee1:
+    uVar4 = uVar5;
+  }
+  else {
+    local_188 = 0;
+    local_184[0] = 0;
+    local_178 = 0;
+    std::basic_istream<char,std::char_traits<char>_>::read
+              ((basic_istream<char,std::char_traits<char>_> *)local_168,(char *)&local_188,4);
+    std::basic_istream<char,std::char_traits<char>_>::read
+              ((basic_istream<char,std::char_traits<char>_> *)local_168,(char *)&local_178,8);
+    std::basic_istream<char,std::char_traits<char>_>::read
+              ((basic_istream<char,std::char_traits<char>_> *)local_168,(char *)local_184,4);
+    bVar1 = std::ios_base::operator!
+                      ((ios_base *)((longlong)local_168 + (longlong)*(int *)(local_168[0] + 4)));
+    if (((bVar1) || (local_188 != 0x43544d31)) ||
+       (uVar4 = local_178 ^ 0x9e3779b97f4a7c15,
+       ((uint)(uVar4 >> 0x20) ^ (uint)uVar4 ^ 0x43544d31) != local_184[0])) goto LAB_180013ee1;
+  }
+  *(undefined ***)((longlong)local_168 + (longlong)*(int *)(local_168[0] + 4)) =
+       std::basic_ifstream<char,std::char_traits<char>_>::vftable;
+  *(int *)((longlong)&iStack_16c + (longlong)*(int *)(local_168[0] + 4)) =
+       *(int *)(local_168[0] + 4) + -0xb0;
+  FUN_180009290((basic_streambuf<char,std::char_traits<char>_> *)&local_158);
+  std::basic_istream<char,std::char_traits<char>_>::~basic_istream<char,std::char_traits<char>_>
+            (local_150);
+  std::basic_ios<char,std::char_traits<char>_>::~basic_ios<char,std::char_traits<char>_>(local_b8);
+  uVar5 = uVar4;
+LAB_180013f25:
+  FUN_18000d0e0((longlong *)local_50);
+  return uVar5;
+}
+
+

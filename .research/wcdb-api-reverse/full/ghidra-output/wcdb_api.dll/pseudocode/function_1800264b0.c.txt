@@ -1,0 +1,11 @@
+/* 1800264b0 wcdb_set_app_version */
+
+void wcdb_set_app_version(void *param_1)
+
+{
+                    /* 0x264b0  14  wcdb_set_app_version */
+  FUN_18002eca0(param_1);
+  return;
+}
+
+

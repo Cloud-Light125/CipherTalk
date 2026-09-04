@@ -8,6 +8,7 @@
  * - id === -1 && type === 'monitor' 为 native pipe 的变更上行事件
  */
 import { WcdbCore } from './services/wcdbCore'
+import { normalize, resolve } from 'path'
 
 const parentPort = process.parentPort
 
@@ -25,6 +26,33 @@ try {
   // stdin may be unavailable in some utilityProcess modes; the timer still keeps the process alive.
 }
 
+function describeDiagnosticPayload(type: string, payload: any): Record<string, unknown> {
+  if (type === 'setPaths') {
+    return {
+      resourcesPath: String(payload?.resourcesPath || ''),
+      userDataPath: String(payload?.userDataPath || ''),
+      appVersion: String(payload?.appVersion || '')
+    }
+  }
+  if (type !== 'testConnection' && type !== 'open') return {}
+
+  const dbPath = String(payload?.dbPath || '').trim()
+  const hexKey = String(payload?.hexKey || '').trim()
+  return {
+    normalizedAccountDirectory: dbPath ? normalize(resolve(dbPath)) : '',
+    wxid: String(payload?.wxid || '').trim(),
+    keyPresent: hexKey.length > 0,
+    keyLength: hexKey.length,
+    keyLengthExpected: 64,
+    keyLengthValid: hexKey.length === 64,
+    keyFormatValid: /^[0-9a-fA-F]{64}$/.test(hexKey)
+  }
+}
+
+function redactSensitiveLogText(value: unknown): string {
+  return String(value || '').replace(/[0-9a-fA-F]{64}/g, (token) => `[redacted-hex:${token.length}]`)
+}
+
 // 串行化所有请求：每个请求（含游标 open→fetch→close 全过程）跑完后下一个才开始。
 // 防止 close/open/shutdown 在某个游标批次的 await 间隙插入，导致 native 句柄被释放后
 // 仍被在飞的 fetch 使用（use-after-free → koffi napi_throw → utility process fatal）。
@@ -39,6 +67,7 @@ async function handleMessage(msg: any) {
   const { id, type, payload } = msg || {}
   let shouldExitAfterReply = false
   try {
+    console.error(`[wcdbUtility][diagnostic] received id=${id} type=${type}`, describeDiagnosticPayload(type, payload))
     let result: any
     switch (type) {
       case 'setPaths':
@@ -47,9 +76,6 @@ async function handleMessage(msg: any) {
         break
       case 'testConnection':
         result = await core.testConnection(payload.dbPath, payload.hexKey, payload.wxid)
-        break
-      case 'checkLicense':
-        result = await core.checkLicense()
         break
       case 'open':
         result = await core.open(payload.dbPath, payload.hexKey, payload.wxid)
@@ -104,10 +130,22 @@ async function handleMessage(msg: any) {
       default:
         result = { success: false, error: `unknown type: ${type}` }
     }
+    if (type === 'testConnection' || type === 'open') {
+      console.error(`[wcdbUtility][diagnostic] completed id=${id} type=${type}`, {
+        ...describeDiagnosticPayload(type, payload),
+        success: typeof result === 'boolean' ? result : Boolean(result?.success),
+        error: result?.error ? redactSensitiveLogText(result.error) : null
+      })
+    }
     parentPort.postMessage({ id, result })
     if (shouldExitAfterReply) clearInterval(keepAliveTimer)
   } catch (e: any) {
-    parentPort.postMessage({ id, error: e?.message || String(e) })
+    const error = redactSensitiveLogText(e?.message || String(e))
+    console.error(`[wcdbUtility][diagnostic] failed id=${id} type=${type}`, {
+      ...describeDiagnosticPayload(type, payload),
+      error
+    })
+    parentPort.postMessage({ id, error })
   }
 }
 

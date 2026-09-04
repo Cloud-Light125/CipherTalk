@@ -1,0 +1,98 @@
+/* 1800289c0 FUN_1800289c0 */
+
+void FUN_1800289c0(undefined8 *param_1,longlong *param_2)
+
+{
+  char cVar1;
+  int iVar2;
+  int *piVar3;
+  longlong *_Memory;
+  longlong *plVar4;
+  void *pvVar5;
+  code *pcVar6;
+  longlong *_Memory_00;
+  undefined8 *puVar7;
+  void *_Memory_01;
+  undefined1 *puVar8;
+  undefined1 *puVar9;
+  undefined1 auStack_68 [8];
+  undefined1 auStack_60 [56];
+  
+  puVar8 = auStack_68;
+  puVar9 = auStack_68;
+  puVar7 = (undefined8 *)FUN_1800373b0(0x20);
+  if (puVar7 == (undefined8 *)0x0) {
+    puVar7 = (undefined8 *)0x0;
+  }
+  else {
+    *puVar7 = 0;
+    puVar7[1] = 0;
+    puVar7[2] = 0;
+    puVar7[3] = 0xf;
+    *(undefined1 *)puVar7 = 0;
+  }
+  piVar3 = (int *)*param_1;
+  iVar2 = *piVar3;
+  *piVar3 = 3;
+  _Memory = *(longlong **)(piVar3 + 2);
+  *(undefined8 **)(piVar3 + 2) = puVar7;
+  if (iVar2 == 3) {
+    if (_Memory == (longlong *)0x0) goto LAB_180028b12;
+    puVar8 = auStack_68;
+    if (0xf < (ulonglong)_Memory[3]) {
+      pvVar5 = (void *)*_Memory;
+      puVar8 = auStack_68;
+      _Memory_01 = pvVar5;
+      if ((0xfff < _Memory[3] + 1U) &&
+         (_Memory_01 = *(void **)((longlong)pvVar5 + -8), puVar8 = auStack_68,
+         0x1f < (ulonglong)((longlong)pvVar5 + (-8 - (longlong)_Memory_01)))) {
+        pcVar6 = (code *)swi(0x29);
+        _Memory_01 = (void *)(*pcVar6)(5);
+        puVar8 = auStack_60;
+      }
+      *(undefined8 *)(puVar8 + -8) = 0x180028af2;
+      free(_Memory_01);
+    }
+    _Memory[2] = 0;
+    _Memory[3] = 0xf;
+    *(undefined1 *)_Memory = 0;
+  }
+  else if (iVar2 == 4) {
+    puVar9 = auStack_68;
+    if (_Memory == (longlong *)0x0) goto LAB_180028b12;
+    FUN_18002a2d0(_Memory);
+  }
+  else {
+    puVar9 = auStack_68;
+    if ((iVar2 != 5) || (puVar9 = auStack_68, _Memory == (longlong *)0x0)) goto LAB_180028b12;
+    cVar1 = *(char *)((longlong)*(longlong **)(*_Memory + 8) + 0x19);
+    _Memory_00 = *(longlong **)(*_Memory + 8);
+    while (cVar1 == '\0') {
+      FUN_180026f50(_Memory,_Memory,(longlong *)_Memory_00[2]);
+      plVar4 = (longlong *)*_Memory_00;
+      FUN_180029950((int *)(_Memory_00 + 8));
+      FUN_18000d070(_Memory_00 + 4);
+      free(_Memory_00);
+      _Memory_00 = plVar4;
+      cVar1 = *(char *)((longlong)plVar4 + 0x19);
+    }
+    free((void *)*_Memory);
+    puVar8 = auStack_68;
+  }
+  *(undefined8 *)(puVar8 + -8) = 0x180028b12;
+  free(_Memory);
+  puVar9 = puVar8;
+LAB_180028b12:
+  if (*(int *)*param_1 == 3) {
+    FUN_180028040(*(longlong **)((int *)*param_1 + 2),param_2);
+    return;
+  }
+  *(undefined8 *)(puVar9 + -8) = 0x180028b41;
+  FUN_1800293e0((undefined8 *)(puVar9 + 0x20),
+                "\"type mismatch! call is<type>() before get<type>()\" && is<std::string>()");
+                    /* WARNING: Subroutine does not return */
+  *(undefined **)(puVar9 + -8) = &UNK_180028b52;
+  _CxxThrowException(puVar9 + 0x20,(ThrowInfo *)&DAT_180047650);
+}
+
+

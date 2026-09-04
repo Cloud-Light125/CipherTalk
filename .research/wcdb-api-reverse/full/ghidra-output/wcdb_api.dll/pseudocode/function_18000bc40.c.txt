@@ -1,0 +1,9 @@
+/* 18000bc40 _guard_check_icall */
+
+void _guard_check_icall(void)
+
+{
+  return;
+}
+
+

@@ -1,0 +1,127 @@
+/* 18000a520 FUN_18000a520 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+__uint64 FUN_18000a520(undefined8 *param_1,undefined8 *param_2,undefined1 *param_3)
+
+{
+  int *piVar1;
+  InnerHandle *this;
+  code *pcVar2;
+  double dVar3;
+  char cVar4;
+  ColumnType CVar5;
+  __uint64 _Var6;
+  char *pcVar7;
+  undefined8 *******pppppppuVar8;
+  int iVar9;
+  undefined1 *puVar10;
+  undefined1 *puVar11;
+  int *piVar12;
+  undefined1 auStack_a8 [8];
+  undefined1 auStack_a0 [24];
+  undefined8 ******local_88;
+  UnsafeStringView local_80 [24];
+  undefined8 ******local_68;
+  undefined8 uStack_60;
+  longlong local_58;
+  ulonglong local_50;
+  ulonglong local_48;
+  
+  puVar11 = auStack_a8;
+  puVar10 = auStack_a8;
+  local_48 = DAT_18004b4c0 ^ (ulonglong)auStack_a8;
+  piVar12 = (int *)*param_2;
+  piVar1 = (int *)param_2[1];
+  do {
+    if (piVar12 == piVar1) {
+      *param_3 = 1;
+      _Var6 = 0;
+      puVar10 = auStack_a8;
+LAB_18000a695:
+      *(undefined8 *)(puVar10 + -8) = 0x18000a6a1;
+      return _Var6;
+    }
+    iVar9 = *piVar12;
+    if (-1 < iVar9) {
+      this = *(InnerHandle **)*param_1;
+      CVar5 = WCDB::InnerHandle::getColumnType(this,iVar9);
+      cVar4 = (char)CVar5;
+      if (cVar4 == '\x01') {
+        _Var6 = WCDB::InnerHandle::getInteger(this,iVar9);
+        *param_3 = 0;
+        goto LAB_18000a695;
+      }
+      if (cVar4 != '\x02') {
+        if (cVar4 != '\x03') goto LAB_18000a681;
+        WCDB::InnerHandle::getText(this,(int)local_80);
+        _Var6 = WCDB::UnsafeStringView::length(local_80);
+        pcVar7 = WCDB::UnsafeStringView::data(local_80);
+        local_68 = (undefined8 *******)0x0;
+        uStack_60 = 0;
+        local_58 = 0;
+        local_50 = 0;
+        FUN_180002340(&local_68,pcVar7,_Var6);
+        if (local_58 == 0) {
+joined_r0x00018000a639:
+          if (0xf < local_50) {
+            pppppppuVar8 = (undefined8 *******)local_68;
+            if ((0xfff < local_50 + 1) &&
+               (pppppppuVar8 = (undefined8 *******)local_68[-1],
+               0x1f < (ulonglong)((longlong)local_68 + (-8 - (longlong)pppppppuVar8))))
+            goto LAB_18000a70b;
+            free(pppppppuVar8);
+          }
+          local_58 = 0;
+          local_50 = 0xf;
+          local_68 = (undefined8 ******)((ulonglong)local_68 & 0xffffffffffffff00);
+          WCDB::UnsafeStringView::~UnsafeStringView(local_80);
+          goto LAB_18000a681;
+        }
+        local_88 = (undefined8 *******)0x0;
+        pppppppuVar8 = &local_68;
+        if (0xf < local_50) {
+          pppppppuVar8 = (undefined8 *******)local_68;
+        }
+        _Var6 = strtoll(pppppppuVar8,&local_88,10);
+        pppppppuVar8 = &local_68;
+        if (0xf < local_50) {
+          pppppppuVar8 = (undefined8 *******)local_68;
+        }
+        if ((undefined8 *******)local_88 == pppppppuVar8) goto joined_r0x00018000a639;
+        if (local_50 < 0x10) {
+LAB_18000a6e8:
+          local_58 = 0;
+          local_50 = 0xf;
+          local_68 = (undefined8 ******)((ulonglong)local_68 & 0xffffffffffffff00);
+          WCDB::UnsafeStringView::~UnsafeStringView(local_80);
+          *param_3 = 0;
+          puVar10 = auStack_a8;
+          goto LAB_18000a695;
+        }
+        pppppppuVar8 = (undefined8 *******)local_68;
+        if ((local_50 + 1 < 0x1000) ||
+           (pppppppuVar8 = (undefined8 *******)local_68[-1],
+           (ulonglong)((longlong)local_68 + (-8 - (longlong)pppppppuVar8)) < 0x20)) {
+          free(pppppppuVar8);
+          goto LAB_18000a6e8;
+        }
+LAB_18000a70b:
+        iVar9 = (int)_Var6;
+        pcVar2 = (code *)swi(0x29);
+        (*pcVar2)(5);
+        puVar11 = auStack_a0;
+      }
+      *(undefined8 *)(puVar11 + -8) = 0x18000a71c;
+      dVar3 = WCDB::InnerHandle::getDouble(this,iVar9);
+      _Var6 = (__uint64)dVar3;
+      *param_3 = 0;
+      puVar10 = puVar11;
+      goto LAB_18000a695;
+    }
+LAB_18000a681:
+    piVar12 = piVar12 + 1;
+  } while( true );
+}
+
+

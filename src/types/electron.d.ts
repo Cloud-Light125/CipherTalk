@@ -324,13 +324,6 @@ export interface ImageViewerOpenOptions {
   imageDatName?: string
 }
 
-export interface UpdateDownloadProgressPayload {
-  percent: number
-  transferred: number
-  total: number
-  bytesPerSecond: number
-}
-
 /**
  * Direct DB 迁移后的 WAL 变更广播 payload，
  * 通过 `wcdb:change` channel 从主进程推送到渲染端。
@@ -694,7 +687,6 @@ export interface ElectronAPI {
     onMomentsFilterUser: (callback: (username: string) => void) => () => void
     onNavigate: (callback: (route: string) => void) => () => void
     openAgreementWindow: () => Promise<boolean>
-    openPurchaseWindow: () => Promise<boolean>
     openWelcomeWindow: (mode?: 'default' | 'add-account') => Promise<boolean>
     completeWelcome: () => Promise<boolean>
     isChatWindowOpen: () => Promise<boolean>
@@ -875,139 +867,7 @@ export interface ElectronAPI {
       cwd: string
       mode: 'dev' | 'packaged'
     } | null>
-    getUpdateState: () => Promise<{
-      hasUpdate: boolean
-      forceUpdate: boolean
-      currentVersion: string
-      version?: string
-      releaseNotes?: string
-      title?: string
-      message?: string
-      minimumSupportedVersion?: string
-      reason?: 'minimum-version' | 'blocked-version'
-      checkedAt: number
-      updateSource: 'r2' | 'github' | 'custom' | 'none'
-      policySource: 'r2' | 'github' | 'custom' | 'none'
-      diagnostics?: {
-        phase: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'failed'
-        strategy: 'unknown' | 'differential' | 'full'
-        fallbackToFull: boolean
-        lastError?: string
-        lastEvent?: string
-        progressPercent?: number
-        downloadedBytes?: number
-        totalBytes?: number
-        targetVersion?: string
-        lastUpdatedAt: number
-      }
-    } | null>
-    getUpdateSourceInfo: () => Promise<{
-      primaryUpdateSource: 'r2'
-      r2UpdateBaseUrl: string
-      githubRepository: {
-        owner: string
-        repo: string
-      }
-      policySources: Array<'r2' | 'github'>
-      policyPrecedence: 'r2'
-    }>
-    getMcpLaunchConfig: () => Promise<{
-      command: string
-      args: string[]
-      cwd: string
-      mode: 'dev' | 'packaged'
-    } | null>
-    getUpdateState: () => Promise<{
-      hasUpdate: boolean
-      forceUpdate: boolean
-      currentVersion: string
-      version?: string
-      releaseNotes?: string
-      title?: string
-      message?: string
-      minimumSupportedVersion?: string
-      reason?: 'minimum-version' | 'blocked-version'
-      checkedAt: number
-      updateSource: 'r2' | 'github' | 'custom' | 'none'
-      policySource: 'r2' | 'github' | 'custom' | 'none'
-      diagnostics?: {
-        phase: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'failed'
-        strategy: 'unknown' | 'differential' | 'full'
-        fallbackToFull: boolean
-        lastError?: string
-        lastEvent?: string
-        progressPercent?: number
-        downloadedBytes?: number
-        totalBytes?: number
-        targetVersion?: string
-        lastUpdatedAt: number
-      }
-    } | null>
-    getUpdateSourceInfo: () => Promise<{
-      primaryUpdateSource: 'r2'
-      r2UpdateBaseUrl: string
-      githubRepository: {
-        owner: string
-        repo: string
-      }
-      policySources: Array<'r2' | 'github'>
-      policyPrecedence: 'r2'
-    }>
-    checkForUpdates: () => Promise<{
-      hasUpdate: boolean
-      forceUpdate: boolean
-      currentVersion: string
-      version?: string
-      releaseNotes?: string
-      title?: string
-      message?: string
-      minimumSupportedVersion?: string
-      reason?: 'minimum-version' | 'blocked-version'
-      checkedAt: number
-      updateSource: 'r2' | 'github' | 'custom' | 'none'
-      policySource: 'r2' | 'github' | 'custom' | 'none'
-      diagnostics?: {
-        phase: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'failed'
-        strategy: 'unknown' | 'differential' | 'full'
-        fallbackToFull: boolean
-        lastError?: string
-        lastEvent?: string
-        progressPercent?: number
-        downloadedBytes?: number
-        totalBytes?: number
-        targetVersion?: string
-        lastUpdatedAt: number
-      }
-    }>
-    downloadAndInstall: () => Promise<void>
     getStartupDbConnected?: () => Promise<boolean>
-    onDownloadProgress: (callback: (progress: UpdateDownloadProgressPayload) => void) => () => void
-    onUpdateAvailable: (callback: (info: {
-      hasUpdate: boolean
-      forceUpdate: boolean
-      currentVersion: string
-      version?: string
-      releaseNotes?: string
-      title?: string
-      message?: string
-      minimumSupportedVersion?: string
-      reason?: 'minimum-version' | 'blocked-version'
-      checkedAt: number
-      updateSource: 'r2' | 'github' | 'custom' | 'none'
-      policySource: 'r2' | 'github' | 'custom' | 'none'
-      diagnostics?: {
-        phase: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'installing' | 'failed'
-        strategy: 'unknown' | 'differential' | 'full'
-        fallbackToFull: boolean
-        lastError?: string
-        lastEvent?: string
-        progressPercent?: number
-        downloadedBytes?: number
-        totalBytes?: number
-        targetVersion?: string
-        lastUpdatedAt: number
-      }
-    }) => void) => () => void
   }
   systemAuth: {
     getStatus: () => Promise<{
@@ -1473,14 +1333,6 @@ export interface ElectronAPI {
       phase?: string
       detail?: string
     }) => void) => () => void
-  }
-  activation: {
-    getDeviceId: () => Promise<string>
-    verifyCode: (code: string) => Promise<{ success: boolean; message: string }>
-    activate: (code: string) => Promise<ActivationResult>
-    checkStatus: () => Promise<ActivationStatus>
-    getTypeDisplayName: (type: string | null) => Promise<string>
-    clearCache: () => Promise<boolean>
   }
   cache: {
     clearImages: () => Promise<{ success: boolean; error?: string }>
@@ -1962,25 +1814,6 @@ export interface DecryptProgress {
   fileProgress?: number
   error?: string
   images?: ImageFileInfo[]
-}
-
-export interface ActivationStatus {
-  isActivated: boolean
-  type: string | null
-  expiresAt: string | null
-  activatedAt: string | null
-  daysRemaining: number | null
-  deviceId: string
-}
-
-export interface ActivationResult {
-  success: boolean
-  message: string
-  data?: {
-    type: string
-    expires_at: string | null
-    activated_at: string
-  }
 }
 
 declare global {

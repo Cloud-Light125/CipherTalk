@@ -1,0 +1,16 @@
+/* 1800297a0 FUN_1800297a0 */
+
+void FUN_1800297a0(undefined8 *param_1)
+
+{
+  int *piVar1;
+  int *piVar2;
+  
+  piVar1 = (int *)param_1[1];
+  for (piVar2 = (int *)*param_1; piVar2 != piVar1; piVar2 = piVar2 + 4) {
+    FUN_180029950(piVar2);
+  }
+  return;
+}
+
+

@@ -1,0 +1,39 @@
+/* 180011190 FUN_180011190 */
+
+void FUN_180011190(void)
+
+{
+  LSTATUS LVar1;
+  ulonglong uVar2;
+  DWORD local_res8 [2];
+  DWORD local_res10 [2];
+  HKEY local_res18;
+  ulonglong local_res20;
+  
+  if (DAT_18004bca9 == '\0') {
+    uVar2 = FUN_180013ce0();
+    local_res18 = (HKEY)0x0;
+    local_res20 = 0;
+    LVar1 = RegOpenKeyExA((HKEY)&DAT_ffffffff80000001,"Software\\WCDBApi",0,0x20019,&local_res18);
+    if (LVar1 == 0) {
+      local_res8[0] = 0;
+      local_res10[0] = 8;
+      LVar1 = RegQueryValueExA(local_res18,"ts",(LPDWORD)0x0,local_res8,(LPBYTE)&local_res20,
+                               local_res10);
+      if ((LVar1 != 0) || (local_res8[0] != 0xb)) {
+        local_res20 = 0;
+      }
+      RegCloseKey(local_res18);
+    }
+    DAT_18004bca9 = '\x01';
+    DAT_18004bcb0 = local_res20;
+    DAT_18004bcb8 = local_res20;
+    if ((longlong)local_res20 <= (longlong)uVar2) {
+      DAT_18004bcb0 = uVar2;
+      DAT_18004bcb8 = uVar2;
+    }
+  }
+  return;
+}
+
+

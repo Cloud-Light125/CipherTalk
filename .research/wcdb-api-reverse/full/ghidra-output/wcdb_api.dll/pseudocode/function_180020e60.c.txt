@@ -1,0 +1,102 @@
+/* 180020e60 wcdb_close_account */
+
+undefined8 wcdb_close_account(longlong param_1)
+
+{
+  char cVar1;
+  longlong *plVar2;
+  longlong *plVar3;
+  int iVar4;
+  longlong *plVar5;
+  longlong *plVar6;
+  undefined8 uVar7;
+  longlong *plVar8;
+  
+                    /* 0x20e60  2  wcdb_close_account */
+  iVar4 = _Mtx_lock(&DAT_18004b000);
+  if (iVar4 != 0) {
+                    /* WARNING: Subroutine does not return */
+    std::_Throw_Cpp_error(5);
+  }
+  if (DAT_18004b04c != 0x7fffffff) {
+    cVar1 = *(char *)(DAT_18004bc80[1] + 0x19);
+    plVar5 = (longlong *)DAT_18004bc80[1];
+    plVar2 = DAT_18004bc80;
+    while (plVar8 = plVar5, cVar1 == '\0') {
+      if (plVar8[4] < param_1) {
+        plVar5 = (longlong *)plVar8[2];
+        plVar8 = plVar2;
+      }
+      else {
+        plVar5 = (longlong *)*plVar8;
+      }
+      cVar1 = *(char *)((longlong)plVar5 + 0x19);
+      plVar2 = plVar8;
+    }
+    if (((*(char *)((longlong)plVar2 + 0x19) == '\0') && (plVar2[4] <= param_1)) &&
+       (plVar2 != DAT_18004bc80)) {
+      plVar5 = (longlong *)*DAT_18004bc70;
+      plVar8 = DAT_18004bc70;
+      if ((longlong *)*DAT_18004bc70 != DAT_18004bc70) {
+        do {
+          plVar6 = (longlong *)plVar5[2];
+          if (plVar5[5] == param_1) {
+            if (*(char *)((longlong)plVar6 + 0x19) == '\0') {
+              cVar1 = *(char *)(*plVar6 + 0x19);
+              while (cVar1 == '\0') {
+                plVar6 = (longlong *)*plVar6;
+                cVar1 = *(char *)(*plVar6 + 0x19);
+              }
+            }
+            else {
+              cVar1 = *(char *)(plVar5[1] + 0x19);
+              plVar3 = (longlong *)plVar5[1];
+              plVar8 = plVar5;
+              while ((plVar6 = plVar3, cVar1 == '\0' && (plVar8 == (longlong *)plVar6[2]))) {
+                cVar1 = *(char *)(plVar6[1] + 0x19);
+                plVar3 = (longlong *)plVar6[1];
+                plVar8 = plVar6;
+              }
+            }
+            plVar5 = FUN_18000bd40((longlong *)&DAT_18004bc70,plVar5);
+            FUN_18000cf20(plVar5 + 8);
+            free(plVar5);
+            plVar8 = DAT_18004bc70;
+          }
+          else if (*(char *)((longlong)plVar6 + 0x19) == '\0') {
+            cVar1 = *(char *)(*plVar6 + 0x19);
+            while (cVar1 == '\0') {
+              plVar6 = (longlong *)*plVar6;
+              cVar1 = *(char *)(*plVar6 + 0x19);
+            }
+          }
+          else {
+            cVar1 = *(char *)(plVar5[1] + 0x19);
+            plVar3 = (longlong *)plVar5[1];
+            while ((plVar6 = plVar3, cVar1 == '\0' && (plVar5 == (longlong *)plVar6[2]))) {
+              cVar1 = *(char *)(plVar6[1] + 0x19);
+              plVar3 = (longlong *)plVar6[1];
+              plVar5 = plVar6;
+            }
+          }
+          plVar5 = plVar6;
+        } while (plVar6 != plVar8);
+      }
+      plVar5 = FUN_18000bd40((longlong *)&DAT_18004bc80,plVar2);
+      FUN_180009950(plVar5 + 5);
+      free(plVar5);
+      _Mtx_unlock(&DAT_18004b000);
+      uVar7 = 0;
+    }
+    else {
+      _Mtx_unlock(&DAT_18004b000);
+      uVar7 = 0xffffffff;
+    }
+    return uVar7;
+  }
+  DAT_18004b04c = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+  std::_Throw_Cpp_error(6);
+}
+
+

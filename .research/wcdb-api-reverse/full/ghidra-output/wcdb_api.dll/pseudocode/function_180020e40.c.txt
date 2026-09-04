@@ -1,0 +1,11 @@
+/* 180020e40 wcdb_check_license */
+
+void wcdb_check_license(void)
+
+{
+                    /* 0x20e40  1  wcdb_check_license */
+  FUN_18001f250();
+  return;
+}
+
+

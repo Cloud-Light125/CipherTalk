@@ -1,0 +1,41 @@
+/* 1800097b0 FUN_1800097b0 */
+
+void FUN_1800097b0(longlong *param_1)
+
+{
+  undefined8 *puVar1;
+  void *pvVar2;
+  code *pcVar3;
+  void *_Memory;
+  undefined8 *puVar4;
+  undefined1 *puVar5;
+  undefined1 auStack_28 [8];
+  undefined1 auStack_20 [24];
+  
+  puVar4 = (undefined8 *)*param_1;
+  if (puVar4 != (undefined8 *)0x0) {
+    puVar1 = (undefined8 *)param_1[1];
+    for (; puVar4 != puVar1; puVar4 = puVar4 + 1) {
+      FUN_180036880((HANDLE)*puVar4);
+    }
+    pvVar2 = (void *)*param_1;
+    _Memory = pvVar2;
+    puVar5 = auStack_28;
+    if ((0xfff < (ulonglong)((param_1[2] - (longlong)pvVar2 >> 3) * 8)) &&
+       (_Memory = *(void **)((longlong)pvVar2 + -8), puVar5 = auStack_28,
+       0x1f < (ulonglong)((longlong)pvVar2 + (-8 - (longlong)_Memory)))) {
+      _Memory = (void *)0x5;
+      pcVar3 = (code *)swi(0x29);
+      (*pcVar3)();
+      puVar5 = auStack_20;
+    }
+    *(undefined8 *)(puVar5 + -8) = 0x180009831;
+    free(_Memory);
+    *param_1 = 0;
+    param_1[1] = 0;
+    param_1[2] = 0;
+  }
+  return;
+}
+
+

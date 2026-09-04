@@ -1,0 +1,253 @@
+/* 1800205e0 FUN_1800205e0 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+uint FUN_1800205e0(basic_streambuf<char,std::char_traits<char>_> *param_1)
+
+{
+  ulonglong uVar1;
+  ulonglong uVar2;
+  code *pcVar3;
+  undefined1 *puVar4;
+  uint uVar5;
+  int iVar6;
+  char *pcVar7;
+  char *pcVar8;
+  byte *pbVar9;
+  basic_streambuf<char,std::char_traits<char>_> *pbVar10;
+  char *****pppppcVar11;
+  FILE *_File;
+  size_t sVar12;
+  uint uVar13;
+  ulonglong uVar14;
+  size_t sVar15;
+  undefined1 *puVar16;
+  undefined1 *puVar17;
+  char ******ppppppcVar18;
+  char ******ppppppcVar19;
+  ulonglong uVar20;
+  char cVar21;
+  undefined8 uStackY_d0;
+  undefined1 auStackY_c8 [8];
+  undefined1 auStackY_c0 [24];
+  byte local_88;
+  char local_87 [7];
+  char *local_80;
+  byte *local_78;
+  char *****local_70;
+  undefined8 uStack_68;
+  size_t local_60;
+  ulonglong local_58;
+  ulonglong local_50;
+  
+  puVar17 = auStackY_c8;
+  puVar16 = auStackY_c8;
+  local_50 = DAT_18004b4c0 ^ (ulonglong)auStackY_c8;
+  pcVar7 = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+  if (pcVar7 != (char *)0x0) {
+    pcVar7 = std::basic_streambuf<char,std::char_traits<char>_>::egptr(param_1);
+    pcVar8 = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+    if (pcVar8 < pcVar7) {
+      pbVar9 = (byte *)std::basic_streambuf<char,std::char_traits<char>_>::_Gninc(param_1);
+      uVar13 = (uint)*pbVar9;
+      puVar16 = auStackY_c8;
+      goto LAB_180020983;
+    }
+  }
+  if (*(longlong *)(param_1 + 0x80) == 0) {
+    uVar13 = 0xffffffff;
+    puVar16 = auStackY_c8;
+  }
+  else {
+    pbVar10 = (basic_streambuf<char,std::char_traits<char>_> *)
+              std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+    if (pbVar10 == param_1 + 0x70) {
+      std::basic_streambuf<char,std::char_traits<char>_>::setg
+                (param_1,*(char **)(param_1 + 0x88),*(char **)(param_1 + 0x88),
+                 *(char **)(param_1 + 0x90));
+    }
+    _File = *(FILE **)(param_1 + 0x80);
+    if (*(longlong *)(param_1 + 0x68) == 0) {
+      uVar5 = fgetc(_File);
+      uVar13 = 0xffffffff;
+      puVar16 = auStackY_c8;
+      if (uVar5 != 0xffffffff) {
+        uVar13 = uVar5 & 0xff;
+        puVar16 = auStackY_c8;
+      }
+    }
+    else {
+      uStack_68 = 0;
+      local_60 = 0;
+      local_58 = 0xf;
+      local_70 = (char *****)0x0;
+LAB_1800206c5:
+      iVar6 = fgetc(_File);
+      uVar20 = local_58;
+      sVar15 = local_60;
+      puVar4 = auStackY_c8;
+      if (iVar6 != -1) {
+        cVar21 = (char)iVar6;
+        if (local_60 < local_58) {
+          ppppppcVar18 = &local_70;
+          if (0xf < local_58) {
+            ppppppcVar18 = (char ******)local_70;
+          }
+          pcVar7 = (char *)((longlong)ppppppcVar18 + local_60);
+          local_60 = local_60 + 1;
+          *pcVar7 = cVar21;
+          *(char *)((longlong)ppppppcVar18 + sVar15 + 1) = '\0';
+LAB_180020822:
+          ppppppcVar18 = &local_70;
+          if (0xf < local_58) {
+            ppppppcVar18 = (char ******)local_70;
+          }
+          ppppppcVar19 = &local_70;
+          if (0xf < local_58) {
+            ppppppcVar19 = (char ******)local_70;
+          }
+          iVar6 = std::codecvt<char,char,_Mbstatet>::in
+                            (*(codecvt<char,char,_Mbstatet> **)(param_1 + 0x68),
+                             (_Mbstatet *)(param_1 + 0x74),(char *)ppppppcVar19,
+                             (char *)((longlong)ppppppcVar18 + local_60),&local_80,(char *)&local_88
+                             ,local_87,(char **)&local_78);
+          if ((iVar6 != 0) && (iVar6 = iVar6 + -1, puVar4 = auStackY_c8, iVar6 != 0))
+          goto LAB_1800208e3;
+          if (local_78 == &local_88) goto code_r0x000180020892;
+          ppppppcVar18 = &local_70;
+          if (0xf < local_58) {
+            ppppppcVar18 = (char ******)local_70;
+          }
+          pcVar7 = (char *)((longlong)ppppppcVar18 + (local_60 - (longlong)local_80));
+          while (0 < (longlong)pcVar7) {
+            pcVar7 = pcVar7 + -1;
+            ungetc((int)pcVar7[(longlong)local_80],*(FILE **)(param_1 + 0x80));
+          }
+          uVar13 = (uint)local_88;
+          goto LAB_18002094a;
+        }
+        if (local_60 == 0x7fffffffffffffff) goto LAB_1800209aa;
+        uVar1 = local_60 + 1;
+        uVar14 = uVar1 | 0xf;
+        if (uVar14 < 0x8000000000000000) {
+          if (0x7fffffffffffffff - (local_58 >> 1) < local_58) {
+            uVar14 = 0x7fffffffffffffff;
+            sVar12 = 0x8000000000000027;
+            goto LAB_180020785;
+          }
+          uVar2 = (local_58 >> 1) + local_58;
+          if (uVar14 < uVar2) {
+            uVar14 = uVar2;
+          }
+          uVar2 = uVar14 + 1;
+          if (uVar2 == 0) {
+            ppppppcVar18 = (char ******)0x0;
+          }
+          else {
+            if (0xfff < uVar2) {
+              sVar12 = uVar14 + 0x28;
+              if (sVar12 <= uVar2) {
+                    /* WARNING: Subroutine does not return */
+                FUN_18000cdd0();
+              }
+              goto LAB_180020785;
+            }
+            ppppppcVar18 = (char ******)FUN_1800373b0(uVar2);
+          }
+LAB_1800207ac:
+          pppppcVar11 = local_70;
+          local_60 = uVar1;
+          local_58 = uVar14;
+          if (uVar20 < 0x10) {
+            memcpy(ppppppcVar18,&local_70,sVar15);
+            *(char *)((longlong)ppppppcVar18 + sVar15) = cVar21;
+            *(char *)((longlong)ppppppcVar18 + sVar15 + 1) = '\0';
+            local_70 = (char *****)ppppppcVar18;
+          }
+          else {
+            memcpy(ppppppcVar18,local_70,sVar15);
+            *(char *)((longlong)ppppppcVar18 + sVar15) = cVar21;
+            *(char *)((longlong)ppppppcVar18 + sVar15 + 1) = '\0';
+            if (uVar20 + 1 < 0x1000) {
+              free(pppppcVar11);
+              local_70 = (char *****)ppppppcVar18;
+            }
+            else {
+              if ((char *)0x1f < (char *)((longlong)pppppcVar11 + (-8 - (longlong)pppppcVar11[-1])))
+              goto LAB_1800208dc;
+              free(pppppcVar11[-1]);
+              local_70 = (char *****)ppppppcVar18;
+            }
+          }
+          goto LAB_180020822;
+        }
+        uVar14 = 0x7fffffffffffffff;
+        sVar12 = 0x8000000000000027;
+LAB_180020785:
+        pppppcVar11 = (char *****)FUN_1800373b0(sVar12);
+        if (pppppcVar11 != (char *****)0x0) {
+          ppppppcVar18 = (char ******)((longlong)pppppcVar11 + 0x27U & 0xffffffffffffffe0);
+          ppppppcVar18[-1] = pppppcVar11;
+          goto LAB_1800207ac;
+        }
+LAB_1800208dc:
+        pcVar3 = (code *)swi(0x29);
+        iVar6 = (*pcVar3)(5);
+        puVar4 = auStackY_c0;
+LAB_1800208e3:
+        puVar16 = puVar4;
+        puVar4 = puVar16;
+        if (iVar6 == 2) {
+          ppppppcVar18 = &local_70;
+          if (0xf < local_58) {
+            ppppppcVar18 = (char ******)local_70;
+          }
+          uVar13 = (uint)*(char *)ppppppcVar18;
+          goto LAB_18002094a;
+        }
+      }
+      puVar16 = puVar4;
+      uVar13 = 0xffffffff;
+LAB_18002094a:
+      if (0xf < local_58) {
+        ppppppcVar18 = (char ******)local_70;
+        if ((0xfff < local_58 + 1) &&
+           (ppppppcVar18 = (char ******)local_70[-1],
+           (char *)0x1f < (char *)((longlong)local_70 + (-8 - (longlong)ppppppcVar18)))) {
+          pcVar3 = (code *)swi(0x29);
+          (*pcVar3)(5);
+          puVar17 = puVar16 + 8;
+LAB_1800209aa:
+                    /* WARNING: Subroutine does not return */
+          *(undefined8 *)(puVar17 + -8) = 0x1800209af;
+          FUN_18000d170();
+        }
+        *(undefined8 *)(puVar16 + -8) = 0x180020981;
+        free(ppppppcVar18);
+      }
+    }
+  }
+LAB_180020983:
+  *(undefined8 *)(puVar16 + -8) = 0x18002098f;
+  return uVar13;
+code_r0x000180020892:
+  ppppppcVar18 = &local_70;
+  if (0xf < local_58) {
+    ppppppcVar18 = (char ******)local_70;
+  }
+  uVar20 = (longlong)local_80 - (longlong)ppppppcVar18;
+  if (local_60 < (ulonglong)((longlong)local_80 - (longlong)ppppppcVar18)) {
+    uVar20 = local_60;
+  }
+  ppppppcVar18 = &local_70;
+  if (0xf < local_58) {
+    ppppppcVar18 = (char ******)local_70;
+  }
+  sVar15 = local_60 - uVar20;
+  memmove(ppppppcVar18,(char *)((longlong)ppppppcVar18 + uVar20),sVar15 + 1);
+  _File = *(FILE **)(param_1 + 0x80);
+  local_60 = sVar15;
+  goto LAB_1800206c5;
+}
+
+

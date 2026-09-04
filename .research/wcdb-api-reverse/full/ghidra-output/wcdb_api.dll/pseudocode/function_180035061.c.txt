@@ -1,0 +1,12 @@
+/* 180035061 getText */
+
+void __thiscall WCDB::InnerHandle::getText(InnerHandle *this,int param_1)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180035061. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  getText(this,param_1);
+  return;
+}
+
+

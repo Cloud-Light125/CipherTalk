@@ -1,0 +1,142 @@
+/* 180032a60 FUN_180032a60 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+undefined8 * FUN_180032a60(undefined8 *param_1)
+
+{
+  code *pcVar1;
+  void *pvVar2;
+  undefined1 *puVar3;
+  DWORD DVar4;
+  LPWSTR **pppWVar5;
+  undefined8 *puVar6;
+  longlong lVar7;
+  void *pvVar8;
+  LPWSTR ***ppppWVar9;
+  ulonglong uVar10;
+  undefined1 *puVar11;
+  undefined1 *puVar12;
+  undefined8 uStack_100;
+  undefined1 auStack_f8 [8];
+  undefined1 auStack_f0 [48];
+  undefined8 *local_c0;
+  LPWSTR **local_b8;
+  undefined8 uStack_b0;
+  ulonglong local_a8;
+  ulonglong local_a0;
+  void *local_98;
+  undefined8 uStack_90;
+  undefined8 local_88;
+  ulonglong local_80;
+  WCHAR local_78;
+  undefined6 uStack_76;
+  undefined8 local_68;
+  ulonglong local_60;
+  longlong local_58 [4];
+  ulonglong local_38;
+  
+  puVar11 = auStack_f8;
+  puVar12 = auStack_f8;
+  local_38 = DAT_18004b4c0 ^ (ulonglong)auStack_f8;
+  local_b8 = (LPWSTR **)0x0;
+  uStack_b0 = 0;
+  local_a8 = 0;
+  local_a0 = 0;
+  local_c0 = param_1;
+  pppWVar5 = (LPWSTR **)FUN_1800373b0(0x10037);
+  if (pppWVar5 == (LPWSTR **)0x0) goto LAB_180032ca3;
+  local_b8 = (LPWSTR **)((longlong)pppWVar5 + 0x27U & 0xffffffffffffffe0);
+  local_b8[-1] = (LPWSTR *)pppWVar5;
+  local_a8 = 0x8000;
+  local_a0 = 0x8007;
+  ppppWVar9 = (LPWSTR ***)local_b8;
+  for (lVar7 = 0x8000; lVar7 != 0; lVar7 = lVar7 + -1) {
+    *(WCHAR *)ppppWVar9 = L'\0';
+    ppppWVar9 = (LPWSTR ***)((longlong)ppppWVar9 + 2);
+  }
+  *(WCHAR *)(local_b8 + 0x2000) = L'\0';
+  DVar4 = GetModuleFileNameW((HMODULE)0x0,(LPWSTR)local_b8,0x8000);
+  puVar3 = auStack_f8;
+  if ((DVar4 == 0) || (uVar10 = (ulonglong)DVar4, puVar3 = auStack_f8, local_a8 <= uVar10)) {
+LAB_180032c33:
+    puVar12 = puVar3;
+    *param_1 = 0;
+    param_1[1] = 0;
+    param_1[2] = 0;
+    param_1[3] = 0xf;
+    *(undefined1 *)param_1 = 0;
+  }
+  else {
+    ppppWVar9 = &local_b8;
+    if (7 < local_a0) {
+      ppppWVar9 = (LPWSTR ***)local_b8;
+    }
+    local_a8 = uVar10;
+    *(WCHAR *)((longlong)ppppWVar9 + uVar10 * 2) = L'\0';
+    ppppWVar9 = &local_b8;
+    if (7 < local_a0) {
+      ppppWVar9 = (LPWSTR ***)local_b8;
+    }
+    local_98 = (void *)0x0;
+    uStack_90 = 0;
+    local_88 = 0;
+    local_80 = 0;
+    FUN_180002440(&local_98,ppppWVar9,local_a8);
+    puVar6 = FUN_1800141a0((uint *)&local_98,local_58);
+    FUN_1800081a0((undefined8 *)&local_78,puVar6);
+    FUN_180034e60(param_1,&local_78);
+    if (7 < local_60) {
+      pvVar2 = (void *)CONCAT62(uStack_76,local_78);
+      pvVar8 = pvVar2;
+      if ((local_60 * 2 + 2 < 0x1000) ||
+         (pvVar8 = *(void **)((longlong)pvVar2 + -8),
+         (ulonglong)((longlong)pvVar2 + (-8 - (longlong)pvVar8)) < 0x20)) {
+        free(pvVar8);
+        goto LAB_180032bb9;
+      }
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      puVar11 = auStack_f0;
+LAB_180032c2c:
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      puVar3 = puVar11 + 8;
+      goto LAB_180032c33;
+    }
+LAB_180032bb9:
+    local_68 = 0;
+    local_60 = 7;
+    local_78 = L'\0';
+    FUN_18000d0e0(local_58);
+    if (7 < local_80) {
+      pvVar8 = local_98;
+      if ((0xfff < local_80 * 2 + 2) &&
+         (pvVar8 = *(void **)((longlong)local_98 + -8),
+         0x1f < (ulonglong)((longlong)local_98 + (-8 - (longlong)pvVar8)))) goto LAB_180032c2c;
+      free(pvVar8);
+    }
+    local_88 = 0;
+    local_80 = 7;
+    local_98 = (void *)((ulonglong)local_98 & 0xffffffffffff0000);
+  }
+  if (7 < local_a0) {
+    ppppWVar9 = (LPWSTR ***)local_b8;
+    if ((0xfff < local_a0 * 2 + 2) &&
+       (ppppWVar9 = (LPWSTR ***)local_b8[-1],
+       0x1f < (ulonglong)((longlong)local_b8 + (-8 - (longlong)ppppWVar9)))) {
+LAB_180032ca3:
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      pcVar1 = (code *)swi(3);
+      puVar6 = (undefined8 *)(*pcVar1)();
+      return puVar6;
+    }
+    *(undefined8 *)(puVar12 + -8) = 0x180032c88;
+    free(ppppWVar9);
+  }
+  *(undefined8 *)(puVar12 + -8) = 0x180032c97;
+  return param_1;
+}
+
+

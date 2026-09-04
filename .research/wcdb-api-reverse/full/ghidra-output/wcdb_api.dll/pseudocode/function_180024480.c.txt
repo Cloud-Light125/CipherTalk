@@ -1,0 +1,11 @@
+/* 180024480 wcdb_free_string */
+
+void wcdb_free_string(void *param_1)
+
+{
+                    /* 0x24480  7  wcdb_free_string */
+  free(param_1);
+  return;
+}
+
+

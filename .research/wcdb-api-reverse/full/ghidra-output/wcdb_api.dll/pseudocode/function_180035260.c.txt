@@ -1,0 +1,533 @@
+/* 180035260 FUN_180035260 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+undefined1 (*) [32]
+FUN_180035260(undefined1 (*param_1) [32],undefined1 (*param_2) [32],undefined1 (*param_3) [32],
+             ulonglong param_4)
+
+{
+  undefined1 auVar1 [32];
+  undefined1 auVar2 [32];
+  undefined8 uVar3;
+  undefined8 uVar4;
+  undefined8 uVar5;
+  undefined8 uVar6;
+  undefined1 auVar7 [32];
+  undefined1 auVar8 [32];
+  uint uVar9;
+  int iVar10;
+  undefined1 (*pauVar11) [32];
+  longlong lVar12;
+  uint uVar13;
+  undefined1 (*pauVar14) [32];
+  undefined1 uVar15;
+  undefined1 auStack_128 [40];
+  ulonglong local_100;
+  undefined1 (*local_f8) [32];
+  undefined1 (*local_f0) [32];
+  undefined1 (*local_e8) [32];
+  undefined1 local_e0;
+  undefined1 uStack_df;
+  undefined1 uStack_de;
+  undefined1 uStack_dd;
+  undefined1 uStack_dc;
+  undefined1 uStack_db;
+  undefined1 uStack_da;
+  undefined1 uStack_d9;
+  undefined1 uStack_d8;
+  undefined1 uStack_d7;
+  undefined1 uStack_d6;
+  undefined1 uStack_d5;
+  undefined1 uStack_d4;
+  undefined1 uStack_d3;
+  undefined1 uStack_d2;
+  undefined1 uStack_d1;
+  undefined1 uStack_d0;
+  undefined1 uStack_cf;
+  undefined1 uStack_ce;
+  undefined1 uStack_cd;
+  undefined1 uStack_cc;
+  undefined1 uStack_cb;
+  undefined1 uStack_ca;
+  undefined1 uStack_c9;
+  undefined1 uStack_c8;
+  undefined1 uStack_c7;
+  undefined1 uStack_c6;
+  undefined1 uStack_c5;
+  undefined1 uStack_c4;
+  undefined1 uStack_c3;
+  undefined1 uStack_c2;
+  undefined1 uStack_c1;
+  undefined1 local_c0 [32];
+  undefined1 local_a0 [32];
+  undefined1 local_80 [32];
+  ulonglong local_60;
+  
+  local_60 = DAT_18004b4c0 ^ (ulonglong)auStack_128;
+  lVar12 = (longlong)param_2 - (longlong)param_1;
+  local_100 = lVar12;
+  local_f8 = param_1;
+  local_f0 = param_2;
+  if (param_4 < 0x21) {
+    lVar12 = -param_4;
+    uVar3 = *(undefined8 *)*(undefined1 (*) [32])(&DAT_180040cf0 + lVar12);
+    uVar4 = *(undefined8 *)(&UNK_180040cf8 + lVar12);
+    uVar5 = *(undefined8 *)(&UNK_180040d00 + lVar12);
+    uVar6 = *(undefined8 *)(&UNK_180040d08 + lVar12);
+    local_e0 = (undefined1)uVar3;
+    uStack_df = (undefined1)((ulonglong)uVar3 >> 8);
+    uStack_de = (undefined1)((ulonglong)uVar3 >> 0x10);
+    uStack_dd = (undefined1)((ulonglong)uVar3 >> 0x18);
+    uStack_dc = (undefined1)((ulonglong)uVar3 >> 0x20);
+    uStack_db = (undefined1)((ulonglong)uVar3 >> 0x28);
+    uStack_da = (undefined1)((ulonglong)uVar3 >> 0x30);
+    uStack_d9 = (undefined1)((ulonglong)uVar3 >> 0x38);
+    uStack_d8 = (undefined1)uVar4;
+    uStack_d7 = (undefined1)((ulonglong)uVar4 >> 8);
+    uStack_d6 = (undefined1)((ulonglong)uVar4 >> 0x10);
+    uStack_d5 = (undefined1)((ulonglong)uVar4 >> 0x18);
+    uStack_d4 = (undefined1)((ulonglong)uVar4 >> 0x20);
+    uStack_d3 = (undefined1)((ulonglong)uVar4 >> 0x28);
+    uStack_d2 = (undefined1)((ulonglong)uVar4 >> 0x30);
+    uStack_d1 = (undefined1)((ulonglong)uVar4 >> 0x38);
+    uStack_d0 = (undefined1)uVar5;
+    uStack_cf = (undefined1)((ulonglong)uVar5 >> 8);
+    uStack_ce = (undefined1)((ulonglong)uVar5 >> 0x10);
+    uStack_cd = (undefined1)((ulonglong)uVar5 >> 0x18);
+    uStack_cc = (undefined1)((ulonglong)uVar5 >> 0x20);
+    uStack_cb = (undefined1)((ulonglong)uVar5 >> 0x28);
+    uStack_ca = (undefined1)((ulonglong)uVar5 >> 0x30);
+    uStack_c9 = (undefined1)((ulonglong)uVar5 >> 0x38);
+    uStack_c8 = (undefined1)uVar6;
+    uStack_c7 = (undefined1)((ulonglong)uVar6 >> 8);
+    uStack_c6 = (undefined1)((ulonglong)uVar6 >> 0x10);
+    uStack_c5 = (undefined1)((ulonglong)uVar6 >> 0x18);
+    uStack_c4 = (undefined1)((ulonglong)uVar6 >> 0x20);
+    uStack_c3 = (undefined1)((ulonglong)uVar6 >> 0x28);
+    uStack_c2 = (undefined1)((ulonglong)uVar6 >> 0x30);
+    uStack_c1 = (undefined1)((ulonglong)uVar6 >> 0x38);
+    memcpy(local_a0,param_3,param_4);
+    uVar15 = local_a0[0];
+    local_c0[1] = uVar15;
+    local_c0[0] = uVar15;
+    local_c0[2] = uVar15;
+    local_c0[3] = uVar15;
+    local_c0[4] = uVar15;
+    local_c0[5] = uVar15;
+    local_c0[6] = uVar15;
+    local_c0[7] = uVar15;
+    local_c0[8] = uVar15;
+    local_c0[9] = uVar15;
+    local_c0[10] = uVar15;
+    local_c0[0xb] = uVar15;
+    local_c0[0xc] = uVar15;
+    local_c0[0xd] = uVar15;
+    local_c0[0xe] = uVar15;
+    local_c0[0xf] = uVar15;
+    local_c0[0x10] = uVar15;
+    local_c0[0x11] = uVar15;
+    local_c0[0x12] = uVar15;
+    local_c0[0x13] = uVar15;
+    local_c0[0x14] = uVar15;
+    local_c0[0x15] = uVar15;
+    local_c0[0x16] = uVar15;
+    local_c0[0x17] = uVar15;
+    local_c0[0x18] = uVar15;
+    local_c0[0x19] = uVar15;
+    local_c0[0x1a] = uVar15;
+    local_c0[0x1b] = uVar15;
+    local_c0[0x1c] = uVar15;
+    local_c0[0x1d] = uVar15;
+    local_c0[0x1e] = uVar15;
+    local_c0[0x1f] = uVar15;
+    auVar2 = vpcmpeqb_avx2(local_c0,local_f0[-1]);
+    pauVar14 = local_f0 + -1;
+    uVar13 = ((uint)(SUB321(auVar2 >> 7,0) & 1) | (uint)(SUB321(auVar2 >> 0xf,0) & 1) << 1 |
+              (uint)(SUB321(auVar2 >> 0x17,0) & 1) << 2 | (uint)(SUB321(auVar2 >> 0x1f,0) & 1) << 3
+              | (uint)(SUB321(auVar2 >> 0x27,0) & 1) << 4 |
+              (uint)(SUB321(auVar2 >> 0x2f,0) & 1) << 5 | (uint)(SUB321(auVar2 >> 0x37,0) & 1) << 6
+              | (uint)(SUB321(auVar2 >> 0x3f,0) & 1) << 7 |
+              (uint)(SUB321(auVar2 >> 0x47,0) & 1) << 8 | (uint)(SUB321(auVar2 >> 0x4f,0) & 1) << 9
+              | (uint)(SUB321(auVar2 >> 0x57,0) & 1) << 10 |
+              (uint)(SUB321(auVar2 >> 0x5f,0) & 1) << 0xb |
+              (uint)(SUB321(auVar2 >> 0x67,0) & 1) << 0xc |
+              (uint)(SUB321(auVar2 >> 0x6f,0) & 1) << 0xd |
+              (uint)(SUB321(auVar2 >> 0x77,0) & 1) << 0xe | (uint)SUB321(auVar2 >> 0x7f,0) << 0xf |
+              (uint)(SUB321(auVar2 >> 0x87,0) & 1) << 0x10 |
+              (uint)(SUB321(auVar2 >> 0x8f,0) & 1) << 0x11 |
+              (uint)(SUB321(auVar2 >> 0x97,0) & 1) << 0x12 |
+              (uint)(SUB321(auVar2 >> 0x9f,0) & 1) << 0x13 |
+              (uint)(SUB321(auVar2 >> 0xa7,0) & 1) << 0x14 |
+              (uint)(SUB321(auVar2 >> 0xaf,0) & 1) << 0x15 |
+              (uint)(SUB321(auVar2 >> 0xb7,0) & 1) << 0x16 | (uint)SUB321(auVar2 >> 0xbf,0) << 0x17
+              | (uint)(SUB321(auVar2 >> 199,0) & 1) << 0x18 |
+              (uint)(SUB321(auVar2 >> 0xcf,0) & 1) << 0x19 |
+              (uint)(SUB321(auVar2 >> 0xd7,0) & 1) << 0x1a |
+              (uint)(SUB321(auVar2 >> 0xdf,0) & 1) << 0x1b |
+              (uint)(SUB321(auVar2 >> 0xe7,0) & 1) << 0x1c |
+              (uint)(SUB321(auVar2 >> 0xef,0) & 1) << 0x1d |
+              (uint)(SUB321(auVar2 >> 0xf7,0) & 1) << 0x1e | (uint)(byte)(auVar2[0x1f] >> 7) << 0x1f
+             ) & (1 << (0x21U - (char)param_4 & 0x1f)) - 1U;
+    if (uVar13 == 0) {
+      auVar1[1] = uStack_df;
+      auVar1[0] = local_e0;
+      auVar1[2] = uStack_de;
+      auVar1[3] = uStack_dd;
+      auVar1[4] = uStack_dc;
+      auVar1[5] = uStack_db;
+      auVar1[6] = uStack_da;
+      auVar1[7] = uStack_d9;
+      auVar1[8] = uStack_d8;
+      auVar1[9] = uStack_d7;
+      auVar1[10] = uStack_d6;
+      auVar1[0xb] = uStack_d5;
+      auVar1[0xc] = uStack_d4;
+      auVar1[0xd] = uStack_d3;
+      auVar1[0xe] = uStack_d2;
+      auVar1[0xf] = uStack_d1;
+      auVar1[0x10] = uStack_d0;
+      auVar1[0x11] = uStack_cf;
+      auVar1[0x12] = uStack_ce;
+      auVar1[0x13] = uStack_cd;
+      auVar1[0x14] = uStack_cc;
+      auVar1[0x15] = uStack_cb;
+      auVar1[0x16] = uStack_ca;
+      auVar1[0x17] = uStack_c9;
+      auVar1[0x18] = uStack_c8;
+      auVar1[0x19] = uStack_c7;
+      auVar1[0x1a] = uStack_c6;
+      auVar1[0x1b] = uStack_c5;
+      auVar1[0x1c] = uStack_c4;
+      auVar1[0x1d] = uStack_c3;
+      auVar1[0x1e] = uStack_c2;
+      auVar1[0x1f] = uStack_c1;
+    }
+    else {
+      do {
+        pauVar11 = (undefined1 (*) [32])(*pauVar14 + (0x1fU - LZCOUNT(uVar13)));
+        memcpy(local_80,pauVar11,(longlong)local_f0 - (longlong)pauVar11);
+        auVar1 = *(undefined1 (*) [32])(&DAT_180040cf0 + lVar12);
+        if ((auVar1 & (local_a0 ^ local_80)) == (undefined1  [32])0x0) {
+          return pauVar11;
+        }
+        uVar13 = uVar13 ^ 1 << ((byte)(0x1fU - LZCOUNT(uVar13)) & 0x1f);
+      } while (uVar13 != 0);
+    }
+    uVar13 = (uint)local_100 & 0x1f;
+    while (pauVar14 != (undefined1 (*) [32])(*local_f8 + uVar13)) {
+      auVar2 = vpcmpeqb_avx2(local_c0,pauVar14[-1]);
+      pauVar14 = pauVar14 + -1;
+      for (uVar9 = (uint)(SUB321(auVar2 >> 7,0) & 1) | (uint)(SUB321(auVar2 >> 0xf,0) & 1) << 1 |
+                   (uint)(SUB321(auVar2 >> 0x17,0) & 1) << 2 |
+                   (uint)(SUB321(auVar2 >> 0x1f,0) & 1) << 3 |
+                   (uint)(SUB321(auVar2 >> 0x27,0) & 1) << 4 |
+                   (uint)(SUB321(auVar2 >> 0x2f,0) & 1) << 5 |
+                   (uint)(SUB321(auVar2 >> 0x37,0) & 1) << 6 |
+                   (uint)(SUB321(auVar2 >> 0x3f,0) & 1) << 7 |
+                   (uint)(SUB321(auVar2 >> 0x47,0) & 1) << 8 |
+                   (uint)(SUB321(auVar2 >> 0x4f,0) & 1) << 9 |
+                   (uint)(SUB321(auVar2 >> 0x57,0) & 1) << 10 |
+                   (uint)(SUB321(auVar2 >> 0x5f,0) & 1) << 0xb |
+                   (uint)(SUB321(auVar2 >> 0x67,0) & 1) << 0xc |
+                   (uint)(SUB321(auVar2 >> 0x6f,0) & 1) << 0xd |
+                   (uint)(SUB321(auVar2 >> 0x77,0) & 1) << 0xe |
+                   (uint)SUB321(auVar2 >> 0x7f,0) << 0xf |
+                   (uint)(SUB321(auVar2 >> 0x87,0) & 1) << 0x10 |
+                   (uint)(SUB321(auVar2 >> 0x8f,0) & 1) << 0x11 |
+                   (uint)(SUB321(auVar2 >> 0x97,0) & 1) << 0x12 |
+                   (uint)(SUB321(auVar2 >> 0x9f,0) & 1) << 0x13 |
+                   (uint)(SUB321(auVar2 >> 0xa7,0) & 1) << 0x14 |
+                   (uint)(SUB321(auVar2 >> 0xaf,0) & 1) << 0x15 |
+                   (uint)(SUB321(auVar2 >> 0xb7,0) & 1) << 0x16 |
+                   (uint)SUB321(auVar2 >> 0xbf,0) << 0x17 |
+                   (uint)(SUB321(auVar2 >> 199,0) & 1) << 0x18 |
+                   (uint)(SUB321(auVar2 >> 0xcf,0) & 1) << 0x19 |
+                   (uint)(SUB321(auVar2 >> 0xd7,0) & 1) << 0x1a |
+                   (uint)(SUB321(auVar2 >> 0xdf,0) & 1) << 0x1b |
+                   (uint)(SUB321(auVar2 >> 0xe7,0) & 1) << 0x1c |
+                   (uint)(SUB321(auVar2 >> 0xef,0) & 1) << 0x1d |
+                   (uint)(SUB321(auVar2 >> 0xf7,0) & 1) << 0x1e |
+                   (uint)(byte)(auVar2[0x1f] >> 7) << 0x1f; uVar9 != 0;
+          uVar9 = uVar9 ^ 1 << ((byte)(0x1fU - LZCOUNT(uVar9)) & 0x1f)) {
+        if ((auVar1 & (local_a0 ^ *(undefined1 (*) [32])(*pauVar14 + (0x1fU - LZCOUNT(uVar9))))) ==
+            (undefined1  [32])0x0) {
+          return (undefined1 (*) [32])(*pauVar14 + (0x1fU - LZCOUNT(uVar9)));
+        }
+      }
+    }
+    pauVar14 = local_f0;
+    if ((ulonglong)uVar13 != 0) {
+      auVar2 = vpcmpeqb_avx2(*local_f8,local_c0);
+      uVar9 = (uint)(SUB321(auVar2 >> 7,0) & 1) | (uint)(SUB321(auVar2 >> 0xf,0) & 1) << 1 |
+              (uint)(SUB321(auVar2 >> 0x17,0) & 1) << 2 | (uint)(SUB321(auVar2 >> 0x1f,0) & 1) << 3
+              | (uint)(SUB321(auVar2 >> 0x27,0) & 1) << 4 |
+              (uint)(SUB321(auVar2 >> 0x2f,0) & 1) << 5 | (uint)(SUB321(auVar2 >> 0x37,0) & 1) << 6
+              | (uint)(SUB321(auVar2 >> 0x3f,0) & 1) << 7 |
+              (uint)(SUB321(auVar2 >> 0x47,0) & 1) << 8 | (uint)(SUB321(auVar2 >> 0x4f,0) & 1) << 9
+              | (uint)(SUB321(auVar2 >> 0x57,0) & 1) << 10 |
+              (uint)(SUB321(auVar2 >> 0x5f,0) & 1) << 0xb |
+              (uint)(SUB321(auVar2 >> 0x67,0) & 1) << 0xc |
+              (uint)(SUB321(auVar2 >> 0x6f,0) & 1) << 0xd |
+              (uint)(SUB321(auVar2 >> 0x77,0) & 1) << 0xe | (uint)SUB321(auVar2 >> 0x7f,0) << 0xf |
+              (uint)(SUB321(auVar2 >> 0x87,0) & 1) << 0x10 |
+              (uint)(SUB321(auVar2 >> 0x8f,0) & 1) << 0x11 |
+              (uint)(SUB321(auVar2 >> 0x97,0) & 1) << 0x12 |
+              (uint)(SUB321(auVar2 >> 0x9f,0) & 1) << 0x13 |
+              (uint)(SUB321(auVar2 >> 0xa7,0) & 1) << 0x14 |
+              (uint)(SUB321(auVar2 >> 0xaf,0) & 1) << 0x15 |
+              (uint)(SUB321(auVar2 >> 0xb7,0) & 1) << 0x16 | (uint)SUB321(auVar2 >> 0xbf,0) << 0x17
+              | (uint)(SUB321(auVar2 >> 199,0) & 1) << 0x18 |
+              (uint)(SUB321(auVar2 >> 0xcf,0) & 1) << 0x19 |
+              (uint)(SUB321(auVar2 >> 0xd7,0) & 1) << 0x1a |
+              (uint)(SUB321(auVar2 >> 0xdf,0) & 1) << 0x1b |
+              (uint)(SUB321(auVar2 >> 0xe7,0) & 1) << 0x1c |
+              (uint)(SUB321(auVar2 >> 0xef,0) & 1) << 0x1d |
+              (uint)(SUB321(auVar2 >> 0xf7,0) & 1) << 0x1e | (uint)(byte)(auVar2[0x1f] >> 7) << 0x1f
+      ;
+      if ((uVar9 != 0) && (uVar9 = (1 << (sbyte)uVar13) - 1U & uVar9, uVar9 != 0)) {
+        auVar7[1] = uStack_df;
+        auVar7[0] = local_e0;
+        auVar7[2] = uStack_de;
+        auVar7[3] = uStack_dd;
+        auVar7[4] = uStack_dc;
+        auVar7[5] = uStack_db;
+        auVar7[6] = uStack_da;
+        auVar7[7] = uStack_d9;
+        auVar7[8] = uStack_d8;
+        auVar7[9] = uStack_d7;
+        auVar7[10] = uStack_d6;
+        auVar7[0xb] = uStack_d5;
+        auVar7[0xc] = uStack_d4;
+        auVar7[0xd] = uStack_d3;
+        auVar7[0xe] = uStack_d2;
+        auVar7[0xf] = uStack_d1;
+        auVar7[0x10] = uStack_d0;
+        auVar7[0x11] = uStack_cf;
+        auVar7[0x12] = uStack_ce;
+        auVar7[0x13] = uStack_cd;
+        auVar7[0x14] = uStack_cc;
+        auVar7[0x15] = uStack_cb;
+        auVar7[0x16] = uStack_ca;
+        auVar7[0x17] = uStack_c9;
+        auVar7[0x18] = uStack_c8;
+        auVar7[0x19] = uStack_c7;
+        auVar7[0x1a] = uStack_c6;
+        auVar7[0x1b] = uStack_c5;
+        auVar7[0x1c] = uStack_c4;
+        auVar7[0x1d] = uStack_c3;
+        auVar7[0x1e] = uStack_c2;
+        auVar7[0x1f] = uStack_c1;
+        do {
+          uVar13 = 0x1f - LZCOUNT(uVar9);
+          if ((auVar7 & (local_a0 ^ *(undefined1 (*) [32])(*local_f8 + uVar13))) ==
+              (undefined1  [32])0x0) {
+            return (undefined1 (*) [32])(*local_f8 + uVar13);
+          }
+          uVar9 = uVar9 ^ 1 << ((byte)uVar13 & 0x1f);
+        } while (uVar9 != 0);
+      }
+    }
+  }
+  else {
+    local_e0 = SUB321(*param_3,0);
+    pauVar14 = (undefined1 (*) [32])((longlong)param_2 - param_4);
+    uStack_df = local_e0;
+    uStack_de = local_e0;
+    uStack_dd = local_e0;
+    uStack_dc = local_e0;
+    uStack_db = local_e0;
+    uStack_da = local_e0;
+    uStack_d9 = local_e0;
+    uStack_d8 = local_e0;
+    uStack_d7 = local_e0;
+    uStack_d6 = local_e0;
+    uStack_d5 = local_e0;
+    uStack_d4 = local_e0;
+    uStack_d3 = local_e0;
+    uStack_d2 = local_e0;
+    uStack_d1 = local_e0;
+    uStack_d0 = local_e0;
+    uStack_cf = local_e0;
+    uStack_ce = local_e0;
+    uStack_cd = local_e0;
+    uStack_cc = local_e0;
+    uStack_cb = local_e0;
+    uStack_ca = local_e0;
+    uStack_c9 = local_e0;
+    uStack_c8 = local_e0;
+    uStack_c7 = local_e0;
+    uStack_c6 = local_e0;
+    uStack_c5 = local_e0;
+    uStack_c4 = local_e0;
+    uStack_c3 = local_e0;
+    uStack_c2 = local_e0;
+    uStack_c1 = local_e0;
+    if ((*param_3 != *pauVar14) ||
+       (iVar10 = memcmp(pauVar14 + 1,param_3 + 1,param_4 - 0x20), iVar10 != 0)) {
+      local_100 = (ulonglong)((int)lVar12 - (int)param_4 & 0x1f);
+      pauVar11 = (undefined1 (*) [32])(*param_1 + local_100);
+      local_e8 = pauVar11;
+      if (pauVar14 != pauVar11) {
+        do {
+          auVar2[1] = uStack_df;
+          auVar2[0] = local_e0;
+          auVar2[2] = uStack_de;
+          auVar2[3] = uStack_dd;
+          auVar2[4] = uStack_dc;
+          auVar2[5] = uStack_db;
+          auVar2[6] = uStack_da;
+          auVar2[7] = uStack_d9;
+          auVar2[8] = uStack_d8;
+          auVar2[9] = uStack_d7;
+          auVar2[10] = uStack_d6;
+          auVar2[0xb] = uStack_d5;
+          auVar2[0xc] = uStack_d4;
+          auVar2[0xd] = uStack_d3;
+          auVar2[0xe] = uStack_d2;
+          auVar2[0xf] = uStack_d1;
+          auVar2[0x10] = uStack_d0;
+          auVar2[0x11] = uStack_cf;
+          auVar2[0x12] = uStack_ce;
+          auVar2[0x13] = uStack_cd;
+          auVar2[0x14] = uStack_cc;
+          auVar2[0x15] = uStack_cb;
+          auVar2[0x16] = uStack_ca;
+          auVar2[0x17] = uStack_c9;
+          auVar2[0x18] = uStack_c8;
+          auVar2[0x19] = uStack_c7;
+          auVar2[0x1a] = uStack_c6;
+          auVar2[0x1b] = uStack_c5;
+          auVar2[0x1c] = uStack_c4;
+          auVar2[0x1d] = uStack_c3;
+          auVar2[0x1e] = uStack_c2;
+          auVar2[0x1f] = uStack_c1;
+          auVar2 = vpcmpeqb_avx2(pauVar14[-1],auVar2);
+          pauVar14 = pauVar14 + -1;
+          param_1 = local_f8;
+          for (uVar13 = (uint)(SUB321(auVar2 >> 7,0) & 1) | (uint)(SUB321(auVar2 >> 0xf,0) & 1) << 1
+                        | (uint)(SUB321(auVar2 >> 0x17,0) & 1) << 2 |
+                        (uint)(SUB321(auVar2 >> 0x1f,0) & 1) << 3 |
+                        (uint)(SUB321(auVar2 >> 0x27,0) & 1) << 4 |
+                        (uint)(SUB321(auVar2 >> 0x2f,0) & 1) << 5 |
+                        (uint)(SUB321(auVar2 >> 0x37,0) & 1) << 6 |
+                        (uint)(SUB321(auVar2 >> 0x3f,0) & 1) << 7 |
+                        (uint)(SUB321(auVar2 >> 0x47,0) & 1) << 8 |
+                        (uint)(SUB321(auVar2 >> 0x4f,0) & 1) << 9 |
+                        (uint)(SUB321(auVar2 >> 0x57,0) & 1) << 10 |
+                        (uint)(SUB321(auVar2 >> 0x5f,0) & 1) << 0xb |
+                        (uint)(SUB321(auVar2 >> 0x67,0) & 1) << 0xc |
+                        (uint)(SUB321(auVar2 >> 0x6f,0) & 1) << 0xd |
+                        (uint)(SUB321(auVar2 >> 0x77,0) & 1) << 0xe |
+                        (uint)SUB321(auVar2 >> 0x7f,0) << 0xf |
+                        (uint)(SUB321(auVar2 >> 0x87,0) & 1) << 0x10 |
+                        (uint)(SUB321(auVar2 >> 0x8f,0) & 1) << 0x11 |
+                        (uint)(SUB321(auVar2 >> 0x97,0) & 1) << 0x12 |
+                        (uint)(SUB321(auVar2 >> 0x9f,0) & 1) << 0x13 |
+                        (uint)(SUB321(auVar2 >> 0xa7,0) & 1) << 0x14 |
+                        (uint)(SUB321(auVar2 >> 0xaf,0) & 1) << 0x15 |
+                        (uint)(SUB321(auVar2 >> 0xb7,0) & 1) << 0x16 |
+                        (uint)SUB321(auVar2 >> 0xbf,0) << 0x17 |
+                        (uint)(SUB321(auVar2 >> 199,0) & 1) << 0x18 |
+                        (uint)(SUB321(auVar2 >> 0xcf,0) & 1) << 0x19 |
+                        (uint)(SUB321(auVar2 >> 0xd7,0) & 1) << 0x1a |
+                        (uint)(SUB321(auVar2 >> 0xdf,0) & 1) << 0x1b |
+                        (uint)(SUB321(auVar2 >> 0xe7,0) & 1) << 0x1c |
+                        (uint)(SUB321(auVar2 >> 0xef,0) & 1) << 0x1d |
+                        (uint)(SUB321(auVar2 >> 0xf7,0) & 1) << 0x1e |
+                        (uint)(byte)(auVar2[0x1f] >> 7) << 0x1f; local_f8 = param_1, uVar13 != 0;
+              uVar13 = uVar13 ^ 1 << ((byte)uVar9 & 0x1f)) {
+            uVar9 = 0x1f - LZCOUNT(uVar13);
+            if ((*(undefined1 (*) [32])(*pauVar14 + uVar9) == *param_3) &&
+               (iVar10 = memcmp((undefined1 (*) [32])(*pauVar14 + uVar9) + 1,param_3 + 1,
+                                param_4 - 0x20), iVar10 == 0)) {
+              return (undefined1 (*) [32])(*pauVar14 + uVar9);
+            }
+            pauVar11 = local_e8;
+            param_1 = local_f8;
+          }
+        } while (pauVar14 != pauVar11);
+      }
+      pauVar14 = local_f0;
+      if (local_100 != 0) {
+        auVar8[1] = uStack_df;
+        auVar8[0] = local_e0;
+        auVar8[2] = uStack_de;
+        auVar8[3] = uStack_dd;
+        auVar8[4] = uStack_dc;
+        auVar8[5] = uStack_db;
+        auVar8[6] = uStack_da;
+        auVar8[7] = uStack_d9;
+        auVar8[8] = uStack_d8;
+        auVar8[9] = uStack_d7;
+        auVar8[10] = uStack_d6;
+        auVar8[0xb] = uStack_d5;
+        auVar8[0xc] = uStack_d4;
+        auVar8[0xd] = uStack_d3;
+        auVar8[0xe] = uStack_d2;
+        auVar8[0xf] = uStack_d1;
+        auVar8[0x10] = uStack_d0;
+        auVar8[0x11] = uStack_cf;
+        auVar8[0x12] = uStack_ce;
+        auVar8[0x13] = uStack_cd;
+        auVar8[0x14] = uStack_cc;
+        auVar8[0x15] = uStack_cb;
+        auVar8[0x16] = uStack_ca;
+        auVar8[0x17] = uStack_c9;
+        auVar8[0x18] = uStack_c8;
+        auVar8[0x19] = uStack_c7;
+        auVar8[0x1a] = uStack_c6;
+        auVar8[0x1b] = uStack_c5;
+        auVar8[0x1c] = uStack_c4;
+        auVar8[0x1d] = uStack_c3;
+        auVar8[0x1e] = uStack_c2;
+        auVar8[0x1f] = uStack_c1;
+        auVar2 = vpcmpeqb_avx2(*param_1,auVar8);
+        uVar13 = (uint)(SUB321(auVar2 >> 7,0) & 1) | (uint)(SUB321(auVar2 >> 0xf,0) & 1) << 1 |
+                 (uint)(SUB321(auVar2 >> 0x17,0) & 1) << 2 |
+                 (uint)(SUB321(auVar2 >> 0x1f,0) & 1) << 3 |
+                 (uint)(SUB321(auVar2 >> 0x27,0) & 1) << 4 |
+                 (uint)(SUB321(auVar2 >> 0x2f,0) & 1) << 5 |
+                 (uint)(SUB321(auVar2 >> 0x37,0) & 1) << 6 |
+                 (uint)(SUB321(auVar2 >> 0x3f,0) & 1) << 7 |
+                 (uint)(SUB321(auVar2 >> 0x47,0) & 1) << 8 |
+                 (uint)(SUB321(auVar2 >> 0x4f,0) & 1) << 9 |
+                 (uint)(SUB321(auVar2 >> 0x57,0) & 1) << 10 |
+                 (uint)(SUB321(auVar2 >> 0x5f,0) & 1) << 0xb |
+                 (uint)(SUB321(auVar2 >> 0x67,0) & 1) << 0xc |
+                 (uint)(SUB321(auVar2 >> 0x6f,0) & 1) << 0xd |
+                 (uint)(SUB321(auVar2 >> 0x77,0) & 1) << 0xe | (uint)SUB321(auVar2 >> 0x7f,0) << 0xf
+                 | (uint)(SUB321(auVar2 >> 0x87,0) & 1) << 0x10 |
+                 (uint)(SUB321(auVar2 >> 0x8f,0) & 1) << 0x11 |
+                 (uint)(SUB321(auVar2 >> 0x97,0) & 1) << 0x12 |
+                 (uint)(SUB321(auVar2 >> 0x9f,0) & 1) << 0x13 |
+                 (uint)(SUB321(auVar2 >> 0xa7,0) & 1) << 0x14 |
+                 (uint)(SUB321(auVar2 >> 0xaf,0) & 1) << 0x15 |
+                 (uint)(SUB321(auVar2 >> 0xb7,0) & 1) << 0x16 |
+                 (uint)SUB321(auVar2 >> 0xbf,0) << 0x17 |
+                 (uint)(SUB321(auVar2 >> 199,0) & 1) << 0x18 |
+                 (uint)(SUB321(auVar2 >> 0xcf,0) & 1) << 0x19 |
+                 (uint)(SUB321(auVar2 >> 0xd7,0) & 1) << 0x1a |
+                 (uint)(SUB321(auVar2 >> 0xdf,0) & 1) << 0x1b |
+                 (uint)(SUB321(auVar2 >> 0xe7,0) & 1) << 0x1c |
+                 (uint)(SUB321(auVar2 >> 0xef,0) & 1) << 0x1d |
+                 (uint)(SUB321(auVar2 >> 0xf7,0) & 1) << 0x1e |
+                 (uint)(byte)(auVar2[0x1f] >> 7) << 0x1f;
+        if (uVar13 != 0) {
+          for (uVar13 = (1 << ((byte)local_100 & 0x1f)) - 1U & uVar13; pauVar14 = local_f0,
+              uVar13 != 0; uVar13 = uVar13 ^ 1 << ((byte)(0x1fU - LZCOUNT(uVar13)) & 0x1f)) {
+            pauVar14 = (undefined1 (*) [32])(*param_1 + (0x1fU - LZCOUNT(uVar13)));
+            if ((*pauVar14 == *param_3) &&
+               (iVar10 = memcmp(pauVar14 + 1,param_3 + 1,param_4 - 0x20), iVar10 == 0)) {
+              return pauVar14;
+            }
+            param_1 = local_f8;
+          }
+        }
+      }
+    }
+  }
+  return pauVar14;
+}
+
+

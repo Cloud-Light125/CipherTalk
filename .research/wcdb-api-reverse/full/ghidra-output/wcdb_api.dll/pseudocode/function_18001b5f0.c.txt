@@ -1,0 +1,18 @@
+/* 18001b5f0 FUN_18001b5f0 */
+
+LPSTR FUN_18001b5f0(LPSTR param_1,undefined8 *param_2)
+
+{
+  undefined8 *local_18;
+  undefined8 local_10;
+  
+  local_18 = param_2;
+  if (7 < (ulonglong)param_2[3]) {
+    local_18 = (undefined8 *)*param_2;
+  }
+  local_10 = param_2[2];
+  FUN_180002570(param_1,0xfde9,&local_18);
+  return param_1;
+}
+
+

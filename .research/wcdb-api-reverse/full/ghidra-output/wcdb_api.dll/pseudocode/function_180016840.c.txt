@@ -1,0 +1,123 @@
+/* 180016840 FUN_180016840 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+uint * FUN_180016840(uint *param_1)
+
+{
+  code *pcVar1;
+  wchar_t *_Str;
+  size_t sVar2;
+  void *pvVar3;
+  undefined1 *puVar4;
+  undefined1 *puVar5;
+  undefined8 uStack_f0;
+  undefined1 auStack_e8 [8];
+  undefined1 auStack_e0 [24];
+  uint *local_c8;
+  undefined8 local_b8;
+  undefined **ppuStack_b0;
+  undefined8 local_a8;
+  ulonglong local_a0;
+  void *local_98;
+  undefined8 uStack_90;
+  undefined8 local_88;
+  ulonglong local_80;
+  void *local_78;
+  undefined8 uStack_70;
+  undefined8 local_68;
+  ulonglong local_60;
+  uint local_58 [8];
+  ulonglong local_38;
+  
+  puVar5 = auStack_e8;
+  local_38 = DAT_18004b4c0 ^ (ulonglong)auStack_e8;
+  local_c8 = param_1;
+  _Str = _wgetenv(L"LOCALAPPDATA");
+  if ((((_Str != (wchar_t *)0x0) && (*_Str != L'\0')) ||
+      (_Str = _wgetenv(L"APPDATA"), puVar4 = auStack_e8, _Str != (wchar_t *)0x0)) &&
+     (puVar4 = auStack_e8, *_Str != L'\0')) {
+    local_b8 = (void *)((ulonglong)local_b8._4_4_ << 0x20);
+    ppuStack_b0 = &PTR_vftable_18004b178;
+    local_78 = (void *)0x0;
+    uStack_70 = 0;
+    local_68 = 0;
+    local_60 = 0;
+    FUN_180002440(&local_78,L"WCDBApi",7);
+    sVar2 = wcslen(_Str);
+    local_98 = (void *)0x0;
+    uStack_90 = 0;
+    local_88 = 0;
+    local_80 = 0;
+    FUN_180002440(&local_98,_Str,sVar2);
+    FUN_18000a0f0(local_58,(uint *)&local_98,(uint *)&local_78);
+    if (local_80 < 8) {
+LAB_180016955:
+      local_88 = 0;
+      local_80 = 7;
+      local_98 = (void *)((ulonglong)local_98 & 0xffffffffffff0000);
+      if (7 < local_60) {
+        pvVar3 = local_78;
+        if ((0xfff < local_60 * 2 + 2) &&
+           (pvVar3 = *(void **)((longlong)local_78 + -8), puVar4 = auStack_e8,
+           0x1f < (ulonglong)((longlong)local_78 + (-8 - (longlong)pvVar3)))) goto LAB_180016a5f;
+        free(pvVar3);
+      }
+      local_68 = 0;
+      local_60 = 7;
+      local_78 = (void *)((ulonglong)local_78 & 0xffffffffffff0000);
+      FUN_18000ea30(local_58,(uint *)&local_b8);
+      local_b8 = (void *)0x0;
+      ppuStack_b0 = (undefined **)0x0;
+      local_a8 = 0;
+      local_a0 = 0;
+      FUN_180002440(&local_b8,L".wcdbts",7);
+      FUN_18000a0f0(param_1,local_58,(uint *)&local_b8);
+      if (7 < local_a0) {
+        pvVar3 = local_b8;
+        if ((0xfff < local_a0 * 2 + 2) &&
+           (pvVar3 = *(void **)((longlong)local_b8 + -8), puVar4 = auStack_e8,
+           0x1f < (ulonglong)((longlong)local_b8 + (-8 - (longlong)pvVar3)))) goto LAB_180016a5f;
+        free(pvVar3);
+      }
+      local_a8 = 0;
+      local_a0 = 7;
+      local_b8 = (void *)((ulonglong)local_b8 & 0xffffffffffff0000);
+      FUN_18000d0e0((longlong *)local_58);
+      goto LAB_180016a7f;
+    }
+    pvVar3 = local_98;
+    if ((local_80 * 2 + 2 < 0x1000) ||
+       (pvVar3 = *(void **)((longlong)local_98 + -8),
+       (ulonglong)((longlong)local_98 + (-8 - (longlong)pvVar3)) < 0x20)) {
+      free(pvVar3);
+      goto LAB_180016955;
+    }
+    pcVar1 = (code *)swi(0x29);
+    (*pcVar1)(5);
+    puVar4 = auStack_e0;
+LAB_180016a5f:
+    pcVar1 = (code *)swi(0x29);
+    (*pcVar1)(5);
+    puVar4 = puVar4 + 8;
+  }
+  puVar5 = puVar4;
+  param_1[4] = 0;
+  param_1[5] = 0;
+  param_1[6] = 0;
+  param_1[7] = 0;
+  param_1[0] = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  param_1[4] = 0;
+  param_1[5] = 0;
+  param_1[6] = 7;
+  param_1[7] = 0;
+  *(undefined2 *)param_1 = 0;
+LAB_180016a7f:
+  *(undefined8 *)(puVar5 + -8) = 0x180016a8e;
+  return param_1;
+}
+
+

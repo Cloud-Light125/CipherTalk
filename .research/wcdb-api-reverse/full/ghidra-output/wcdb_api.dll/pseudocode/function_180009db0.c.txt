@@ -1,0 +1,23 @@
+/* 180009db0 FUN_180009db0 */
+
+void FUN_180009db0(longlong *param_1)
+
+{
+  bool bVar1;
+  basic_streambuf<char,std::char_traits<char>_> *pbVar2;
+  
+  bVar1 = std::uncaught_exception();
+  if (!bVar1) {
+    std::basic_ostream<char,std::char_traits<char>_>::_Osfx
+              ((basic_ostream<char,std::char_traits<char>_> *)*param_1);
+  }
+  pbVar2 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                     ((basic_ios<char,std::char_traits<char>_> *)
+                      ((longlong)*(int *)(*(longlong *)*param_1 + 4) + *param_1));
+  if (pbVar2 != (basic_streambuf<char,std::char_traits<char>_> *)0x0) {
+    (**(code **)(*(longlong *)pbVar2 + 0x10))(pbVar2);
+  }
+  return;
+}
+
+

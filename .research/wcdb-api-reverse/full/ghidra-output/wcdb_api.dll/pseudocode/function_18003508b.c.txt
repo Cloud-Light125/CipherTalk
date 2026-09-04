@@ -1,0 +1,12 @@
+/* 18003508b setReadOnly */
+
+void __thiscall WCDB::InnerDatabase::setReadOnly(InnerDatabase *this)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x00018003508b. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  setReadOnly(this);
+  return;
+}
+
+

@@ -1,0 +1,14 @@
+/* 18003728c _Fiopen */
+
+_iobuf * __cdecl std::_Fiopen(wchar_t *param_1,int param_2,int param_3)
+
+{
+  _iobuf *p_Var1;
+  
+                    /* WARNING: Could not recover jumptable at 0x00018003728c. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  p_Var1 = _Fiopen(param_1,param_2,param_3);
+  return p_Var1;
+}
+
+

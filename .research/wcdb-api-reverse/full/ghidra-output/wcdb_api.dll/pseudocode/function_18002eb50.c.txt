@@ -1,0 +1,52 @@
+/* 18002eb50 FUN_18002eb50 */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_18002eb50(void)
+
+{
+  int iVar1;
+  undefined8 *puVar2;
+  
+  iVar1 = _Mtx_lock(&DAT_18004b1b0);
+  if (iVar1 != 0) {
+                    /* WARNING: Subroutine does not return */
+    std::_Throw_Cpp_error(5);
+  }
+  if (DAT_18004b1fc != 0x7fffffff) {
+    DAT_18004b200 = 0;
+    DAT_18004b258 = 0;
+    puVar2 = &DAT_18004b248;
+    if (0xf < DAT_18004b260) {
+      puVar2 = DAT_18004b248;
+    }
+    *(undefined1 *)puVar2 = 0;
+    DAT_18004b298 = 0;
+    puVar2 = &DAT_18004b288;
+    if (0xf < DAT_18004b2a0) {
+      puVar2 = DAT_18004b288;
+    }
+    *(undefined1 *)puVar2 = 0;
+    DAT_18004b2a8 = 0;
+    if (DAT_18004b448 != '\0') {
+      FUN_1800298c0(0x18004b2b0);
+      DAT_18004b448 = '\0';
+    }
+    _DAT_18004b460 = 0;
+    puVar2 = &DAT_18004b450;
+    if (0xf < DAT_18004b468) {
+      puVar2 = DAT_18004b450;
+    }
+    *(undefined1 *)puVar2 = 0;
+    DAT_18004b470 = 0;
+    DAT_18004b478 = 0;
+    DAT_18004b480 = 0;
+    _Mtx_unlock(&DAT_18004b1b0);
+    return;
+  }
+  DAT_18004b1fc = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+  std::_Throw_Cpp_error(6);
+}
+
+

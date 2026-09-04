@@ -1,0 +1,13 @@
+/* 180011150 FUN_180011150 */
+
+longlong FUN_180011150(longlong param_1)
+
+{
+  longlong *plVar1;
+  longlong local_res8 [4];
+  
+  plVar1 = FUN_1800193e0(local_res8);
+  return (*plVar1 - param_1) / 1000000;
+}
+
+

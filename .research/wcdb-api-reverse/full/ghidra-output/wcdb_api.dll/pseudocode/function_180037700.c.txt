@@ -1,0 +1,23 @@
+/* 180037700 FUN_180037700 */
+
+undefined8 FUN_180037700(char param_1)
+
+{
+  undefined8 uVar1;
+  bool bVar2;
+  undefined7 extraout_var;
+  undefined8 uVar3;
+  
+  bVar2 = FUN_180038130();
+  uVar1 = DAT_18004bd00;
+  uVar3 = CONCAT71(extraout_var,bVar2);
+  if (((int)uVar3 != 0) && (param_1 == '\0')) {
+    LOCK();
+    DAT_18004bd00 = 0;
+    UNLOCK();
+    uVar3 = uVar1;
+  }
+  return uVar3;
+}
+
+

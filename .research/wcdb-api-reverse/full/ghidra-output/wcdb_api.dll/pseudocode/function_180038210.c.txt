@@ -1,0 +1,12 @@
+/* 180038210 FUN_180038210 */
+
+undefined8 FUN_180038210(HMODULE param_1,int param_2)
+
+{
+  if (param_2 == 1) {
+    DisableThreadLibraryCalls(param_1);
+  }
+  return 1;
+}
+
+

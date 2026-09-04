@@ -1,0 +1,15 @@
+/* 180038270 FUN_180038270 */
+
+void FUN_180038270(void)
+
+{
+  ulonglong *puVar1;
+  
+  puVar1 = (ulonglong *)FUN_180031cc0();
+  *puVar1 = *puVar1 | 0x24;
+  puVar1 = (ulonglong *)FUN_180038260();
+  *puVar1 = *puVar1 | 2;
+  return;
+}
+
+

@@ -1,0 +1,88 @@
+/* 180018260 FUN_180018260 */
+
+void FUN_180018260(undefined8 *param_1)
+
+{
+  void *pvVar1;
+  code *pcVar2;
+  undefined4 uVar3;
+  undefined4 uVar4;
+  longlong *plVar5;
+  longlong *plVar6;
+  longlong *plVar7;
+  longlong lVar8;
+  int iVar9;
+  undefined1 *puVar10;
+  longlong *plVar11;
+  void *_Memory;
+  undefined1 auStack_58 [8];
+  undefined1 auStack_50 [32];
+  
+  puVar10 = auStack_58;
+  iVar9 = _Mtx_lock(&DAT_18004b000);
+  plVar11 = DAT_18004bc98;
+  if (iVar9 != 0) {
+                    /* WARNING: Subroutine does not return */
+    std::_Throw_Cpp_error(5);
+  }
+  if (DAT_18004b04c == 0x7fffffff) {
+    DAT_18004b04c = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+    std::_Throw_Cpp_error(6);
+  }
+  plVar6 = DAT_18004bc90;
+  plVar7 = DAT_18004bc90;
+  if (0x18ff < (ulonglong)((longlong)DAT_18004bc98 - (longlong)DAT_18004bc90)) {
+    while (plVar5 = plVar7 + 4, plVar5 != plVar11) {
+      if (plVar6 != plVar5) {
+        if (0xf < (ulonglong)plVar6[3]) {
+          pvVar1 = (void *)*plVar6;
+          _Memory = pvVar1;
+          if ((0xfff < plVar6[3] + 1U) &&
+             (_Memory = *(void **)((longlong)pvVar1 + -8),
+             0x1f < (ulonglong)((longlong)pvVar1 + (-8 - (longlong)_Memory)))) {
+            pcVar2 = (code *)swi(0x29);
+            (*pcVar2)(5);
+            puVar10 = auStack_50;
+            goto LAB_180018398;
+          }
+          free(_Memory);
+        }
+        plVar6[2] = 0;
+        plVar6[3] = 0xf;
+        *(undefined1 *)plVar6 = 0;
+        uVar3 = *(undefined4 *)((longlong)plVar7 + 0x24);
+        lVar8 = plVar5[1];
+        uVar4 = *(undefined4 *)((longlong)plVar7 + 0x2c);
+        *(int *)plVar6 = (int)*plVar5;
+        *(undefined4 *)((longlong)plVar6 + 4) = uVar3;
+        *(int *)(plVar6 + 1) = (int)lVar8;
+        *(undefined4 *)((longlong)plVar6 + 0xc) = uVar4;
+        lVar8 = plVar5[3];
+        plVar6[2] = plVar5[2];
+        plVar6[3] = lVar8;
+        plVar5[2] = 0;
+        plVar5[3] = 0xf;
+        *(undefined1 *)plVar5 = 0;
+      }
+      plVar6 = plVar6 + 4;
+      plVar7 = plVar5;
+    }
+    FUN_18000d070(DAT_18004bc98 + -4);
+    DAT_18004bc98 = DAT_18004bc98 + -4;
+  }
+  plVar11 = DAT_18004bc98;
+  if (DAT_18004bc98 == DAT_18004bca0) {
+LAB_180018398:
+    *(undefined8 *)(puVar10 + -8) = 0x1800183aa;
+    FUN_180002aa0((longlong *)&DAT_18004bc90,plVar11,param_1);
+  }
+  else {
+    FUN_180007c00(DAT_18004bc98,param_1);
+    DAT_18004bc98 = DAT_18004bc98 + 4;
+  }
+  _Mtx_unlock(&DAT_18004b000);
+  return;
+}
+
+

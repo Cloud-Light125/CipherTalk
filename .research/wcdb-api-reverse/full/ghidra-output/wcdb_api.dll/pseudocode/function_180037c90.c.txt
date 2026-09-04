@@ -1,0 +1,39 @@
+/* 180037c90 FUN_180037c90 */
+
+/* WARNING: Function: _guard_dispatch_icall replaced with injection: guard_dispatch_icall */
+/* WARNING: Removing unreachable block (ram,0x000180037d59) */
+/* WARNING: Removing unreachable block (ram,0x000180037cea) */
+/* WARNING: Removing unreachable block (ram,0x000180037d9a) */
+
+ulonglong FUN_180037c90(HMODULE param_1,int param_2,longlong param_3)
+
+{
+  ulonglong uVar1;
+  ulonglong uVar2;
+  
+  if ((param_2 == 0) && (DAT_18004bd40 < 1)) {
+    return 0;
+  }
+  if (param_2 - 1U < 2) {
+    uVar1 = FUN_180037a80(param_1,param_2,param_3);
+    if ((int)uVar1 == 0) {
+      return uVar1 & 0xffffffff;
+    }
+  }
+  uVar1 = FUN_180038210(param_1,param_2);
+  uVar2 = uVar1 & 0xffffffff;
+  if ((param_2 == 1) && ((int)uVar1 == 0)) {
+    FUN_180038210(param_1,0);
+    FUN_180037bf0(param_3 != 0);
+  }
+  if ((param_2 == 0) || (param_2 == 3)) {
+    uVar1 = FUN_180037a80(param_1,param_2,param_3);
+    uVar2 = uVar1 & 0xffffffff;
+    if ((int)uVar1 != 0) {
+      uVar2 = 1;
+    }
+  }
+  return uVar2;
+}
+
+

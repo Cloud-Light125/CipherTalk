@@ -1,0 +1,10 @@
+/* 18002eca0 FUN_18002eca0 */
+
+void FUN_18002eca0(void *param_1)
+
+{
+  FUN_18002ed10("ciphertalk","desktop",param_1);
+  return;
+}
+
+

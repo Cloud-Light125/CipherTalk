@@ -1,0 +1,40 @@
+/* 18000b930 FUN_18000b930 */
+
+void FUN_18000b930(longlong *param_1,longlong param_2,longlong param_3,longlong param_4)
+
+{
+  longlong *plVar1;
+  void *pvVar2;
+  code *pcVar3;
+  void *_Memory;
+  longlong *plVar4;
+  undefined1 *puVar5;
+  undefined1 auStack_38 [8];
+  undefined1 auStack_30 [24];
+  
+  plVar4 = (longlong *)*param_1;
+  if (plVar4 != (longlong *)0x0) {
+    plVar1 = (longlong *)param_1[1];
+    for (; plVar4 != plVar1; plVar4 = plVar4 + 4) {
+      FUN_18000d0e0(plVar4);
+    }
+    pvVar2 = (void *)*param_1;
+    _Memory = pvVar2;
+    puVar5 = auStack_38;
+    if ((0xfff < (param_1[2] - (longlong)pvVar2 & 0xffffffffffffffe0U)) &&
+       (_Memory = *(void **)((longlong)pvVar2 + -8), puVar5 = auStack_38,
+       0x1f < (ulonglong)((longlong)pvVar2 + (-8 - (longlong)_Memory)))) {
+      pcVar3 = (code *)swi(0x29);
+      _Memory = (void *)(*pcVar3)(5);
+      puVar5 = auStack_30;
+    }
+    *(undefined8 *)(puVar5 + -8) = 0x18000b9b8;
+    free(_Memory);
+  }
+  *param_1 = param_2;
+  param_1[1] = param_3 * 0x20 + param_2;
+  param_1[2] = param_4 * 0x20 + param_2;
+  return;
+}
+
+

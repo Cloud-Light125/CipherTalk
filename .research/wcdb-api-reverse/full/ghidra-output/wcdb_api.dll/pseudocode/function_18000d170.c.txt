@@ -1,0 +1,10 @@
+/* 18000d170 FUN_18000d170 */
+
+void FUN_18000d170(void)
+
+{
+                    /* WARNING: Subroutine does not return */
+  std::_Xlength_error("string too long");
+}
+
+

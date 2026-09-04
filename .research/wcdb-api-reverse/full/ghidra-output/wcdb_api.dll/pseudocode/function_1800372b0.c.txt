@@ -1,0 +1,14 @@
+/* 1800372b0 _Unlock */
+
+void __thiscall
+std::basic_streambuf<char,std::char_traits<char>_>::_Unlock
+          (basic_streambuf<char,std::char_traits<char>_> *this)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x0001800372b0. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  _Unlock(this);
+  return;
+}
+
+

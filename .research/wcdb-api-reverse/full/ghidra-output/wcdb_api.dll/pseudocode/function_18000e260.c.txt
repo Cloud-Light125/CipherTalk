@@ -1,0 +1,327 @@
+/* 18000e260 FUN_18000e260 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+longlong * FUN_18000e260(longlong *param_1,InnerHandle *param_2,int param_3)
+
+{
+  int iVar1;
+  undefined8 uVar2;
+  code *pcVar3;
+  double dVar4;
+  undefined4 uVar5;
+  undefined4 uVar6;
+  undefined4 uVar7;
+  longlong lVar8;
+  char cVar9;
+  ColumnType CVar10;
+  uchar *puVar11;
+  longlong *plVar12;
+  __uint64 _Var13;
+  char *pcVar14;
+  undefined1 *puVar15;
+  undefined8 *puVar16;
+  ulonglong uVar17;
+  void *pvVar18;
+  void *pvVar19;
+  undefined1 *puVar20;
+  undefined1 *puVar21;
+  undefined1 *puVar22;
+  InnerHandle *_Src;
+  InnerHandle *_Size;
+  undefined8 uStackY_1e0;
+  undefined1 auStackY_1d8 [8];
+  undefined1 auStackY_1d0 [24];
+  size_t local_1b0;
+  undefined4 local_1a8 [2];
+  longlong local_1a0 [4];
+  longlong *aplStack_180 [2];
+  undefined8 local_170;
+  ulonglong local_168;
+  longlong alStack_160 [4];
+  int iStack_13c;
+  undefined *local_138;
+  undefined **local_130;
+  basic_ostream<char,std::char_traits<char>_> local_128 [96];
+  undefined8 local_c8;
+  undefined4 local_c0;
+  basic_ios<char,std::char_traits<char>_> local_b0 [104];
+  ulonglong local_48;
+  
+  puVar20 = auStackY_1d8;
+  puVar22 = auStackY_1d8;
+  puVar21 = auStackY_1d8;
+  local_48 = DAT_18004b4c0 ^ (ulonglong)auStackY_1d8;
+  _Size = (InnerHandle *)0x0;
+  aplStack_180[0] = param_1;
+  CVar10 = WCDB::InnerHandle::getColumnType(param_2,param_3);
+  cVar9 = (char)CVar10;
+  if (cVar9 == '\0') {
+    *param_1 = 0;
+    param_1[1] = 0;
+    param_1[2] = 4;
+    param_1[3] = 0xf;
+    *(undefined4 *)param_1 = 0x6c6c756e;
+    *(undefined1 *)((longlong)param_1 + 4) = 0;
+    goto LAB_18000e7f7;
+  }
+  if (cVar9 == '\x01') {
+    uVar17 = WCDB::InnerHandle::getInteger(param_2,param_3);
+    FUN_180020570(param_1,uVar17);
+    puVar21 = auStackY_1d8;
+    goto LAB_18000e7f7;
+  }
+  if (cVar9 != '\x02') {
+    puVar21 = auStackY_1d8;
+    if ((cVar9 != '\x03') && (puVar21 = auStackY_1d8, cVar9 == '\x04')) {
+      WCDB::InnerHandle::getBLOB(param_2,(int)&local_138);
+      param_2 = (InnerHandle *)WCDB::UnsafeData::size((UnsafeData *)&local_138);
+      puVar11 = WCDB::UnsafeData::buffer((UnsafeData *)&local_138);
+      plVar12 = FUN_18000def0((longlong *)aplStack_180,(longlong)puVar11,(ulonglong)param_2);
+      plVar12 = FUN_1800017f0(local_1a0,"\"",(char *)plVar12);
+      uVar17 = plVar12[2];
+      if (plVar12[3] == uVar17) {
+        plVar12 = FUN_180006110(plVar12,1,0,&DAT_18003cebc,1);
+      }
+      else {
+        plVar12[2] = uVar17 + 1;
+        if ((ulonglong)plVar12[3] < 0x10) {
+          *(undefined2 *)((longlong)plVar12 + uVar17) = 0x22;
+        }
+        else {
+          *(undefined2 *)(*plVar12 + uVar17) = 0x22;
+        }
+      }
+      *param_1 = 0;
+      param_1[1] = 0;
+      param_1[2] = 0;
+      param_1[3] = 0;
+      uVar5 = *(undefined4 *)((longlong)plVar12 + 4);
+      lVar8 = plVar12[1];
+      uVar6 = *(undefined4 *)((longlong)plVar12 + 0xc);
+      *(int *)param_1 = (int)*plVar12;
+      *(undefined4 *)((longlong)param_1 + 4) = uVar5;
+      *(int *)(param_1 + 1) = (int)lVar8;
+      *(undefined4 *)((longlong)param_1 + 0xc) = uVar6;
+      uVar5 = *(undefined4 *)((longlong)plVar12 + 0x14);
+      lVar8 = plVar12[3];
+      uVar6 = *(undefined4 *)((longlong)plVar12 + 0x1c);
+      *(int *)(param_1 + 2) = (int)plVar12[2];
+      *(undefined4 *)((longlong)param_1 + 0x14) = uVar5;
+      *(int *)(param_1 + 3) = (int)lVar8;
+      *(undefined4 *)((longlong)param_1 + 0x1c) = uVar6;
+      plVar12[2] = 0;
+      plVar12[3] = 0xf;
+      *(undefined1 *)plVar12 = 0;
+      if ((ulonglong)local_1a0[3] < 0x10) {
+LAB_18000e3e3:
+        local_1a0[2] = 0;
+        local_1a0[3] = 0xf;
+        local_1a0[0]._0_1_ = 0;
+        if (0xf < local_168) {
+          plVar12 = aplStack_180[0];
+          if ((0xfff < local_168 + 1) &&
+             (plVar12 = (longlong *)aplStack_180[0][-1],
+             0x1f < (ulonglong)((longlong)aplStack_180[0] + (-8 - (longlong)plVar12))))
+          goto LAB_18000e457;
+          free(plVar12);
+        }
+        local_170 = 0;
+        local_168 = 0xf;
+        aplStack_180[0] = (longlong *)((ulonglong)aplStack_180[0] & 0xffffffffffffff00);
+        WCDB::UnsafeData::~UnsafeData((UnsafeData *)&local_138);
+        puVar21 = auStackY_1d8;
+        goto LAB_18000e7f7;
+      }
+      pvVar19 = (void *)CONCAT71(local_1a0[0]._1_7_,(undefined1)local_1a0[0]);
+      pvVar18 = pvVar19;
+      if ((local_1a0[3] + 1U < 0x1000) ||
+         (pvVar18 = *(void **)((longlong)pvVar19 + -8),
+         (ulonglong)((longlong)pvVar19 + (-8 - (longlong)pvVar18)) < 0x20)) {
+        free(pvVar18);
+        goto LAB_18000e3e3;
+      }
+      pcVar3 = (code *)swi(0x29);
+      (*pcVar3)(5);
+      puVar20 = auStackY_1d0;
+LAB_18000e457:
+      pcVar3 = (code *)swi(0x29);
+      (*pcVar3)(5);
+      puVar21 = puVar20 + 8;
+    }
+    *(undefined8 *)(puVar21 + -8) = 0x18000e46e;
+    WCDB::InnerHandle::getText(param_2,(int)(puVar21 + 0x58));
+    *(undefined8 *)(puVar21 + -8) = 0x18000e479;
+    _Var13 = WCDB::UnsafeStringView::length((UnsafeStringView *)(puVar21 + 0x58));
+    *(undefined8 *)(puVar21 + -8) = 0x18000e486;
+    pcVar14 = WCDB::UnsafeStringView::data((UnsafeStringView *)(puVar21 + 0x58));
+    *(undefined8 *)(puVar21 + -8) = 0x18000e496;
+    param_2 = (InnerHandle *)FUN_1800176b0((longlong *)(puVar21 + 0x78),(longlong)pcVar14,_Var13);
+    uVar17 = *(ulonglong *)(param_2 + 0x10);
+    if (*(ulonglong *)(param_2 + 0x18) == uVar17) {
+      *(undefined8 *)(puVar21 + 0x28) = 1;
+      *(undefined2 **)(puVar21 + 0x20) = &DAT_18003cebc;
+      *(undefined8 *)(puVar21 + -8) = 0x18000e554;
+      param_2 = (InnerHandle *)
+                FUN_1800062a0((undefined8 *)param_2,1,0,0,*(void **)(puVar21 + 0x20),
+                              *(size_t *)(puVar21 + 0x28));
+    }
+    else {
+      *(ulonglong *)(param_2 + 0x10) = uVar17 + 1;
+      _Src = param_2;
+      if (0xf < *(ulonglong *)(param_2 + 0x18)) {
+        _Src = *(InnerHandle **)param_2;
+      }
+      if (((InnerHandle *)&DAT_18003cebc < _Src) || (_Src + uVar17 < (InnerHandle *)&DAT_18003cebc))
+      {
+        _Size = (InnerHandle *)0x1;
+      }
+      else if ((InnerHandle *)&DAT_18003cebc < _Src) {
+        _Size = _Src + -0x18003cebc;
+      }
+      *(undefined8 *)(puVar21 + -8) = 0x18000e503;
+      memmove(_Src + 1,_Src,uVar17 + 1);
+      *(undefined8 *)(puVar21 + -8) = 0x18000e511;
+      memcpy(_Src,&DAT_18003cebc,(size_t)_Size);
+      *(undefined8 *)(puVar21 + -8) = 0x18000e52a;
+      memcpy(_Size + (longlong)_Src,_Size + 0x18003cebd,1 - (longlong)_Size);
+    }
+    param_3 = -0x7ffc3144;
+    *(undefined8 *)(puVar21 + 0x38) = 0;
+    *(undefined8 *)(puVar21 + 0x40) = 0;
+    *(undefined8 *)(puVar21 + 0x48) = 0;
+    *(undefined8 *)(puVar21 + 0x50) = 0;
+    lVar8 = *(longlong *)(param_2 + 8);
+    *(longlong *)(puVar21 + 0x38) = *(longlong *)param_2;
+    *(longlong *)(puVar21 + 0x40) = lVar8;
+    lVar8 = *(longlong *)(param_2 + 0x18);
+    *(longlong *)(puVar21 + 0x48) = *(longlong *)(param_2 + 0x10);
+    *(longlong *)(puVar21 + 0x50) = lVar8;
+    *(longlong *)(param_2 + 0x10) = 0;
+    *(longlong *)(param_2 + 0x18) = 0xf;
+    *param_2 = (InnerHandle)0x0;
+    uVar17 = *(ulonglong *)(puVar21 + 0x48);
+    if (*(ulonglong *)(puVar21 + 0x50) == uVar17) {
+      *(undefined8 *)(puVar21 + 0x20) = 1;
+      *(undefined8 *)(puVar21 + -8) = 0x18000e5e2;
+      puVar16 = FUN_180006110((undefined8 *)(puVar21 + 0x38),1,0,&DAT_18003cebc,
+                              *(size_t *)(puVar21 + 0x20));
+    }
+    else {
+      *(ulonglong *)(puVar21 + 0x48) = uVar17 + 1;
+      puVar15 = puVar21 + 0x38;
+      if (0xf < *(ulonglong *)(puVar21 + 0x50)) {
+        puVar15 = *(undefined1 **)(puVar21 + 0x38);
+      }
+      *(undefined2 *)(puVar15 + uVar17) = 0x22;
+      puVar16 = (undefined8 *)(puVar21 + 0x38);
+    }
+    *param_1 = 0;
+    param_1[1] = 0;
+    param_1[2] = 0;
+    param_1[3] = 0;
+    uVar5 = *(undefined4 *)((longlong)puVar16 + 4);
+    uVar6 = *(undefined4 *)(puVar16 + 1);
+    uVar7 = *(undefined4 *)((longlong)puVar16 + 0xc);
+    *(undefined4 *)param_1 = *(undefined4 *)puVar16;
+    *(undefined4 *)((longlong)param_1 + 4) = uVar5;
+    *(undefined4 *)(param_1 + 1) = uVar6;
+    *(undefined4 *)((longlong)param_1 + 0xc) = uVar7;
+    uVar5 = *(undefined4 *)((longlong)puVar16 + 0x14);
+    uVar6 = *(undefined4 *)(puVar16 + 3);
+    uVar7 = *(undefined4 *)((longlong)puVar16 + 0x1c);
+    *(undefined4 *)(param_1 + 2) = *(undefined4 *)(puVar16 + 2);
+    *(undefined4 *)((longlong)param_1 + 0x14) = uVar5;
+    *(undefined4 *)(param_1 + 3) = uVar6;
+    *(undefined4 *)((longlong)param_1 + 0x1c) = uVar7;
+    puVar16[2] = 0;
+    puVar16[3] = 0xf;
+    *(undefined1 *)puVar16 = 0;
+    if (*(ulonglong *)(puVar21 + 0x50) < 0x10) {
+LAB_18000e646:
+      *(undefined8 *)(puVar21 + 0x48) = 0;
+      *(undefined8 *)(puVar21 + 0x50) = 0xf;
+      puVar21[0x38] = 0;
+      if (0xf < (ulonglong)alStack_160[3]) {
+        pvVar18 = *(void **)(puVar21 + 0x78);
+        pvVar19 = pvVar18;
+        if ((0xfff < alStack_160[3] + 1U) &&
+           (pvVar19 = *(void **)((longlong)pvVar18 + -8),
+           0x1f < (ulonglong)((longlong)pvVar18 + (-8 - (longlong)pvVar19)))) goto LAB_18000e6b8;
+        *(undefined8 *)(puVar21 + -8) = 0x18000e691;
+        free(pvVar19);
+      }
+      alStack_160[2] = 0;
+      alStack_160[3] = 0xf;
+      puVar21[0x78] = 0;
+      *(undefined8 *)(puVar21 + -8) = 0x18000e6ac;
+      WCDB::UnsafeStringView::~UnsafeStringView((UnsafeStringView *)(puVar21 + 0x58));
+      goto LAB_18000e7f7;
+    }
+    pvVar18 = *(void **)(puVar21 + 0x38);
+    pvVar19 = pvVar18;
+    if ((*(ulonglong *)(puVar21 + 0x50) + 1 < 0x1000) ||
+       (pvVar19 = *(void **)((longlong)pvVar18 + -8),
+       (ulonglong)((longlong)pvVar18 + (-8 - (longlong)pvVar19)) < 0x20)) {
+      *(undefined8 *)(puVar21 + -8) = 0x18000e646;
+      free(pvVar19);
+      goto LAB_18000e646;
+    }
+    pcVar3 = (code *)swi(0x29);
+    (*pcVar3)(5);
+    puVar21 = puVar21 + 8;
+LAB_18000e6b8:
+    pcVar3 = (code *)swi(0x29);
+    (*pcVar3)(5);
+    puVar22 = puVar21 + 8;
+  }
+  local_138 = &DAT_18003cc60;
+  *(undefined8 *)(puVar22 + -8) = 0x18000e6d4;
+  std::basic_ios<char,std::char_traits<char>_>::basic_ios<char,std::char_traits<char>_>(local_b0);
+  *(undefined4 *)(puVar22 + 0x30) = 8;
+  *(undefined8 *)(puVar22 + -8) = 0x18000e6f1;
+  std::basic_ostream<char,std::char_traits<char>_>::basic_ostream<char,std::char_traits<char>_>
+            ((basic_ostream<char,std::char_traits<char>_> *)&local_138,
+             (basic_streambuf<char,std::char_traits<char>_> *)&local_130,false);
+  *(undefined ***)((longlong)&local_138 + (longlong)*(int *)(local_138 + 4)) =
+       std::basic_ostringstream<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+  *(int *)((longlong)&iStack_13c + (longlong)*(int *)(local_138 + 4)) =
+       *(int *)(local_138 + 4) + -0x88;
+  *(undefined8 *)(puVar22 + -8) = 0x18000e722;
+  std::basic_streambuf<char,std::char_traits<char>_>::basic_streambuf<char,std::char_traits<char>_>
+            ((basic_streambuf<char,std::char_traits<char>_> *)&local_130);
+  local_130 = std::basic_stringbuf<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+  local_c8 = 0;
+  local_c0 = 4;
+  *(undefined8 *)(puVar22 + -8) = 0x18000e747;
+  puVar16 = (undefined8 *)std::setprecision((__int64)(puVar22 + 0x58));
+  iVar1 = *(int *)(local_138 + 4);
+  uVar2 = puVar16[1];
+  pcVar3 = (code *)*puVar16;
+  *(undefined8 *)(puVar22 + -8) = 0x18000e75c;
+  (*pcVar3)((longlong)&local_138 + (longlong)iVar1,uVar2);
+  *(undefined8 *)(puVar22 + -8) = 0x18000e766;
+  dVar4 = WCDB::InnerHandle::getDouble(param_2,param_3);
+  *(undefined8 *)(puVar22 + -8) = 0x18000e773;
+  std::basic_ostream<char,std::char_traits<char>_>::operator<<
+            ((basic_ostream<char,std::char_traits<char>_> *)&local_138,dVar4);
+  *(undefined8 *)(puVar22 + -8) = 0x18000e77f;
+  FUN_180020170((longlong)&local_138,param_1);
+  *(undefined ***)((longlong)&local_138 + (longlong)*(int *)(local_138 + 4)) =
+       std::basic_ostringstream<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+  *(int *)((longlong)&iStack_13c + (longlong)*(int *)(local_138 + 4)) =
+       *(int *)(local_138 + 4) + -0x88;
+  *(undefined8 *)(puVar22 + -8) = 0x18000e7a8;
+  FUN_180009380((basic_streambuf<char,std::char_traits<char>_> *)&local_130);
+  *(undefined8 *)(puVar22 + -8) = 0x18000e7b2;
+  std::basic_ostream<char,std::char_traits<char>_>::~basic_ostream<char,std::char_traits<char>_>
+            (local_128);
+  *(undefined8 *)(puVar22 + -8) = 0x18000e7bc;
+  std::basic_ios<char,std::char_traits<char>_>::~basic_ios<char,std::char_traits<char>_>(local_b0);
+  puVar21 = puVar22;
+LAB_18000e7f7:
+  *(undefined8 *)(puVar21 + -8) = 0x18000e809;
+  return param_1;
+}
+
+

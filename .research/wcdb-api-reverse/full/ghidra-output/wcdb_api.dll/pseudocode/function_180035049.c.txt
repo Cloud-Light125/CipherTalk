@@ -1,0 +1,14 @@
+/* 180035049 step */
+
+bool __thiscall WCDB::InnerHandle::step(InnerHandle *this)
+
+{
+  bool bVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180035049. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  bVar1 = step(this);
+  return bVar1;
+}
+
+

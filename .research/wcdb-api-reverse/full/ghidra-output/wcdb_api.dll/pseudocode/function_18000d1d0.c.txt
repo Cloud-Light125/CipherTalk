@@ -1,0 +1,14 @@
+/* 18000d1d0 FUN_18000d1d0 */
+
+void FUN_18000d1d0(void)
+
+{
+  code *pcVar1;
+  
+  std::_Xout_of_range("invalid string position");
+  pcVar1 = (code *)swi(3);
+  (*pcVar1)();
+  return;
+}
+
+

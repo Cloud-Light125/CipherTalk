@@ -1,0 +1,10 @@
+/* 18003a2f0 FUN_18003a2f0 */
+
+undefined8 FUN_18003a2f0(void)
+
+{
+  FUN_18001e720(&DAT_18003d810);
+  return 0;
+}
+
+

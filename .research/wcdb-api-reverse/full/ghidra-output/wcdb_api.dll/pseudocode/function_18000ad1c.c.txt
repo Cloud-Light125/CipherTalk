@@ -1,0 +1,11 @@
+/* 18000ad1c FUN_18000ad1c */
+
+void FUN_18000ad1c(longlong param_1,uint param_2)
+
+{
+  FUN_18000af70((basic_ios<char,std::char_traits<char>_> *)(param_1 - *(int *)(param_1 + -4)),
+                param_2);
+  return;
+}
+
+

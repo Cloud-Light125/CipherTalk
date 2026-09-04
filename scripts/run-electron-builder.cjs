@@ -41,7 +41,7 @@ const result = spawnSync(
   }
 )
 
-// 构建阶段只要求安装包产物存在，自动更新元数据交给后续发布阶段校验。
+// 构建阶段只要求安装包产物存在；构建不生成版本更新元数据。
 const artifactNames = target === 'mac'
   ? [`release/CipherTalk-${pkg.version}-Setup.dmg`]
   : [`release/CipherTalk-${pkg.version}-Setup.exe`]

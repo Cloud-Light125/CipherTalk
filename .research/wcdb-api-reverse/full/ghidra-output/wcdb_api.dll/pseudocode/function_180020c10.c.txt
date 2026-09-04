@@ -1,0 +1,51 @@
+/* 180020c10 FUN_180020c10 */
+
+longlong FUN_180020c10(basic_streambuf<char,std::char_traits<char>_> *param_1,char *param_2,
+                      ulonglong param_3)
+
+{
+  __int64 _Var1;
+  ulonglong uVar2;
+  char *_Src;
+  size_t sVar3;
+  ulonglong uVar4;
+  
+  if ((longlong)param_3 < 1) {
+    return 0;
+  }
+  if (*(longlong *)(param_1 + 0x68) != 0) {
+                    /* WARNING: Could not recover jumptable at 0x000180020c58. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+    _Var1 = std::basic_streambuf<char,std::char_traits<char>_>::xsgetn(param_1,param_2,param_3);
+    return _Var1;
+  }
+  uVar2 = std::basic_streambuf<char,std::char_traits<char>_>::_Gnavail(param_1);
+  uVar4 = param_3;
+  if (uVar2 != 0) {
+    if (uVar2 < param_3) {
+      uVar4 = uVar2;
+    }
+    _Src = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+    memcpy(param_2,_Src,uVar4);
+    param_2 = param_2 + uVar4;
+    std::basic_streambuf<char,std::char_traits<char>_>::gbump(param_1,(int)uVar4);
+    uVar4 = param_3 - uVar4;
+  }
+  if (*(longlong *)(param_1 + 0x80) != 0) {
+    FUN_18000ccd0(param_1);
+    while (0xfff < uVar4) {
+      sVar3 = fread(param_2,1,0xfff,*(FILE **)(param_1 + 0x80));
+      uVar4 = uVar4 - sVar3;
+      if (sVar3 != 0xfff) goto LAB_180020d1e;
+      param_2 = param_2 + 0xfff;
+    }
+    if (uVar4 != 0) {
+      sVar3 = fread(param_2,1,uVar4,*(FILE **)(param_1 + 0x80));
+      uVar4 = uVar4 - sVar3;
+    }
+  }
+LAB_180020d1e:
+  return param_3 - uVar4;
+}
+
+

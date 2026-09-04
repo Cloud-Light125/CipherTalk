@@ -1,0 +1,72 @@
+/* 180031cd0 FUN_180031cd0 */
+
+basic_istream<char,std::char_traits<char>_> *
+FUN_180031cd0(basic_istream<char,std::char_traits<char>_> *param_1,undefined8 *param_2,uint param_3)
+
+{
+  bool bVar1;
+  bool bVar2;
+  uint uVar3;
+  basic_streambuf<char,std::char_traits<char>_> *pbVar4;
+  undefined8 *puVar5;
+  uint uVar6;
+  
+  uVar6 = 0;
+  bVar1 = false;
+  pbVar4 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                     ((basic_ios<char,std::char_traits<char>_> *)
+                      (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+  if (pbVar4 != (basic_streambuf<char,std::char_traits<char>_> *)0x0) {
+    (**(code **)(*(longlong *)pbVar4 + 8))(pbVar4);
+  }
+  bVar2 = std::basic_istream<char,std::char_traits<char>_>::_Ipfx(param_1,true);
+  if (bVar2) {
+    param_2[2] = 0;
+    puVar5 = param_2;
+    if (0xf < (ulonglong)param_2[3]) {
+      puVar5 = (undefined8 *)*param_2;
+    }
+    *(undefined1 *)puVar5 = 0;
+    pbVar4 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                       ((basic_ios<char,std::char_traits<char>_> *)
+                        (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+    uVar3 = std::basic_streambuf<char,std::char_traits<char>_>::sgetc(pbVar4);
+    while (uVar3 != 0xffffffff) {
+      if (uVar3 == (param_3 & 0xff)) {
+        bVar1 = true;
+        pbVar4 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                           ((basic_ios<char,std::char_traits<char>_> *)
+                            (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+        std::basic_streambuf<char,std::char_traits<char>_>::sbumpc(pbVar4);
+        goto LAB_180031dc8;
+      }
+      if (0x7ffffffffffffffe < (ulonglong)param_2[2]) {
+        uVar6 = 2;
+        goto LAB_180031dc8;
+      }
+      FUN_18001b8a0(param_2,(char)uVar3);
+      bVar1 = true;
+      pbVar4 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                         ((basic_ios<char,std::char_traits<char>_> *)
+                          (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+      uVar3 = std::basic_streambuf<char,std::char_traits<char>_>::snextc(pbVar4);
+    }
+    uVar6 = 1;
+LAB_180031dc8:
+    if (bVar1) goto LAB_180031e19;
+  }
+  uVar6 = uVar6 | 2;
+LAB_180031e19:
+  std::basic_ios<char,std::char_traits<char>_>::setstate
+            ((basic_ios<char,std::char_traits<char>_> *)
+             (param_1 + *(int *)(*(longlong *)param_1 + 4)),uVar6,false);
+  pbVar4 = std::basic_ios<char,std::char_traits<char>_>::rdbuf
+                     ((basic_ios<char,std::char_traits<char>_> *)
+                      (param_1 + *(int *)(*(longlong *)param_1 + 4)));
+  if (pbVar4 != (basic_streambuf<char,std::char_traits<char>_> *)0x0) {
+    (**(code **)(*(longlong *)pbVar4 + 0x10))(pbVar4);
+  }
+  return param_1;
+}
+
+

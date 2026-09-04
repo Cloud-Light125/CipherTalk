@@ -1,0 +1,111 @@
+/* 180026610 wcdb_shutdown */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+undefined8 wcdb_shutdown(void)
+
+{
+  code *pcVar1;
+  longlong lVar2;
+  undefined8 *puVar3;
+  int iVar4;
+  char *pcVar5;
+  ulonglong uVar6;
+  undefined1 *puVar7;
+  undefined1 auStack_58 [8];
+  undefined1 auStack_50 [24];
+  undefined *local_38;
+  undefined8 local_30;
+  undefined8 uStack_28;
+  undefined8 local_20;
+  ulonglong uStack_18;
+  ulonglong local_10;
+  
+                    /* 0x26610  18  wcdb_shutdown */
+  puVar7 = auStack_58;
+  local_10 = DAT_18004b4c0 ^ (ulonglong)auStack_58;
+  FUN_18002eb50();
+  local_38 = &DAT_18004b0b0;
+  iVar4 = _Mtx_lock(&DAT_18004b0b0);
+  if (iVar4 != 0) {
+LAB_18002681d:
+                    /* WARNING: Subroutine does not return */
+    *(undefined8 *)(puVar7 + -8) = 0x180026827;
+    std::_Throw_Cpp_error(5);
+  }
+  if (DAT_18004b0fc == 0x7fffffff) {
+    DAT_18004b0fc = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+    std::_Throw_Cpp_error(6);
+  }
+  if ((DAT_18004bca9 != '\0') && (DAT_18004bcb8 < DAT_18004bcb0)) {
+    FUN_18001b7f0();
+  }
+  _Mtx_unlock(&DAT_18004b0b0);
+  local_38 = &DAT_18004b000;
+  iVar4 = _Mtx_lock(&DAT_18004b000);
+  lVar2 = DAT_18004bc70;
+  if (iVar4 != 0) {
+                    /* WARNING: Subroutine does not return */
+    std::_Throw_Cpp_error(5);
+  }
+  if (DAT_18004b04c == 0x7fffffff) {
+    DAT_18004b04c = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+    std::_Throw_Cpp_error(6);
+  }
+  FUN_1800041f0(&DAT_18004bc70,&DAT_18004bc70,*(longlong **)(DAT_18004bc70 + 8));
+  *(longlong *)(lVar2 + 8) = lVar2;
+  *(longlong *)lVar2 = lVar2;
+  *(longlong *)(lVar2 + 0x10) = lVar2;
+  lVar2 = DAT_18004bc80;
+  DAT_18004bc78 = 0;
+  FUN_180004170(&DAT_18004bc80,&DAT_18004bc80,*(longlong **)(DAT_18004bc80 + 8));
+  *(longlong *)(lVar2 + 8) = lVar2;
+  *(longlong *)lVar2 = lVar2;
+  *(longlong *)(lVar2 + 0x10) = lVar2;
+  DAT_18004bc88 = 0;
+  DAT_18004bca8 = 0;
+  local_30 = (char *)0x0;
+  uStack_28 = 0;
+  local_20 = 0;
+  uStack_18 = 0;
+  pcVar5 = (char *)FUN_1800373b0(0x20);
+  local_20 = 0x11;
+  uStack_18 = 0x1f;
+  builtin_strncpy(pcVar5,"wcdb_api shutdown",0x12);
+  puVar3 = DAT_18004bc98;
+  if (DAT_18004bc98 == DAT_18004bca0) {
+    local_30 = pcVar5;
+    FUN_180003af0(&DAT_18004bc90,DAT_18004bc98,&local_30);
+    uVar6 = uStack_18;
+  }
+  else {
+    local_30._0_4_ = SUB84(pcVar5,0);
+    local_30._4_4_ = (undefined4)((ulonglong)pcVar5 >> 0x20);
+    *(undefined4 *)DAT_18004bc98 = (undefined4)local_30;
+    *(undefined4 *)((longlong)puVar3 + 4) = local_30._4_4_;
+    *(undefined4 *)(puVar3 + 1) = (undefined4)uStack_28;
+    *(undefined4 *)((longlong)puVar3 + 0xc) = uStack_28._4_4_;
+    puVar3[2] = 0x11;
+    puVar3[3] = 0x1f;
+    local_30 = (char *)((ulonglong)pcVar5 & 0xffffffffffffff00);
+    DAT_18004bc98 = DAT_18004bc98 + 4;
+    uVar6 = 0xf;
+  }
+  if (0xf < uVar6) {
+    pcVar5 = local_30;
+    if ((0xfff < uVar6 + 1) &&
+       (pcVar5 = *(char **)(local_30 + -8), (char *)0x1f < local_30 + (-8 - (longlong)pcVar5))) {
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      puVar7 = auStack_50;
+      goto LAB_18002681d;
+    }
+    free(pcVar5);
+  }
+  _Mtx_unlock(&DAT_18004b000);
+  return 0;
+}
+
+

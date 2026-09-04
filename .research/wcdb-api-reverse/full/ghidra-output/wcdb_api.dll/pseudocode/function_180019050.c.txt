@@ -1,0 +1,32 @@
+/* 180019050 FUN_180019050 */
+
+undefined8 * FUN_180019050(undefined8 param_1,undefined8 *param_2,DWORD param_3)
+
+{
+  void *local_20;
+  size_t local_18;
+  
+  local_20 = (void *)0x0;
+  local_18 = FUN_1800363d0(param_3,(longlong *)&local_20);
+  if ((local_20 != (void *)0x0) && (local_18 != 0)) {
+    *param_2 = 0;
+    param_2[1] = 0;
+    param_2[2] = 0;
+    param_2[3] = 0;
+    FUN_180002340(param_2,local_20,local_18);
+    LocalFree(local_20);
+    return param_2;
+  }
+  *param_2 = 0;
+  param_2[1] = 0;
+  param_2[2] = 0xd;
+  param_2[3] = 0xf;
+  *param_2 = 0x206e776f6e6b6e75;
+  *(undefined4 *)(param_2 + 1) = 0x6f727265;
+  *(undefined1 *)((longlong)param_2 + 0xc) = 0x72;
+  *(undefined1 *)((longlong)param_2 + 0xd) = 0;
+  LocalFree(local_20);
+  return param_2;
+}
+
+

@@ -1,0 +1,14 @@
+# ninja log v6
+13	2798	8102443474101150	CMakeFiles/wcdb_api.dir/src/exports.cpp.obj	89242af1ffb88117
+947	1127	8102444005429749	wcdb_probe.exe	55894ce8984ed6b3
+14	1865	8102456328067662	CMakeFiles/wcdb_api.dir/src/runtime.cpp.obj	9df9b07eee50633c
+26	1150	8102443609045882	CMakeFiles/wcdb_api.dir/src/json_serializer.cpp.obj	56c7e0305cfaf468
+2238	2443	8102443633102779	libwcdb_api.dll	668a84afe1ed41c7
+1866	2025	8102456348096071	libwcdb_api.dll.a	ccad9caf738df754
+1866	2025	8102456348096071	wcdb_api.dll	ccad9caf738df754
+1151	2238	8102443620287867	CMakeFiles/wcdb_api.dir/src/query_executor.cpp.obj	e16218ad3b0e52a2
+10	946	8102443996059062	CMakeFiles/wcdb_probe.dir/tests/wcdb_probe.cpp.obj	c5d075dbe44093db
+31	449	8102457332313990	build.ninja	7cacd358e0ac1e31
+47	828	8102457333515098	wcdb_probe.exe	398c4a92d0eda15
+34	890	8102457341468443	wcdb_api.dll	418744598193077f
+34	890	8102457341468443	libwcdb_api.dll.a	418744598193077f

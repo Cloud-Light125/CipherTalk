@@ -1,0 +1,20 @@
+/* 18000acb0 FUN_18000acb0 */
+
+void FUN_18000acb0(longlong *param_1)
+
+{
+  *(undefined ***)((longlong)*(int *)(*param_1 + 4) + (longlong)param_1) =
+       std::basic_ostringstream<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+  *(int *)((longlong)*(int *)(*param_1 + 4) + -4 + (longlong)param_1) =
+       *(int *)(*param_1 + 4) + -0x88;
+  FUN_180009380((basic_streambuf<char,std::char_traits<char>_> *)(param_1 + 1));
+  std::basic_ostream<char,std::char_traits<char>_>::~basic_ostream<char,std::char_traits<char>_>
+            ((basic_ostream<char,std::char_traits<char>_> *)(param_1 + 2));
+                    /* WARNING: Could not recover jumptable at 0x00018000acfd. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  std::basic_ios<char,std::char_traits<char>_>::~basic_ios<char,std::char_traits<char>_>
+            ((basic_ios<char,std::char_traits<char>_> *)(param_1 + 0x11));
+  return;
+}
+
+

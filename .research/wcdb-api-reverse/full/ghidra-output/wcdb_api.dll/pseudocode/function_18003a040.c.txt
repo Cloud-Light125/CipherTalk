@@ -1,0 +1,9 @@
+/* 18003a040 FUN_18003a040 */
+
+undefined8 FUN_18003a040(void)
+
+{
+  return 0;
+}
+
+

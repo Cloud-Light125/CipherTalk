@@ -1,0 +1,12 @@
+/* 180038352 __std_type_info_compare */
+
+void __std_type_info_compare(void)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180038352. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  __std_type_info_compare();
+  return;
+}
+
+

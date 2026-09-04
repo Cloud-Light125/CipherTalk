@@ -1,0 +1,14 @@
+/* 180035073 getColumnType */
+
+ColumnType __thiscall WCDB::InnerHandle::getColumnType(InnerHandle *this,int param_1)
+
+{
+  ColumnType CVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180035073. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  CVar1 = getColumnType(this,param_1);
+  return CVar1;
+}
+
+

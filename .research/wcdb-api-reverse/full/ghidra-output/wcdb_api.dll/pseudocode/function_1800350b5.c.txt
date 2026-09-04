@@ -1,0 +1,14 @@
+/* 1800350b5 BCryptDestroyKey */
+
+NTSTATUS __stdcall BCryptDestroyKey(BCRYPT_KEY_HANDLE hKey)
+
+{
+  NTSTATUS NVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x0001800350b5. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  NVar1 = BCryptDestroyKey(hKey);
+  return NVar1;
+}
+
+

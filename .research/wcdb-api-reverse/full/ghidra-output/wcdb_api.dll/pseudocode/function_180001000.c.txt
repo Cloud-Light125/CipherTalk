@@ -1,0 +1,15 @@
+/* 180001000 FUN_180001000 */
+
+void FUN_180001000(void)
+
+{
+  DAT_18004bc80 = FUN_1800373b0(0x108);
+  *(longlong *)DAT_18004bc80 = DAT_18004bc80;
+  *(longlong *)(DAT_18004bc80 + 8) = DAT_18004bc80;
+  *(longlong *)(DAT_18004bc80 + 0x10) = DAT_18004bc80;
+  *(undefined2 *)(DAT_18004bc80 + 0x18) = 0x101;
+  FUN_180037760(0x18003af50);
+  return;
+}
+
+

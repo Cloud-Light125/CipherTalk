@@ -1,0 +1,268 @@
+/* 1800247e0 wcdb_get_sns_timeline */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+ulonglong wcdb_get_sns_timeline
+                    (longlong *param_1,int param_2,int param_3,
+                    basic_ostream<char,std::char_traits<char>_> *param_4,char *param_5,int param_6,
+                    uint param_7,undefined8 *param_8)
+
+{
+  ulonglong *puVar1;
+  code *pcVar2;
+  void *pvVar3;
+  int iVar4;
+  uint uVar5;
+  undefined4 extraout_var;
+  ulonglong uVar6;
+  size_t sVar7;
+  basic_ostream<char,std::char_traits<char>_> *pbVar8;
+  longlong *plVar9;
+  longlong *plVar10;
+  basic_ostream<char,struct_std::char_traits<char>_> *pbVar11;
+  void *pvVar12;
+  basic_ostream<char,std::char_traits<char>_> *pbVar13;
+  undefined1 *puVar14;
+  undefined1 *puVar15;
+  undefined1 *puVar16;
+  undefined1 *puVar17;
+  undefined8 uStackY_1d0;
+  undefined1 auStackY_1c8 [8];
+  undefined1 auStackY_1c0 [24];
+  basic_ostream<char,std::char_traits<char>_> *local_190 [2];
+  undefined8 local_180;
+  undefined *local_178;
+  undefined **local_170 [13];
+  undefined8 local_108;
+  undefined4 local_100;
+  basic_ios<char,std::char_traits<char>_> local_f0 [104];
+  undefined1 local_88;
+  undefined7 uStack_87;
+  undefined8 local_78;
+  ulonglong local_70;
+  void *local_68;
+  undefined8 uStack_60;
+  undefined8 local_58;
+  ulonglong local_50;
+  ulonglong local_48;
+  
+                    /* 0x247e0  9  wcdb_get_sns_timeline */
+  puVar17 = auStackY_1c8;
+  puVar16 = auStackY_1c8;
+  puVar15 = auStackY_1c8;
+  local_48 = DAT_18004b4c0 ^ (ulonglong)auStackY_1c8;
+  iVar4 = FUN_18001f250();
+  uVar6 = CONCAT44(extraout_var,iVar4);
+  puVar14 = auStackY_1c8;
+  if (iVar4 != 0) goto LAB_180024dd3;
+  if (param_8 == (undefined8 *)0x0) {
+    uVar6 = 0xffffffff;
+    puVar14 = auStackY_1c8;
+    goto LAB_180024dd3;
+  }
+  *param_8 = 0;
+  local_178 = &DAT_18003cc60;
+  std::basic_ios<char,std::char_traits<char>_>::basic_ios<char,std::char_traits<char>_>(local_f0);
+  std::basic_ostream<char,std::char_traits<char>_>::basic_ostream<char,std::char_traits<char>_>
+            ((basic_ostream<char,std::char_traits<char>_> *)&local_178,
+             (basic_streambuf<char,std::char_traits<char>_> *)local_170,false);
+  *(undefined ***)((longlong)local_170 + (longlong)*(int *)(local_178 + 4) + -8) =
+       std::basic_ostringstream<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+  *(int *)((longlong)&local_180 + (longlong)*(int *)(local_178 + 4) + 4) =
+       *(int *)(local_178 + 4) + -0x88;
+  std::basic_streambuf<char,std::char_traits<char>_>::basic_streambuf<char,std::char_traits<char>_>
+            ((basic_streambuf<char,std::char_traits<char>_> *)local_170);
+  local_170[0] = std::basic_stringbuf<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+  local_108 = 0;
+  local_100 = 4;
+  FUN_180001420((basic_ostream<char,std::char_traits<char>_> *)&local_178,
+                "SELECT tid, user_name, content FROM SnsTimeLine WHERE 1=1");
+  pbVar8 = (basic_ostream<char,std::char_traits<char>_> *)&DAT_18003cbc5;
+  if (param_4 != (basic_ostream<char,std::char_traits<char>_> *)0x0) {
+    pbVar8 = param_4;
+  }
+  local_68 = (void *)0x0;
+  uStack_60 = 0;
+  pbVar13 = (basic_ostream<char,std::char_traits<char>_> *)0x0;
+  local_58 = 0;
+  local_50 = 0;
+  sVar7 = strlen((char *)pbVar8);
+  FUN_180002340(&local_68,pbVar8,sVar7);
+  FUN_18001b280((longlong *)local_190,&local_68);
+  if (local_50 < 0x10) {
+LAB_180024980:
+    if (local_190[0] != local_190[1]) {
+      FUN_180001420((basic_ostream<char,std::char_traits<char>_> *)&local_178," AND user_name IN (")
+      ;
+      for (; pbVar13 < (basic_ostream<char,std::char_traits<char>_> *)
+                       ((longlong)local_190[1] - (longlong)local_190[0] >> 5); pbVar13 = pbVar13 + 1
+          ) {
+        if (pbVar13 != (basic_ostream<char,std::char_traits<char>_> *)0x0) {
+          FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)&local_178,',');
+        }
+        pbVar8 = FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)&local_178,'\'');
+        plVar9 = FUN_18001fbd0((longlong *)&local_88,
+                               (byte *)(local_190[0] + (longlong)pbVar13 * 0x20));
+        puVar1 = (ulonglong *)(plVar9 + 2);
+        if (0xf < (ulonglong)plVar9[3]) {
+          plVar9 = (longlong *)*plVar9;
+        }
+        pbVar8 = FUN_1800046a0(pbVar8,(char *)plVar9,*puVar1);
+        FUN_1800011f0(pbVar8,'\'');
+        if (0xf < local_70) {
+          pvVar3 = (void *)CONCAT71(uStack_87,local_88);
+          pvVar12 = pvVar3;
+          if ((0xfff < local_70 + 1) &&
+             (pvVar12 = *(void **)((longlong)pvVar3 + -8), pbVar8 = pbVar13, puVar14 = auStackY_1c8,
+             0x1f < (ulonglong)((longlong)pvVar3 + (-8 - (longlong)pvVar12)))) goto LAB_180024d59;
+          free(pvVar12);
+        }
+      }
+      FUN_180001420((basic_ostream<char,std::char_traits<char>_> *)&local_178,")");
+    }
+    if ((param_5 != (char *)0x0) && (*param_5 != '\0')) {
+      pbVar8 = FUN_180001420((basic_ostream<char,std::char_traits<char>_> *)&local_178,
+                             " AND content LIKE \'%");
+      local_68 = (void *)0x0;
+      uStack_60 = 0;
+      local_58 = 0;
+      local_50 = 0;
+      sVar7 = strlen(param_5);
+      FUN_180002340(&local_68,param_5,sVar7);
+      plVar10 = FUN_18001fbd0((longlong *)&local_88,(byte *)&local_68);
+      plVar9 = plVar10;
+      if (0xf < (ulonglong)plVar10[3]) {
+        plVar9 = (longlong *)*plVar10;
+      }
+      pbVar13 = FUN_1800046a0(pbVar8,(char *)plVar9,plVar10[2]);
+      FUN_180001420(pbVar13,"%\'");
+      if (0xf < local_70) {
+        pvVar3 = (void *)CONCAT71(uStack_87,local_88);
+        pvVar12 = pvVar3;
+        if ((0xfff < local_70 + 1) &&
+           (pvVar12 = *(void **)((longlong)pvVar3 + -8),
+           0x1f < (ulonglong)((longlong)pvVar3 + (-8 - (longlong)pvVar12)))) {
+          pcVar2 = (code *)swi(0x29);
+          (*pcVar2)(5);
+          puVar14 = auStackY_1c0;
+          goto LAB_180024d59;
+        }
+        free(pvVar12);
+      }
+      local_78 = 0;
+      local_70 = 0xf;
+      local_88 = 0;
+      if (0xf < local_50) {
+        pvVar12 = local_68;
+        if ((0xfff < local_50 + 1) &&
+           (pvVar12 = *(void **)((longlong)local_68 + -8), puVar14 = auStackY_1c8,
+           0x1f < (ulonglong)((longlong)local_68 + (-8 - (longlong)pvVar12)))) goto LAB_180024d59;
+        free(pvVar12);
+      }
+    }
+    if (0 < param_6) {
+      pbVar8 = FUN_180001420((basic_ostream<char,std::char_traits<char>_> *)&local_178,
+                             " AND CAST(SUBSTR(CAST(content AS TEXT), INSTR(CAST(content AS TEXT), \'<createTime>\') + 12, 10) AS INTEGER) >= "
+                            );
+      std::basic_ostream<char,std::char_traits<char>_>::operator<<(pbVar8,param_6);
+    }
+    pbVar8 = (basic_ostream<char,std::char_traits<char>_> *)(ulonglong)param_7;
+    if (0 < (int)param_7) {
+      pbVar13 = FUN_180001420((basic_ostream<char,std::char_traits<char>_> *)&local_178,
+                              " AND CAST(SUBSTR(CAST(content AS TEXT), INSTR(CAST(content AS TEXT), \'<createTime>\') + 12, 10) AS INTEGER) <= "
+                             );
+      std::basic_ostream<char,std::char_traits<char>_>::operator<<(pbVar13,param_7);
+    }
+    pbVar13 = FUN_180001420((basic_ostream<char,std::char_traits<char>_> *)&local_178,
+                            " ORDER BY tid DESC LIMIT ");
+    if (param_2 < 1) {
+      param_2 = 1;
+    }
+    pbVar11 = std::basic_ostream<char,std::char_traits<char>_>::operator<<(pbVar13,param_2);
+    pbVar13 = FUN_180001420((basic_ostream<char,std::char_traits<char>_> *)pbVar11," OFFSET ");
+    if (param_3 < 0) {
+      param_3 = 0;
+    }
+    std::basic_ostream<char,std::char_traits<char>_>::operator<<(pbVar13,param_3);
+    plVar9 = FUN_180020170((longlong)&local_178,(longlong *)&local_88);
+    if (0xf < (ulonglong)plVar9[3]) {
+      plVar9 = (longlong *)*plVar9;
+    }
+    uVar5 = wcdb_exec_query(param_1,(undefined8 ****)&DAT_18003d0b0,(undefined8 ****)&DAT_18003cbc5,
+                            (char *)plVar9,param_8);
+    param_5 = (char *)(ulonglong)uVar5;
+    if (0xf < local_70) {
+      pvVar3 = (void *)CONCAT71(uStack_87,local_88);
+      pvVar12 = pvVar3;
+      if ((0xfff < local_70 + 1) &&
+         (pvVar12 = *(void **)((longlong)pvVar3 + -8), puVar14 = auStackY_1c8,
+         0x1f < (ulonglong)((longlong)pvVar3 + (-8 - (longlong)pvVar12)))) goto LAB_180024d59;
+      free(pvVar12);
+    }
+    local_78 = 0;
+    local_70 = 0xf;
+    local_88 = 0;
+    pbVar8 = local_190[0];
+    pbVar13 = local_190[0];
+    if (local_190[0] != (basic_ostream<char,std::char_traits<char>_> *)0x0) {
+      for (; pbVar8 != local_190[1]; pbVar8 = pbVar8 + 0x20) {
+        local_190[0] = pbVar13;
+        FUN_18000d070((longlong *)pbVar8);
+        pbVar13 = local_190[0];
+      }
+      if (0xfff < (local_180 - (longlong)pbVar13 & 0xffffffffffffffe0U)) {
+        pbVar8 = pbVar13 + (-8 - (longlong)
+                                 *(basic_ostream<char,std::char_traits<char>_> **)(pbVar13 + -8));
+        pbVar13 = *(basic_ostream<char,std::char_traits<char>_> **)(pbVar13 + -8);
+        puVar16 = auStackY_1c8;
+        if ((basic_ostream<char,std::char_traits<char>_> *)&DAT_0000001f < pbVar8)
+        goto LAB_180024d60;
+      }
+      goto LAB_180024d6a;
+    }
+  }
+  else {
+    pvVar12 = local_68;
+    if ((local_50 + 1 < 0x1000) ||
+       (pvVar12 = *(void **)((longlong)local_68 + -8), puVar14 = auStackY_1c8,
+       (ulonglong)((longlong)local_68 + (-8 - (longlong)pvVar12)) < 0x20)) {
+      free(pvVar12);
+      goto LAB_180024980;
+    }
+LAB_180024d59:
+    pcVar2 = (code *)swi(0x29);
+    (*pcVar2)(5);
+    puVar15 = puVar14 + 8;
+LAB_180024d60:
+    pbVar13 = pbVar8;
+    pcVar2 = (code *)swi(0x29);
+    (*pcVar2)(5);
+    puVar16 = puVar15 + 8;
+LAB_180024d6a:
+    *(undefined8 *)(puVar16 + -8) = 0x180024d6f;
+    free(pbVar13);
+    *(undefined8 *)(puVar16 + 0x38) = 0;
+    *(undefined8 *)(puVar16 + 0x40) = 0;
+    *(undefined8 *)(puVar16 + 0x48) = 0;
+    puVar17 = puVar16;
+  }
+  *(undefined ***)(puVar17 + (longlong)*(int *)(*(longlong *)(puVar17 + 0x50) + 4) + 0x50) =
+       std::basic_ostringstream<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+  *(int *)(puVar17 + (longlong)*(int *)(*(longlong *)(puVar17 + 0x50) + 4) + 0x4c) =
+       *(int *)(*(longlong *)(puVar17 + 0x50) + 4) + -0x88;
+  *(undefined8 *)(puVar17 + -8) = 0x180024db1;
+  FUN_180009380((basic_streambuf<char,std::char_traits<char>_> *)(puVar17 + 0x58));
+  *(undefined8 *)(puVar17 + -8) = 0x180024dbc;
+  std::basic_ostream<char,std::char_traits<char>_>::~basic_ostream<char,std::char_traits<char>_>
+            ((basic_ostream<char,std::char_traits<char>_> *)(puVar17 + 0x60));
+  *(undefined8 *)(puVar17 + -8) = 0x180024dca;
+  std::basic_ios<char,std::char_traits<char>_>::~basic_ios<char,std::char_traits<char>_>
+            ((basic_ios<char,std::char_traits<char>_> *)(puVar17 + 0xd8));
+  uVar6 = (ulonglong)param_5 & 0xffffffff;
+  puVar14 = puVar17;
+LAB_180024dd3:
+  *(undefined8 *)(puVar14 + -8) = 0x180024de3;
+  return uVar6;
+}
+
+

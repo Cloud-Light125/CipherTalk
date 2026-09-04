@@ -1,0 +1,37 @@
+/* 18000d2d0 FUN_18000d2d0 */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_18000d2d0(longlong param_1)
+
+{
+  int iVar1;
+  longlong *plVar2;
+  longlong local_res10;
+  
+  if (param_1 - 1700000000U < 0x8f326601) {
+    iVar1 = _Mtx_lock(&DAT_18004b0b0);
+    if (iVar1 != 0) {
+                    /* WARNING: Subroutine does not return */
+      std::_Throw_Cpp_error(5);
+    }
+    if (DAT_18004b0fc == 0x7fffffff) {
+      DAT_18004b0fc = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+      std::_Throw_Cpp_error(6);
+    }
+    FUN_180011190();
+    _DAT_18004bcc0 = param_1;
+    plVar2 = FUN_1800193e0(&local_res10);
+    DAT_18004bcc8 = *plVar2;
+    DAT_18004bcaa = 1;
+    if (DAT_18004bcb0 < param_1) {
+      DAT_18004bcb0 = param_1;
+    }
+    FUN_18001b7f0();
+    _Mtx_unlock(&DAT_18004b0b0);
+  }
+  return;
+}
+
+

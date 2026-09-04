@@ -1,0 +1,49 @@
+/* 180020b10 FUN_180020b10 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+ulonglong FUN_180020b10(undefined8 *param_1)
+
+{
+  bool bVar1;
+  ulonglong uVar2;
+  undefined7 extraout_var;
+  InnerHandle *this;
+  UnsafeStringView *pUVar3;
+  undefined1 auStack_c8 [32];
+  UnsafeStringView local_a8 [32];
+  RecyclableHandle local_88 [112];
+  ulonglong local_18;
+  
+  uVar2 = DAT_18004b4c0 ^ (ulonglong)auStack_c8;
+  if ((InnerDatabase *)*param_1 == (InnerDatabase *)0x0) {
+LAB_180020bcc:
+    return uVar2 & 0xffffffffffffff00;
+  }
+  local_18 = uVar2;
+  bVar1 = WCDB::InnerDatabase::canOpen((InnerDatabase *)*param_1);
+  uVar2 = CONCAT71(extraout_var,bVar1);
+  if (!bVar1) goto LAB_180020bcc;
+  WCDB::InnerDatabase::getHandle((InnerDatabase *)*param_1,SUB81(local_88,0),false);
+  this = WCDB::RecyclableHandle::get(local_88);
+  if (this != (InnerHandle *)0x0) {
+    pUVar3 = (UnsafeStringView *)
+             WCDB::UnsafeStringView::UnsafeStringView(local_a8,"SELECT count(*) FROM sqlite_master")
+    ;
+    bVar1 = WCDB::InnerHandle::prepare(this,pUVar3);
+    WCDB::UnsafeStringView::~UnsafeStringView(local_a8);
+    if (bVar1) {
+      bVar1 = WCDB::InnerHandle::step(this);
+      uVar2 = (ulonglong)bVar1;
+      (**(code **)(*(longlong *)this + 0x78))(this);
+      goto LAB_180020baa;
+    }
+    (**(code **)(*(longlong *)this + 0x78))();
+  }
+  uVar2 = 0;
+LAB_180020baa:
+  WCDB::RecyclableHandle::~RecyclableHandle(local_88);
+  return uVar2;
+}
+
+

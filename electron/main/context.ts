@@ -51,7 +51,6 @@ export interface WindowManager {
   openMomentsWindow(filterUsername?: string): BrowserWindow
   openAgreementWindow(): BrowserWindow
   openWelcomeWindow(mode?: 'default' | 'add-account'): BrowserWindow
-  openPurchaseWindow(): BrowserWindow
   openImageViewerWindow(
     imagePath: string,
     liveVideoPath?: string,
@@ -102,8 +101,6 @@ export interface MainProcessContext {
   setSplashReady(ready: boolean): void
   getStartupDbConnected(): boolean
   setStartupDbConnected(connected: boolean): void
-  getIsInstallingUpdate(): boolean
-  setIsInstallingUpdate(installing: boolean): void
   broadcastToWindows(channel: string, ...args: any[]): void
   getWindowManager(): WindowManager
   setWindowManager(manager: WindowManager): void

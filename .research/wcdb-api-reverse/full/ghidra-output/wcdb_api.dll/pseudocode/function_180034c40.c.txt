@@ -1,0 +1,81 @@
+/* 180034c40 FUN_180034c40 */
+
+ulonglong FUN_180034c40(PUCHAR param_1,longlong *param_2,longlong *param_3,longlong *param_4)
+
+{
+  code *pcVar1;
+  NTSTATUS NVar2;
+  uint uVar3;
+  ulonglong uVar4;
+  PUCHAR pUVar5;
+  undefined1 *puVar6;
+  BCRYPT_KEY_HANDLE local_res10 [3];
+  undefined1 auStackY_98 [8];
+  undefined1 auStackY_90 [24];
+  BCRYPT_ALG_HANDLE local_58;
+  PUCHAR local_50;
+  int local_48;
+  undefined4 uStack_44;
+  longlong local_40;
+  
+  puVar6 = auStackY_98;
+  uVar4 = param_2[1] - *param_2;
+  if (((uVar4 == 0x40) && (uVar4 = param_3[1] - *param_3, uVar4 == 0x20)) &&
+     (uVar4 = param_4[1] - *param_4, uVar4 == 0x20)) {
+    pUVar5 = param_1;
+    if (0xf < *(ulonglong *)(param_1 + 0x18)) {
+      pUVar5 = *(PUCHAR *)param_1;
+    }
+    FUN_180032cf0((longlong *)&local_50,pUVar5,(ULONG)*(undefined8 *)(param_1 + 0x10));
+    if (CONCAT44(uStack_44,local_48) - (longlong)local_50 == 0x20) {
+      local_58 = (BCRYPT_ALG_HANDLE)0x0;
+      local_res10[0] = (BCRYPT_KEY_HANDLE)0x0;
+      pUVar5 = (PUCHAR)FUN_1800373b0(0x48);
+      memset(pUVar5,0,(longlong)(pUVar5 + 0x48) - (longlong)pUVar5);
+      builtin_memcpy(pUVar5,"ECS1 ",6);
+      pUVar5[6] = '\0';
+      pUVar5[7] = '\0';
+      memmove(pUVar5 + 8,(void *)*param_3,param_3[1] - *param_3);
+      memmove(pUVar5 + 0x28,(void *)*param_4,param_4[1] - *param_4);
+      uVar4 = 0;
+      NVar2 = BCryptOpenAlgorithmProvider(&local_58,L"ECDSA_P256",(LPCWSTR)0x0,0);
+      if ((-1 < NVar2) &&
+         (NVar2 = BCryptImportKeyPair(local_58,(BCRYPT_KEY_HANDLE)0x0,L"ECCPUBLICBLOB",local_res10,
+                                      pUVar5,(int)(pUVar5 + 0x48) - (int)pUVar5,0), -1 < NVar2)) {
+        uVar3 = BCryptVerifySignature
+                          (local_res10[0],(void *)0x0,local_50,local_48 - (int)local_50,
+                           (PUCHAR)*param_2,(int)param_2[1] - (int)*param_2,0);
+        uVar4 = (ulonglong)(uVar3 >> 0x1f ^ 1);
+      }
+      if (local_res10[0] != (BCRYPT_KEY_HANDLE)0x0) {
+        BCryptDestroyKey(local_res10[0]);
+      }
+      if (local_58 != (BCRYPT_ALG_HANDLE)0x0) {
+        BCryptCloseAlgorithmProvider(local_58,0);
+      }
+      if (pUVar5 != (PUCHAR)0x0) {
+        free(pUVar5);
+      }
+    }
+    else {
+      uVar4 = 0;
+    }
+    if (local_50 != (PUCHAR)0x0) {
+      if (0xfff < (ulonglong)(local_40 - (longlong)local_50)) {
+        if (local_50 + (-8 - (longlong)*(void **)(local_50 + -8)) < (PUCHAR)0x20) {
+          free(*(void **)(local_50 + -8));
+          return uVar4;
+        }
+        pcVar1 = (code *)swi(0x29);
+        local_50 = (PUCHAR)(*pcVar1)(5);
+        puVar6 = auStackY_90;
+      }
+      *(undefined8 *)(puVar6 + -8) = 0x180034e32;
+      free(local_50);
+    }
+    return uVar4;
+  }
+  return uVar4 & 0xffffffffffffff00;
+}
+
+

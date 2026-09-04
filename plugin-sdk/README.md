@@ -1,6 +1,6 @@
 # ciphertalk-plugin-sdk
 
-[CipherTalk（密语）](https://github.com/ILoveBingLu/CipherTalk) 插件开发套件——
+[CipherTalk（密语）](https://github.com/Cloud-Light125/CipherTalk-SafeFork-1) 插件开发套件——
 一个包装齐全部开发所需：
 
 | 入口 | 内容 |
@@ -94,7 +94,7 @@ function App() {
 每类能力对应一个权限，在 `manifest.json` 声明、用户启用时确认。
 
 完整参考（manifest 全字段、全 API、权限清单、UI 组件、限额、FAQ）见主仓库
-[PLUGIN_DEV_GUIDE.md](https://github.com/ILoveBingLu/CipherTalk/blob/main/PLUGIN_DEV_GUIDE.md)。
+[PLUGIN_DEV_GUIDE.md](https://github.com/Cloud-Light125/CipherTalk-SafeFork-1/blob/main/PLUGIN_DEV_GUIDE.md)。
 
 ## 版本
 

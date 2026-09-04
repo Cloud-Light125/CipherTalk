@@ -1,0 +1,66 @@
+/* 18002e6c0 FUN_18002e6c0 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+longlong * FUN_18002e6c0(longlong *param_1)
+
+{
+  code *pcVar1;
+  void *pvVar2;
+  int iVar3;
+  wchar_t *pwVar4;
+  longlong *plVar5;
+  void *_Memory;
+  undefined1 *_Buf1;
+  undefined1 auStack_a8 [32];
+  undefined4 local_88;
+  longlong *local_80;
+  undefined1 local_78;
+  undefined7 uStack_77;
+  undefined8 local_68;
+  ulonglong local_60;
+  uint local_58 [8];
+  uint local_38 [8];
+  ulonglong local_18;
+  
+  local_18 = DAT_18004b4c0 ^ (ulonglong)auStack_a8;
+  local_88 = 0;
+  local_80 = param_1;
+  pwVar4 = (wchar_t *)FUN_180033130(local_58,(undefined8 *)&DAT_18004b208);
+  FUN_18002e810(param_1,pwVar4);
+  local_88 = 1;
+  FUN_18000d0e0((longlong *)local_58);
+  if (param_1[2] == 0) {
+    _Buf1 = &DAT_18004b208;
+    if (0xf < DAT_18004b220) {
+      _Buf1 = _DAT_18004b208;
+    }
+    if ((DAT_18004b218 == 10) && (iVar3 = memcmp(_Buf1,"ciphertalk",10), iVar3 == 0)) {
+      pwVar4 = (wchar_t *)FUN_180034360(local_38);
+      plVar5 = FUN_18002e810((undefined8 *)&local_78,pwVar4);
+      FUN_180009e00(param_1,plVar5);
+      if (0xf < local_60) {
+        pvVar2 = (void *)CONCAT71(uStack_77,local_78);
+        _Memory = pvVar2;
+        if ((0xfff < local_60 + 1) &&
+           (_Memory = *(void **)((longlong)pvVar2 + -8),
+           0x1f < (ulonglong)((longlong)pvVar2 + (-8 - (longlong)_Memory)))) {
+          pcVar1 = (code *)swi(0x29);
+          (*pcVar1)(5);
+          pcVar1 = (code *)swi(3);
+          plVar5 = (longlong *)(*pcVar1)();
+          return plVar5;
+        }
+        free(_Memory);
+      }
+      local_68 = 0;
+      local_60 = 0xf;
+      local_78 = 0;
+      FUN_18000d0e0((longlong *)local_38);
+    }
+  }
+  return param_1;
+}
+
+

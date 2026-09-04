@@ -7,7 +7,6 @@ import visionOrbUrl from '@/assets/lottie/Anumation.lottie?url'
 
 interface WhatsNewModalProps {
   onClose: () => void
-  version: string
 }
 
 
@@ -266,7 +265,7 @@ function WhatsNewModal({ onClose }: WhatsNewModalProps) {
   const lastStateProgressRef = useRef(-1)
   const closeTimeoutRef = useRef<number | null>(null)
   const [isVisionOpen, setIsVisionOpen] = useState(true)
-  // 关闭按钮始终显示：不再因「首次看更新」把 X 藏到音频播完（用户反馈那样体验很差）
+  // 关闭按钮始终显示：不因首次打开开发者愿景把 X 藏到音频播完
   const [isCloseVisible, setIsCloseVisible] = useState(true)
   const [audioProgress, setAudioProgress] = useState(0)
   const [audioCurrentTime, setAudioCurrentTime] = useState(0)

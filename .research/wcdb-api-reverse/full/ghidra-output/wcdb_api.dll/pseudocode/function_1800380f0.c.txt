@@ -1,0 +1,13 @@
+/* 1800380f0 FUN_1800380f0 */
+
+void FUN_1800380f0(void)
+
+{
+  undefined8 local_28 [5];
+  
+  FUN_1800380c0(local_28);
+                    /* WARNING: Subroutine does not return */
+  _CxxThrowException(local_28,(ThrowInfo *)&DAT_180047688);
+}
+
+

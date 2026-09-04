@@ -1,0 +1,165 @@
+/* 180036390 thunk_FUN_180036130 */
+
+ulonglong thunk_FUN_180036130(longlong param_1,longlong param_2,ulonglong param_3)
+
+{
+  char *pcVar1;
+  undefined1 auVar2 [16];
+  uint uVar3;
+  undefined1 auVar4 [32];
+  undefined1 auVar5 [32];
+  ulonglong uVar6;
+  uint uVar7;
+  ulonglong uVar8;
+  ulonglong uVar9;
+  undefined1 auVar10 [16];
+  
+  uVar6 = 0;
+  if ((DAT_18004b514 & 0x20) == 0) {
+    if ((DAT_18004b514 & 4) == 0) goto joined_r0x0001800361fb;
+    uVar8 = param_3 * 2 & 0xfffffffffffffff0;
+    if (uVar8 != 0) {
+      do {
+        pcVar1 = (char *)(param_1 + uVar6);
+        auVar2 = *(undefined1 (*) [16])(param_2 + uVar6);
+        auVar10[0] = -(*pcVar1 == auVar2[0]);
+        auVar10[1] = -(pcVar1[1] == auVar2[1]);
+        auVar10[2] = -(pcVar1[2] == auVar2[2]);
+        auVar10[3] = -(pcVar1[3] == auVar2[3]);
+        auVar10[4] = -(pcVar1[4] == auVar2[4]);
+        auVar10[5] = -(pcVar1[5] == auVar2[5]);
+        auVar10[6] = -(pcVar1[6] == auVar2[6]);
+        auVar10[7] = -(pcVar1[7] == auVar2[7]);
+        auVar10[8] = -(pcVar1[8] == auVar2[8]);
+        auVar10[9] = -(pcVar1[9] == auVar2[9]);
+        auVar10[10] = -(pcVar1[10] == auVar2[10]);
+        auVar10[0xb] = -(pcVar1[0xb] == auVar2[0xb]);
+        auVar10[0xc] = -(pcVar1[0xc] == auVar2[0xc]);
+        auVar10[0xd] = -(pcVar1[0xd] == auVar2[0xd]);
+        auVar10[0xe] = -(pcVar1[0xe] == auVar2[0xe]);
+        auVar10[0xf] = -(pcVar1[0xf] == auVar2[0xf]);
+        uVar7 = (ushort)((ushort)(SUB161(auVar10 >> 7,0) & 1) |
+                         (ushort)(SUB161(auVar10 >> 0xf,0) & 1) << 1 |
+                         (ushort)(SUB161(auVar10 >> 0x17,0) & 1) << 2 |
+                         (ushort)(SUB161(auVar10 >> 0x1f,0) & 1) << 3 |
+                         (ushort)(SUB161(auVar10 >> 0x27,0) & 1) << 4 |
+                         (ushort)(SUB161(auVar10 >> 0x2f,0) & 1) << 5 |
+                         (ushort)(SUB161(auVar10 >> 0x37,0) & 1) << 6 |
+                         (ushort)(SUB161(auVar10 >> 0x3f,0) & 1) << 7 |
+                         (ushort)(SUB161(auVar10 >> 0x47,0) & 1) << 8 |
+                         (ushort)(SUB161(auVar10 >> 0x4f,0) & 1) << 9 |
+                         (ushort)(SUB161(auVar10 >> 0x57,0) & 1) << 10 |
+                         (ushort)(SUB161(auVar10 >> 0x5f,0) & 1) << 0xb |
+                         (ushort)(SUB161(auVar10 >> 0x67,0) & 1) << 0xc |
+                         (ushort)(SUB161(auVar10 >> 0x6f,0) & 1) << 0xd |
+                         (ushort)(SUB161(auVar10 >> 0x77,0) & 1) << 0xe |
+                        (ushort)(auVar10[0xf] >> 7) << 0xf) ^ 0xffff;
+        if (uVar7 != 0) {
+          uVar3 = 0;
+          if (uVar7 != 0) {
+            for (; (uVar7 >> uVar3 & 1) == 0; uVar3 = uVar3 + 1) {
+            }
+          }
+          return uVar6 + uVar3 >> 1;
+        }
+        uVar6 = uVar6 + 0x10;
+      } while (uVar6 != uVar8);
+    }
+  }
+  else {
+    uVar8 = param_3 * 2;
+    if ((uVar8 & 0xffffffffffffffe0) != 0) {
+      do {
+        auVar4 = vpcmpeqb_avx2(*(undefined1 (*) [32])(uVar6 + param_2),
+                               *(undefined1 (*) [32])(uVar6 + param_1));
+        uVar7 = ~((uint)(SUB321(auVar4 >> 7,0) & 1) | (uint)(SUB321(auVar4 >> 0xf,0) & 1) << 1 |
+                  (uint)(SUB321(auVar4 >> 0x17,0) & 1) << 2 |
+                  (uint)(SUB321(auVar4 >> 0x1f,0) & 1) << 3 |
+                  (uint)(SUB321(auVar4 >> 0x27,0) & 1) << 4 |
+                  (uint)(SUB321(auVar4 >> 0x2f,0) & 1) << 5 |
+                  (uint)(SUB321(auVar4 >> 0x37,0) & 1) << 6 |
+                  (uint)(SUB321(auVar4 >> 0x3f,0) & 1) << 7 |
+                  (uint)(SUB321(auVar4 >> 0x47,0) & 1) << 8 |
+                  (uint)(SUB321(auVar4 >> 0x4f,0) & 1) << 9 |
+                  (uint)(SUB321(auVar4 >> 0x57,0) & 1) << 10 |
+                  (uint)(SUB321(auVar4 >> 0x5f,0) & 1) << 0xb |
+                  (uint)(SUB321(auVar4 >> 0x67,0) & 1) << 0xc |
+                  (uint)(SUB321(auVar4 >> 0x6f,0) & 1) << 0xd |
+                  (uint)(SUB321(auVar4 >> 0x77,0) & 1) << 0xe |
+                  (uint)SUB321(auVar4 >> 0x7f,0) << 0xf |
+                  (uint)(SUB321(auVar4 >> 0x87,0) & 1) << 0x10 |
+                  (uint)(SUB321(auVar4 >> 0x8f,0) & 1) << 0x11 |
+                  (uint)(SUB321(auVar4 >> 0x97,0) & 1) << 0x12 |
+                  (uint)(SUB321(auVar4 >> 0x9f,0) & 1) << 0x13 |
+                  (uint)(SUB321(auVar4 >> 0xa7,0) & 1) << 0x14 |
+                  (uint)(SUB321(auVar4 >> 0xaf,0) & 1) << 0x15 |
+                  (uint)(SUB321(auVar4 >> 0xb7,0) & 1) << 0x16 |
+                  (uint)SUB321(auVar4 >> 0xbf,0) << 0x17 |
+                  (uint)(SUB321(auVar4 >> 199,0) & 1) << 0x18 |
+                  (uint)(SUB321(auVar4 >> 0xcf,0) & 1) << 0x19 |
+                  (uint)(SUB321(auVar4 >> 0xd7,0) & 1) << 0x1a |
+                  (uint)(SUB321(auVar4 >> 0xdf,0) & 1) << 0x1b |
+                  (uint)(SUB321(auVar4 >> 0xe7,0) & 1) << 0x1c |
+                  (uint)(SUB321(auVar4 >> 0xef,0) & 1) << 0x1d |
+                  (uint)(SUB321(auVar4 >> 0xf7,0) & 1) << 0x1e |
+                 (uint)(byte)(auVar4[0x1f] >> 7) << 0x1f);
+        if (uVar7 != 0) goto LAB_180036214;
+        uVar6 = uVar6 + 0x20;
+      } while (uVar6 != (uVar8 & 0xffffffffffffffe0));
+    }
+    uVar9 = (ulonglong)((uint)uVar8 & 0x1c);
+    if ((uVar8 & 0x1c) != 0) {
+      auVar4 = vpmaskmovd_avx2(*(undefined1 (*) [32])(&DAT_180040cf0 + -uVar9),
+                               *(undefined1 (*) [32])(uVar6 + param_2));
+      auVar5 = vpmaskmovd_avx2(*(undefined1 (*) [32])(&DAT_180040cf0 + -uVar9),
+                               *(undefined1 (*) [32])(uVar6 + param_1));
+      auVar4 = vpcmpeqb_avx2(auVar5,auVar4);
+      uVar7 = ~((uint)(SUB321(auVar4 >> 7,0) & 1) | (uint)(SUB321(auVar4 >> 0xf,0) & 1) << 1 |
+                (uint)(SUB321(auVar4 >> 0x17,0) & 1) << 2 |
+                (uint)(SUB321(auVar4 >> 0x1f,0) & 1) << 3 |
+                (uint)(SUB321(auVar4 >> 0x27,0) & 1) << 4 |
+                (uint)(SUB321(auVar4 >> 0x2f,0) & 1) << 5 |
+                (uint)(SUB321(auVar4 >> 0x37,0) & 1) << 6 |
+                (uint)(SUB321(auVar4 >> 0x3f,0) & 1) << 7 |
+                (uint)(SUB321(auVar4 >> 0x47,0) & 1) << 8 |
+                (uint)(SUB321(auVar4 >> 0x4f,0) & 1) << 9 |
+                (uint)(SUB321(auVar4 >> 0x57,0) & 1) << 10 |
+                (uint)(SUB321(auVar4 >> 0x5f,0) & 1) << 0xb |
+                (uint)(SUB321(auVar4 >> 0x67,0) & 1) << 0xc |
+                (uint)(SUB321(auVar4 >> 0x6f,0) & 1) << 0xd |
+                (uint)(SUB321(auVar4 >> 0x77,0) & 1) << 0xe | (uint)SUB321(auVar4 >> 0x7f,0) << 0xf
+                | (uint)(SUB321(auVar4 >> 0x87,0) & 1) << 0x10 |
+                (uint)(SUB321(auVar4 >> 0x8f,0) & 1) << 0x11 |
+                (uint)(SUB321(auVar4 >> 0x97,0) & 1) << 0x12 |
+                (uint)(SUB321(auVar4 >> 0x9f,0) & 1) << 0x13 |
+                (uint)(SUB321(auVar4 >> 0xa7,0) & 1) << 0x14 |
+                (uint)(SUB321(auVar4 >> 0xaf,0) & 1) << 0x15 |
+                (uint)(SUB321(auVar4 >> 0xb7,0) & 1) << 0x16 |
+                (uint)SUB321(auVar4 >> 0xbf,0) << 0x17 | (uint)(SUB321(auVar4 >> 199,0) & 1) << 0x18
+                | (uint)(SUB321(auVar4 >> 0xcf,0) & 1) << 0x19 |
+                (uint)(SUB321(auVar4 >> 0xd7,0) & 1) << 0x1a |
+                (uint)(SUB321(auVar4 >> 0xdf,0) & 1) << 0x1b |
+                (uint)(SUB321(auVar4 >> 0xe7,0) & 1) << 0x1c |
+                (uint)(SUB321(auVar4 >> 0xef,0) & 1) << 0x1d |
+                (uint)(SUB321(auVar4 >> 0xf7,0) & 1) << 0x1e |
+               (uint)(byte)(auVar4[0x1f] >> 7) << 0x1f);
+      if (uVar7 != 0) {
+LAB_180036214:
+        uVar3 = 0;
+        for (; (uVar7 & 1) == 0; uVar7 = uVar7 >> 1 | 0x80000000) {
+          uVar3 = uVar3 + 1;
+        }
+        return uVar6 + uVar3 >> 1;
+      }
+      uVar6 = uVar6 + uVar9;
+    }
+  }
+  uVar6 = uVar6 >> 1;
+joined_r0x0001800361fb:
+  for (; (uVar6 != param_3 && (*(short *)(param_1 + uVar6 * 2) == *(short *)(param_2 + uVar6 * 2)));
+      uVar6 = uVar6 + 1) {
+  }
+  return uVar6;
+}
+
+

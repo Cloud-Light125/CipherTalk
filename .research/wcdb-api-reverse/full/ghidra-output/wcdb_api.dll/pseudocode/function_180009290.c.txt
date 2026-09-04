@@ -1,0 +1,44 @@
+/* 180009290 FUN_180009290 */
+
+void FUN_180009290(basic_streambuf<char,std::char_traits<char>_> *param_1)
+
+{
+  basic_streambuf<char,std::char_traits<char>_> *pbVar1;
+  
+  *(undefined ***)param_1 = std::basic_filebuf<char,std::char_traits<char>_>::vftable;
+  if (*(longlong *)(param_1 + 0x80) != 0) {
+    pbVar1 = (basic_streambuf<char,std::char_traits<char>_> *)
+             std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+    if (pbVar1 == param_1 + 0x70) {
+      std::basic_streambuf<char,std::char_traits<char>_>::setg
+                (param_1,*(char **)(param_1 + 0x88),*(char **)(param_1 + 0x88),
+                 *(char **)(param_1 + 0x90));
+    }
+  }
+  if (param_1[0x7c] != (basic_streambuf<char,std::char_traits<char>_>)0x0) {
+    if (*(longlong *)(param_1 + 0x80) != 0) {
+      pbVar1 = (basic_streambuf<char,std::char_traits<char>_> *)
+               std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+      if (pbVar1 == param_1 + 0x70) {
+        std::basic_streambuf<char,std::char_traits<char>_>::setg
+                  (param_1,*(char **)(param_1 + 0x88),*(char **)(param_1 + 0x88),
+                   *(char **)(param_1 + 0x90));
+      }
+      FUN_18000bc50((longlong *)param_1);
+      fclose(*(FILE **)(param_1 + 0x80));
+    }
+    param_1[0x7c] = (basic_streambuf<char,std::char_traits<char>_>)0x0;
+    param_1[0x71] = (basic_streambuf<char,std::char_traits<char>_>)0x0;
+    std::basic_streambuf<char,std::char_traits<char>_>::_Init(param_1);
+    *(undefined8 *)(param_1 + 0x80) = 0;
+    *(undefined8 *)(param_1 + 0x74) = DAT_18004bcd8;
+    *(undefined8 *)(param_1 + 0x68) = 0;
+  }
+                    /* WARNING: Could not recover jumptable at 0x000180009358. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  std::basic_streambuf<char,std::char_traits<char>_>::~basic_streambuf<char,std::char_traits<char>_>
+            (param_1);
+  return;
+}
+
+

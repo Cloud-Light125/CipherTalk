@@ -1,0 +1,105 @@
+/* 18001d3f0 FUN_18001d3f0 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+InnerHandle * FUN_18001d3f0(InnerHandle *param_1,uint param_2,undefined1 *param_3)
+
+{
+  code *pcVar1;
+  double dVar2;
+  char cVar3;
+  ColumnType CVar4;
+  __uint64 _Var5;
+  char *pcVar6;
+  InnerHandle *pIVar7;
+  undefined8 ****ppppuVar8;
+  InnerHandle *pIVar9;
+  undefined1 *puVar10;
+  undefined1 *puVar11;
+  undefined1 auStack_88 [8];
+  undefined1 auStack_80 [24];
+  undefined8 ***local_68;
+  UnsafeStringView local_60 [24];
+  undefined8 ***local_48;
+  undefined8 uStack_40;
+  longlong local_38;
+  ulonglong local_30;
+  ulonglong local_28;
+  
+  puVar10 = auStack_88;
+  puVar11 = auStack_88;
+  local_28 = DAT_18004b4c0 ^ (ulonglong)auStack_88;
+  pIVar9 = (InnerHandle *)(ulonglong)param_2;
+  *param_3 = 1;
+  if (-1 < (int)param_2) {
+    CVar4 = WCDB::InnerHandle::getColumnType(param_1,param_2);
+    cVar3 = (char)CVar4;
+    if (cVar3 == '\x01') {
+      *param_3 = 0;
+      pIVar9 = (InnerHandle *)WCDB::InnerHandle::getInteger(param_1,param_2);
+      goto LAB_18001d563;
+    }
+    if (cVar3 == '\x02') {
+LAB_18001d542:
+      *param_3 = 0;
+      *(undefined8 *)(puVar10 + -8) = 0x18001d54f;
+      dVar2 = WCDB::InnerHandle::getDouble(param_1,(int)pIVar9);
+      pIVar9 = (InnerHandle *)(longlong)dVar2;
+      puVar11 = puVar10;
+      goto LAB_18001d563;
+    }
+    if (cVar3 == '\x03') {
+      WCDB::InnerHandle::getText(param_1,(int)local_60);
+      _Var5 = WCDB::UnsafeStringView::length(local_60);
+      pcVar6 = WCDB::UnsafeStringView::data(local_60);
+      local_48 = (undefined8 ****)0x0;
+      uStack_40 = 0;
+      param_1 = (InnerHandle *)0x0;
+      local_38 = 0;
+      local_30 = 0;
+      FUN_180002340(&local_48,pcVar6,_Var5);
+      pIVar9 = param_1;
+      if (local_38 != 0) {
+        local_68 = (undefined8 ****)0x0;
+        ppppuVar8 = &local_48;
+        if (0xf < local_30) {
+          ppppuVar8 = (undefined8 ****)local_48;
+        }
+        pIVar7 = (InnerHandle *)strtoll(ppppuVar8,&local_68,10);
+        ppppuVar8 = &local_48;
+        if (0xf < local_30) {
+          ppppuVar8 = (undefined8 ****)local_48;
+        }
+        if ((undefined8 ****)local_68 != ppppuVar8) {
+          *param_3 = 0;
+          pIVar9 = pIVar7;
+        }
+      }
+      if (0xf < local_30) {
+        ppppuVar8 = (undefined8 ****)local_48;
+        if ((0xfff < local_30 + 1) &&
+           (ppppuVar8 = (undefined8 ****)local_48[-1],
+           0x1f < (ulonglong)((longlong)local_48 + (-8 - (longlong)ppppuVar8)))) {
+          pcVar1 = (code *)swi(0x29);
+          (*pcVar1)(5);
+          puVar10 = auStack_80;
+          goto LAB_18001d542;
+        }
+        free(ppppuVar8);
+      }
+      local_38 = 0;
+      local_30 = 0xf;
+      local_48 = (undefined8 ***)((ulonglong)local_48 & 0xffffffffffffff00);
+      WCDB::UnsafeStringView::~UnsafeStringView(local_60);
+      puVar11 = auStack_88;
+      goto LAB_18001d563;
+    }
+  }
+  pIVar9 = (InnerHandle *)0x0;
+  puVar11 = auStack_88;
+LAB_18001d563:
+  *(undefined8 *)(puVar11 + -8) = 0x18001d570;
+  return pIVar9;
+}
+
+

@@ -1,0 +1,4 @@
+C:/code/CipherTalk/native/wcdb-api/build/CMakeFiles/wcdb_api.dir
+C:/code/CipherTalk/native/wcdb-api/build/CMakeFiles/wcdb_probe.dir
+C:/code/CipherTalk/native/wcdb-api/build/CMakeFiles/edit_cache.dir
+C:/code/CipherTalk/native/wcdb-api/build/CMakeFiles/rebuild_cache.dir

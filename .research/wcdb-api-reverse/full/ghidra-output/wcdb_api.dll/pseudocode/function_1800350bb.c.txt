@@ -1,0 +1,17 @@
+/* 1800350bb BCryptVerifySignature */
+
+NTSTATUS __stdcall
+BCryptVerifySignature
+          (BCRYPT_KEY_HANDLE hKey,void *pPaddingInfo,PUCHAR pbHash,ULONG cbHash,PUCHAR pbSignature,
+          ULONG cbSignature,ULONG dwFlags)
+
+{
+  NTSTATUS NVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x0001800350bb. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  NVar1 = BCryptVerifySignature(hKey,pPaddingInfo,pbHash,cbHash,pbSignature,cbSignature,dwFlags);
+  return NVar1;
+}
+
+

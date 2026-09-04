@@ -1,0 +1,90 @@
+/* 180007940 FUN_180007940 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+longlong * FUN_180007940(longlong *param_1,LPCSTR param_2)
+
+{
+  int iVar1;
+  ulonglong uVar2;
+  ulonglong uVar3;
+  LPWSTR ***ppppWVar4;
+  ulonglong uVar5;
+  ulonglong uVar6;
+  undefined2 *puVar7;
+  undefined1 auStackY_a8 [32];
+  LPWSTR **local_68;
+  longlong lStack_60;
+  ulonglong local_58;
+  ulonglong uStack_50;
+  ulonglong local_48;
+  
+  local_48 = DAT_18004b4c0 ^ (ulonglong)auStackY_a8;
+  uVar3 = *(ulonglong *)(param_2 + 0x10);
+  if (0xf < *(ulonglong *)(param_2 + 0x18)) {
+    param_2 = *(LPCSTR *)param_2;
+  }
+  lStack_60 = 0;
+  local_58 = 0;
+  uStack_50 = 7;
+  local_68 = (LPWSTR **)0x0;
+  if (uVar3 != 0) {
+    if (0x7fffffff < uVar3) {
+                    /* WARNING: Subroutine does not return */
+      FUN_18000ce10(0x16);
+    }
+    uVar2 = FUN_180036670(0xfde9,param_2,(int)uVar3,(LPWSTR)0x0,0);
+    iVar1 = (int)(uVar2 >> 0x20);
+    if (iVar1 != 0) {
+                    /* WARNING: Subroutine does not return */
+      FUN_18000ce50(iVar1);
+    }
+    uVar6 = (ulonglong)(int)uVar2;
+    if (local_58 < uVar6) {
+      uVar5 = uVar6 - local_58;
+      if (uStack_50 - local_58 < uVar5) {
+        FUN_180006620(&local_68,uVar5,0,uVar5,0);
+      }
+      else {
+        ppppWVar4 = &local_68;
+        if (7 < uStack_50) {
+          ppppWVar4 = (LPWSTR ***)local_68;
+        }
+        puVar7 = (undefined2 *)((longlong)ppppWVar4 + local_58 * 2);
+        local_58 = uVar6;
+        if (uVar5 != 0) {
+          for (; uVar5 != 0; uVar5 = uVar5 - 1) {
+            *puVar7 = 0;
+            puVar7 = puVar7 + 1;
+          }
+        }
+        *(undefined2 *)((longlong)ppppWVar4 + uVar6 * 2) = 0;
+      }
+    }
+    else {
+      ppppWVar4 = &local_68;
+      if (7 < uStack_50) {
+        ppppWVar4 = (LPWSTR ***)local_68;
+      }
+      local_58 = uVar6;
+      *(undefined2 *)((longlong)ppppWVar4 + uVar6 * 2) = 0;
+    }
+    ppppWVar4 = &local_68;
+    if (7 < uStack_50) {
+      ppppWVar4 = (LPWSTR ***)local_68;
+    }
+    uVar3 = FUN_180036670(0xfde9,param_2,(int)uVar3,(LPWSTR)ppppWVar4,(int)uVar2);
+    iVar1 = (int)(uVar3 >> 0x20);
+    if (iVar1 != 0) {
+                    /* WARNING: Subroutine does not return */
+      FUN_18000ce50(iVar1);
+    }
+  }
+  *param_1 = (longlong)local_68;
+  param_1[1] = lStack_60;
+  param_1[2] = local_58;
+  param_1[3] = uStack_50;
+  return param_1;
+}
+
+

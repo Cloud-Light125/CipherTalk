@@ -1,0 +1,80 @@
+/* 180007f50 FUN_180007f50 */
+
+undefined8 *
+FUN_180007f50(undefined8 *param_1,undefined8 param_2,undefined8 param_3,void *param_4,size_t param_5
+             ,undefined8 param_6,size_t param_7)
+
+{
+  ulonglong uVar1;
+  ulonglong uVar2;
+  code *pcVar3;
+  ulonglong uVar4;
+  longlong lVar5;
+  undefined8 *_Dst;
+  ulonglong uVar6;
+  undefined1 *puVar7;
+  undefined8 uStack_60;
+  undefined1 auStack_58 [32];
+  
+  puVar7 = auStack_58;
+  _Dst = (undefined8 *)0x0;
+  *param_1 = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  uVar2 = param_5 + param_7;
+  if (uVar2 < 0x10) {
+    uVar4 = 0xf;
+    _Dst = param_1;
+  }
+  else {
+    uVar4 = uVar2 | 0xf;
+    puVar7 = auStack_58;
+    if (uVar4 < 0x8000000000000000) goto LAB_180007fc8;
+    uVar6 = 0x8000000000000027;
+    puVar7 = auStack_58;
+    uVar4 = 0x7fffffffffffffff;
+    while( true ) {
+      *(undefined8 *)(puVar7 + -8) = 0x180007fbc;
+      lVar5 = FUN_1800373b0(uVar6);
+      if (lVar5 != 0) {
+        _Dst = (undefined8 *)(lVar5 + 0x27U & 0xffffffffffffffe0);
+        _Dst[-1] = lVar5;
+        *param_1 = _Dst;
+        goto LAB_18000801c;
+      }
+      pcVar3 = (code *)swi(0x29);
+      uVar4 = (*pcVar3)(5);
+      puVar7 = puVar7 + 8;
+LAB_180007fc8:
+      if (uVar4 < 0x16) {
+        uVar4 = 0x16;
+      }
+      uVar1 = uVar4 + 1;
+      if (uVar1 == 0) break;
+      if (uVar1 < 0x1000) {
+        *(undefined8 *)(puVar7 + -8) = 0x18000800c;
+        _Dst = (undefined8 *)FUN_1800373b0(uVar1);
+        break;
+      }
+      uVar6 = uVar4 + 0x28;
+      if (uVar6 <= uVar1) {
+                    /* WARNING: Subroutine does not return */
+        *(undefined **)(puVar7 + -8) = &UNK_180008061;
+        FUN_18000cdd0();
+      }
+    }
+    *param_1 = _Dst;
+  }
+LAB_18000801c:
+  param_1[2] = uVar2;
+  param_1[3] = uVar4;
+  *(undefined8 *)(puVar7 + -8) = 0x180008032;
+  memcpy(_Dst,param_4,param_5);
+  *(undefined8 *)(puVar7 + -8) = 0x180008046;
+  memcpy((void *)((longlong)_Dst + param_5),*(void **)(puVar7 + 0x88),param_7);
+  *(undefined1 *)((longlong)_Dst + uVar2) = 0;
+  return param_1;
+}
+
+

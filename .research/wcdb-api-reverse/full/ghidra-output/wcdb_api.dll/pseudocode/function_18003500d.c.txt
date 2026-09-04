@@ -1,0 +1,12 @@
+/* 18003500d ~UnsafeStringView */
+
+void __thiscall WCDB::UnsafeStringView::~UnsafeStringView(UnsafeStringView *this)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x00018003500d. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  ~UnsafeStringView(this);
+  return;
+}
+
+

@@ -1,0 +1,13 @@
+/* 18000d390 FUN_18000d390 */
+
+void FUN_18000d390(longlong *param_1,char *param_2)
+
+{
+  size_t sVar1;
+  
+  sVar1 = strlen(param_2);
+  FUN_180001d30(param_1,param_2,sVar1);
+  return;
+}
+
+

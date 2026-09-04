@@ -1,0 +1,14 @@
+/* 18000adf0 FUN_18000adf0 */
+
+basic_streambuf<char,std::char_traits<char>_> *
+FUN_18000adf0(basic_streambuf<char,std::char_traits<char>_> *param_1,uint param_2)
+
+{
+  FUN_180009290(param_1);
+  if ((param_2 & 1) != 0) {
+    free(param_1);
+  }
+  return param_1;
+}
+
+

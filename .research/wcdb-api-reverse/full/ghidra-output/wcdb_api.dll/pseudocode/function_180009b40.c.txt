@@ -1,0 +1,34 @@
+/* 180009b40 FUN_180009b40 */
+
+void FUN_180009b40(longlong param_1)
+
+{
+  undefined8 *puVar1;
+  longlong *plVar2;
+  code *pcVar3;
+  undefined1 *_Memory;
+  longlong *plVar4;
+  
+  if (*(longlong *)(param_1 + 8) == 0) {
+    return;
+  }
+  plVar2 = *(longlong **)(param_1 + 0x20);
+  for (plVar4 = *(longlong **)(param_1 + 0x18); plVar4 != plVar2; plVar4 = plVar4 + 5) {
+    FUN_18000d070(plVar4);
+  }
+  _Memory = *(undefined1 **)(param_1 + 8);
+  if (0xfff < (ulonglong)(*(longlong *)(param_1 + 0x10) * 0x28)) {
+    puVar1 = (undefined8 *)(_Memory + -8);
+    _Memory = _Memory + (-8 - (longlong)*puVar1);
+    if (_Memory < &DAT_00000020) {
+      free((void *)*puVar1);
+      return;
+    }
+    pcVar3 = (code *)swi(0x29);
+    (*pcVar3)(5);
+  }
+  free(_Memory);
+  return;
+}
+
+

@@ -1,0 +1,136 @@
+/* 180003620 FUN_180003620 */
+
+undefined8 * FUN_180003620(longlong *param_1,undefined8 *param_2,undefined8 *param_3)
+
+{
+  ulonglong uVar1;
+  ulonglong uVar2;
+  longlong lVar3;
+  longlong *plVar4;
+  code *pcVar5;
+  undefined8 uVar6;
+  ulonglong uVar7;
+  undefined8 *puVar8;
+  undefined8 *puVar9;
+  longlong lVar10;
+  longlong *plVar11;
+  undefined1 *puVar12;
+  undefined8 *unaff_RSI;
+  undefined8 *puVar13;
+  undefined8 *puVar14;
+  undefined8 *puVar15;
+  undefined1 auStack_48 [8];
+  undefined1 auStack_40 [24];
+  
+  lVar3 = *param_1;
+  puVar15 = (undefined8 *)0xe38e38e38e38e39;
+  lVar10 = (param_1[1] - lVar3) / 0x12 + (param_1[1] - lVar3 >> 0x3f);
+  lVar10 = (lVar10 >> 2) - (lVar10 >> 0x3f);
+  if (lVar10 == 0x38e38e38e38e38e) {
+                    /* WARNING: Subroutine does not return */
+    FUN_18000d1b0();
+  }
+  uVar2 = (param_1[2] - lVar3) / 0x48;
+  if (0x38e38e38e38e38e - (uVar2 >> 1) < uVar2) {
+LAB_1800038bb:
+                    /* WARNING: Subroutine does not return */
+    FUN_18000cdd0();
+  }
+  uVar2 = (uVar2 >> 1) + uVar2;
+  uVar1 = lVar10 + 1;
+  uVar7 = uVar1;
+  if (uVar1 <= uVar2) {
+    uVar7 = uVar2;
+  }
+  if (0x38e38e38e38e38e < uVar7) goto LAB_1800038bb;
+  puVar13 = (undefined8 *)0x0;
+  uVar2 = uVar7 * 0x48;
+  if (uVar2 == 0) {
+LAB_180003726:
+    lVar3 = ((longlong)param_2 - lVar3) / 0x48;
+    puVar13[lVar3 * 9] = 0;
+    (puVar13 + lVar3 * 9)[1] = 0;
+    puVar13[lVar3 * 9 + 2] = 0;
+    puVar15 = puVar13 + lVar3 * 9;
+    puVar15[3] = 0;
+    uVar6 = param_3[1];
+    *puVar15 = *param_3;
+    puVar15[1] = uVar6;
+    uVar6 = param_3[3];
+    puVar15[2] = param_3[2];
+    puVar15[3] = uVar6;
+    param_3[2] = 0;
+    param_3[3] = 0xf;
+    *(undefined1 *)param_3 = 0;
+    puVar15[4] = 0;
+    puVar15[5] = 0;
+    puVar15[6] = 0;
+    puVar15[7] = 0;
+    uVar6 = param_3[5];
+    puVar15[4] = param_3[4];
+    puVar15[5] = uVar6;
+    uVar6 = param_3[7];
+    puVar15[6] = param_3[6];
+    puVar15[7] = uVar6;
+    param_3[6] = 0;
+    param_3[7] = 0xf;
+    *(undefined1 *)(param_3 + 4) = 0;
+    *(undefined1 *)(puVar15 + 8) = *(undefined1 *)(param_3 + 8);
+    puVar9 = (undefined8 *)param_1[1];
+    puVar8 = (undefined8 *)*param_1;
+    puVar14 = puVar13;
+    if (param_2 != puVar9) {
+      FUN_180007520((undefined8 *)*param_1,param_2,puVar13);
+      puVar9 = (undefined8 *)param_1[1];
+      puVar14 = puVar15 + 9;
+      puVar8 = param_2;
+    }
+    FUN_180007520(puVar8,puVar9,puVar14);
+    plVar11 = (longlong *)*param_1;
+    if (plVar11 == (longlong *)0x0) goto LAB_180003880;
+    plVar4 = (longlong *)param_1[1];
+    for (; plVar11 != plVar4; plVar11 = plVar11 + 9) {
+      FUN_18000d070(plVar11 + 4);
+      FUN_18000d070(plVar11);
+    }
+    puVar14 = (undefined8 *)*param_1;
+    puVar9 = puVar14;
+    puVar12 = auStack_48;
+    if (0xfff < (ulonglong)(((param_1[2] - (longlong)puVar14) / 0x48) * 0x48)) {
+      puVar9 = (undefined8 *)puVar14[-1];
+      puVar14 = (undefined8 *)((longlong)puVar14 + (-8 - (longlong)puVar9));
+      puVar12 = auStack_48;
+      unaff_RSI = puVar13;
+      if (&DAT_0000001f < puVar14) goto LAB_180003871;
+    }
+  }
+  else {
+    if (uVar2 < 0x1000) {
+      puVar13 = (undefined8 *)FUN_1800373b0(uVar2);
+      goto LAB_180003726;
+    }
+    if (uVar2 + 0x27 <= uVar2) goto LAB_1800038bb;
+    lVar10 = FUN_1800373b0(uVar2 + 0x27);
+    puVar14 = puVar13;
+    if (lVar10 != 0) {
+      puVar13 = (undefined8 *)(lVar10 + 0x27U & 0xffffffffffffffe0);
+      puVar13[-1] = lVar10;
+      goto LAB_180003726;
+    }
+LAB_180003871:
+    puVar9 = puVar14;
+    pcVar5 = (code *)swi(0x29);
+    (*pcVar5)(5);
+    puVar12 = auStack_40;
+    puVar13 = unaff_RSI;
+  }
+  *(undefined8 *)(puVar12 + -8) = 0x180003880;
+  free(puVar9);
+LAB_180003880:
+  *param_1 = (longlong)puVar13;
+  param_1[1] = (longlong)(puVar13 + uVar1 * 9);
+  param_1[2] = (longlong)(puVar13 + uVar7 * 9);
+  return puVar15;
+}
+
+

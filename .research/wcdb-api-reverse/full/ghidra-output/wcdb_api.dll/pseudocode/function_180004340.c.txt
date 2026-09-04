@@ -1,0 +1,92 @@
+/* 180004340 FUN_180004340 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+DWORD FUN_180004340(undefined8 *param_1,undefined8 *param_2,uint param_3)
+
+{
+  longlong *plVar1;
+  int *piVar2;
+  int iVar3;
+  longlong *plVar4;
+  bool bVar5;
+  longlong lVar6;
+  DWORD DVar7;
+  undefined8 *puVar8;
+  undefined8 *puVar9;
+  undefined1 auStack_2e8 [32];
+  undefined8 local_2c8;
+  WCHAR local_2b8 [16];
+  HANDLE local_298;
+  _WIN32_FIND_DATAW local_290;
+  undefined1 local_40;
+  undefined2 local_3f;
+  undefined1 local_3d;
+  DWORD local_3c;
+  ulonglong local_38;
+  
+  local_38 = DAT_18004b4c0 ^ (ulonglong)auStack_2e8;
+  puVar9 = (undefined8 *)0x0;
+  FUN_1800081a0((undefined8 *)local_2b8,param_2);
+  local_298 = (HANDLE)0xffffffffffffffff;
+  local_3c = FUN_18000c820(local_2b8,param_3,&local_298,&local_290);
+  if (local_3c == 0) {
+    local_40 = 1;
+    local_3c = 0;
+    bVar5 = true;
+    local_2c8 = (undefined8 *)(ulonglong)(uint)local_2c8;
+  }
+  else {
+    local_40 = 0;
+    bVar5 = false;
+    if (local_3c == 0x12) {
+      local_3c = 0;
+      local_2c8 = (undefined8 *)(ulonglong)(uint)local_2c8;
+    }
+    else {
+      local_2c8 = (undefined8 *)CONCAT44(local_3c,(uint)local_2c8);
+    }
+  }
+  local_3f = local_2c8._1_2_;
+  local_3d = local_2c8._3_1_;
+  if (bVar5) {
+    puVar8 = (undefined8 *)FUN_1800373b0(0x58);
+    local_2c8 = puVar8;
+    if (puVar8 != (undefined8 *)0x0) {
+      *puVar8 = 0;
+      puVar8[1] = 0;
+      *(undefined4 *)(puVar8 + 1) = 1;
+      *(undefined4 *)((longlong)puVar8 + 0xc) = 1;
+      *puVar8 = std::_Ref_count_obj2<std::filesystem::_Dir_enum_impl>::vftable;
+      FUN_180008b80(puVar8 + 2,(longlong *)local_2b8);
+      puVar9 = puVar8;
+    }
+    *param_1 = puVar9 + 2;
+    plVar4 = (longlong *)param_1[1];
+    param_1[1] = puVar9;
+    if (plVar4 != (longlong *)0x0) {
+      LOCK();
+      plVar1 = plVar4 + 1;
+      lVar6 = *plVar1;
+      *(int *)plVar1 = (int)*plVar1 + -1;
+      UNLOCK();
+      if ((int)lVar6 == 1) {
+        (**(code **)*plVar4)(plVar4);
+        LOCK();
+        piVar2 = (int *)((longlong)plVar4 + 0xc);
+        iVar3 = *piVar2;
+        *piVar2 = *piVar2 + -1;
+        UNLOCK();
+        if (iVar3 == 1) {
+          (**(code **)(*plVar4 + 8))(plVar4);
+        }
+      }
+    }
+  }
+  DVar7 = local_3c;
+  FUN_180036880(local_298);
+  FUN_18000d0e0((longlong *)local_2b8);
+  return DVar7;
+}
+
+

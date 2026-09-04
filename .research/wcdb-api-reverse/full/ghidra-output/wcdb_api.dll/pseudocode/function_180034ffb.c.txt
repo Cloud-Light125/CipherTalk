@@ -1,0 +1,14 @@
+/* 180034ffb buffer */
+
+uchar * __thiscall WCDB::UnsafeData::buffer(UnsafeData *this)
+
+{
+  uchar *puVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180034ffb. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  puVar1 = buffer(this);
+  return puVar1;
+}
+
+

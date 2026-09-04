@@ -1,0 +1,54 @@
+/* 180009380 FUN_180009380 */
+
+void FUN_180009380(basic_streambuf<char,std::char_traits<char>_> *param_1)
+
+{
+  code *pcVar1;
+  char *pcVar2;
+  char *pcVar3;
+  char *pcVar4;
+  char *_Memory;
+  undefined1 *puVar5;
+  undefined1 auStack_28 [8];
+  undefined1 auStack_20 [24];
+  
+  puVar5 = auStack_28;
+  *(undefined ***)param_1 =
+       std::basic_stringbuf<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+  if (((byte)param_1[0x70] & 1) != 0) {
+    pcVar2 = std::basic_streambuf<char,std::char_traits<char>_>::pptr(param_1);
+    if (pcVar2 == (char *)0x0) {
+      pcVar2 = std::basic_streambuf<char,std::char_traits<char>_>::egptr(param_1);
+    }
+    else {
+      pcVar2 = std::basic_streambuf<char,std::char_traits<char>_>::epptr(param_1);
+    }
+    pcVar3 = std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+    pcVar4 = std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+    _Memory = pcVar4;
+    puVar5 = auStack_28;
+    if ((0xfff < (ulonglong)((longlong)pcVar2 - (longlong)pcVar3)) &&
+       (_Memory = *(char **)(pcVar4 + -8), puVar5 = auStack_28,
+       (char *)0x1f < pcVar4 + (-8 - (longlong)_Memory))) {
+      pcVar1 = (code *)swi(0x29);
+      _Memory = (char *)(*pcVar1)(5);
+      puVar5 = auStack_20;
+    }
+    *(undefined8 *)(puVar5 + -8) = 0x180009403;
+    free(_Memory);
+  }
+  *(undefined8 *)(puVar5 + -8) = 0x180009414;
+  std::basic_streambuf<char,std::char_traits<char>_>::setg
+            (param_1,(char *)0x0,(char *)0x0,(char *)0x0);
+  *(undefined8 *)(puVar5 + -8) = 0x180009422;
+  std::basic_streambuf<char,std::char_traits<char>_>::setp(param_1,(char *)0x0,(char *)0x0);
+  *(uint *)(param_1 + 0x70) = *(uint *)(param_1 + 0x70) & 0xfffffffe;
+  *(undefined8 *)(param_1 + 0x68) = 0;
+                    /* WARNING: Could not recover jumptable at 0x00018000943b. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  std::basic_streambuf<char,std::char_traits<char>_>::~basic_streambuf<char,std::char_traits<char>_>
+            (param_1);
+  return;
+}
+
+

@@ -1,0 +1,38 @@
+/* 180020a40 FUN_180020a40 */
+
+ulonglong FUN_180020a40(basic_streambuf<char,std::char_traits<char>_> *param_1)
+
+{
+  byte *pbVar1;
+  byte *pbVar2;
+  char *pcVar3;
+  char *pcVar4;
+  byte *pbVar5;
+  
+  pbVar1 = (byte *)std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+  if (pbVar1 != (byte *)0x0) {
+    pbVar2 = (byte *)std::basic_streambuf<char,std::char_traits<char>_>::egptr(param_1);
+    if (pbVar1 < pbVar2) {
+      return (ulonglong)*pbVar1;
+    }
+    pbVar2 = (byte *)std::basic_streambuf<char,std::char_traits<char>_>::pptr(param_1);
+    if ((pbVar2 != (byte *)0x0) && (((byte)param_1[0x70] & 4) == 0)) {
+      pbVar5 = *(byte **)(param_1 + 0x68);
+      if (*(byte **)(param_1 + 0x68) < pbVar2) {
+        pbVar5 = pbVar2;
+      }
+      if (pbVar1 < pbVar5) {
+        *(byte **)(param_1 + 0x68) = pbVar5;
+        pcVar3 = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+        pcVar4 = std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+        std::basic_streambuf<char,std::char_traits<char>_>::setg
+                  (param_1,pcVar4,pcVar3,(char *)pbVar5);
+        pbVar1 = (byte *)std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+        return (ulonglong)*pbVar1;
+      }
+    }
+  }
+  return 0xffffffff;
+}
+
+

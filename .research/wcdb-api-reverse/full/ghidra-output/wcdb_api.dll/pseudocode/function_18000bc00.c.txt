@@ -1,0 +1,12 @@
+/* 18000bc00 FUN_18000bc00 */
+
+void FUN_18000bc00(longlong param_1)
+
+{
+  FUN_1800097b0((longlong *)(param_1 + 0x58));
+  FUN_180036880(*(HANDLE *)(param_1 + 0x50));
+  FUN_18000d0e0((longlong *)(param_1 + 0x30));
+  return;
+}
+
+

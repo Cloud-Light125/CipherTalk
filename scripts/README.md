@@ -57,65 +57,53 @@ GH_TOKEN=ghp_xxxx
 
 其中：
 
-1. `prepare-meta` 生成 `force-update.json` 和 `release-context.json`
-2. `build-windows` 负责构建安装包和 `latest.yml`
+1. `prepare-meta` 生成 `release-context.json`
+2. `build-windows` 和 `build-macos` 负责构建 Windows/macOS 安装包
 3. `generate-release-body` 负责 AI / 模板版发布说明
 4. `publish-github-release` 汇总产物并创建 GitHub Release
 5. `mirror-r2` 与 `notify-telegram-success` 在发布成功后并行执行
 
 GitHub Release 上传内容：
 
-- 安装包
-- `latest.yml`
-- `force-update.json`
+- Windows 和 macOS 安装包
 
 Cloudflare R2 同步内容：
 
-- 安装包
-- `latest.yml`
-- `force-update.json`
+- Windows 和 macOS 安装包
+- `models-dev.json` 模型目录快照
 
 Telegram 通知：
 
 - 成功时发送 AI 摘要通知
 - 失败时发送失败通知
 
-GitHub Release 资产包括：
-   - 安装包
-   - `latest.yml`
-   - `force-update.json`
-10. 向 Telegram 频道/群发送发布通知（AI 摘要 + 强制更新提醒）
+GitHub Release 资产包括 Windows 和 macOS 安装包。
 
-## Windows / macOS 全量更新
+## Windows / macOS 安装包
 
-当前 Windows 和 macOS 自动更新统一使用全量更新包下载。
+当前应用不提供在线版本检查或自动更新，用户通过 GitHub Release 或 R2
+获取安装包后手动安装。
 
-Windows 依赖产物为：
+Windows 产物为：
 
 - `CipherTalk-x.y.z-Setup.exe`
-- `latest.yml`
 
-macOS 依赖产物为：
+macOS 产物为：
 
-- `CipherTalk-x.y.z-Setup.dmg`（手动安装和应用内更新）
-- `latest-mac.yml`
+- `CipherTalk-x.y.z-Setup.dmg`
 
-macOS 客户端使用自定义下载流程读取 `latest-mac.yml`。下载并校验 DMG 后，
-客户端会打开 DMG 并退出，由用户在系统安装窗口中完成替换安装。
-
-工作流会在构建与发布阶段校验安装包、更新包和对应清单的哈希是否一致，避免元数据与真实文件不匹配。
+构建与发布阶段只校验安装包文件存在，不生成版本清单或强制安装策略文件。
 
 说明：
 
 - 当前仍是未签名发布
 - 公开分发时稳定性仍可能受 SmartScreen / 杀软 / 系统策略影响
-- 当前已禁用差分更新，客户端始终下载完整安装包
 
 ## 版本号规则
 
 自 2026.7.21 起，内部构建版本与软件内展示版本分离：
 
-### 内部构建版本（package.json / Git tag / 更新源）
+### 内部构建版本（package.json / Git tag / 分发版本）
 
 格式：`年.月日.当日构建序号`，月日段**不带前导零**：
 
@@ -125,9 +113,7 @@ macOS 客户端使用自定义下载流程读取 `latest-mac.yml`。下载并校
 
 序号从 `0` 开始，跨天归零。
 
-> ⚠️ 月日段不能写成 `0721`：semver 不允许数字段带前导零，
-> `2026.0721.0` 会让 electron-updater 启动时直接抛
-> "App version is not a valid semver version"，自动更新整体失效。
+> ⚠️ 月日段不能写成 `0721`：semver 不允许数字段带前导零。
 > 数值排序上 `721` 与 `0721` 等价（月份先行，天然有序），无需前导零。
 
 ### 软件内展示版本
@@ -137,8 +123,7 @@ macOS 客户端使用自定义下载流程读取 `latest-mac.yml`。下载并校
 - 内部 `2026.721.0` → 展示 `v2026.7.21-构建版本号v0`
 - 旧格式（如 `2026.7.20`）原样展示为 `v2026.7.20`
 
-展示版本只在 UI 层使用；更新检查、latest.yml、force-update.json、
-Git tag 一律使用内部构建版本。
+展示版本只在 UI 层使用；Git tag 和安装包文件名一律使用内部构建版本。
 
 ## 版本要求
 
@@ -148,22 +133,6 @@ Git tag 一律使用内部构建版本。
 - Git tag 必须是 `v2026.721.0`
 
 如果不一致，工作流会直接失败。
-
-## 强制更新策略
-
-工作流会调用：
-
-```bash
-npm run build:force-update-manifest
-```
-
-默认情况下不会触发强制更新。只有在仓库 Variables / Secrets 中提供以下值时，生成的 `force-update.json` 才会带上对应策略：
-
-- `FORCE_UPDATE_MIN_VERSION`
-- `FORCE_UPDATE_BLOCKED_VERSIONS`
-- `FORCE_UPDATE_TITLE`
-- `FORCE_UPDATE_MESSAGE`
-- `FORCE_UPDATE_RELEASE_NOTES`
 
 ## Secrets / Variables
 
@@ -175,18 +144,6 @@ npm run build:force-update-manifest
 - `R2_BUCKET_NAME`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
-
-### 可选强制更新 Variables / Secrets
-
-可以按需配置：
-
-- `FORCE_UPDATE_MIN_VERSION`
-- `FORCE_UPDATE_BLOCKED_VERSIONS`
-- `FORCE_UPDATE_TITLE`
-- `FORCE_UPDATE_MESSAGE`
-- `FORCE_UPDATE_RELEASE_NOTES`
-
-不配置时，`force-update.json` 仍会生成，但只包含当前版本信息，不会强制用户升级。
 
 ### AI Release Body 配置
 
@@ -225,8 +182,7 @@ npm run build:force-update-manifest
 - 成功发布时会发送 AI 摘要版通知
 - 发布失败时会发送失败通知
 
-## 当前更新源角色
+## 当前分发角色
 
-- **Cloudflare R2**：主更新源，负责客户端优先读取安装包、`latest.yml` 与 `force-update.json`
-- **GitHub Release**：发布归档源 + 更新回退源
-- **force-update.json**：R2 优先，GitHub 回退
+- **Cloudflare R2**：安装包和模型目录快照的镜像分发源
+- **GitHub Release**：安装包发布归档源

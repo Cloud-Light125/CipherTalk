@@ -1,0 +1,14 @@
+/* 1800364b7 _Syserror_map */
+
+char * __cdecl std::_Syserror_map(int param_1)
+
+{
+  char *pcVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x0001800364b7. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  pcVar1 = _Syserror_map(param_1);
+  return pcVar1;
+}
+
+

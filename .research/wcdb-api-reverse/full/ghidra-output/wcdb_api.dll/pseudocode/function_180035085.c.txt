@@ -1,0 +1,14 @@
+/* 180035085 canOpen */
+
+bool __thiscall WCDB::InnerDatabase::canOpen(InnerDatabase *this)
+
+{
+  bool bVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180035085. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  bVar1 = canOpen(this);
+  return bVar1;
+}
+
+

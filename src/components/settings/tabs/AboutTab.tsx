@@ -1,41 +1,44 @@
-import { Alert, Button, Chip, Label, ProgressBar, Separator, Typography } from '@heroui/react'
-import { ArrowDownToLine, ArrowUpRightFromSquare, ArrowsRotateLeft, LogoGithub, ShieldCheck } from '@gravity-ui/icons'
-import type { UpdateDownloadProgressPayload } from '../../../types/electron'
-import type { UpdateInfo } from '../types'
-import { formatFileSize, formatSpeed } from '../utils'
+import type { ReactNode } from 'react'
+import { Alert, Button, Chip, Separator, Typography } from '@heroui/react'
+import { ArrowUpRightFromSquare, LogoGithub, ShieldCheck } from '@gravity-ui/icons'
 import { formatDisplayVersion } from '../../../lib/appVersion'
 
 interface AboutTabProps {
   appVersion: string
-  updateInfo: UpdateInfo | null
-  isDownloading: boolean
-  downloadProgress: number
-  downloadProgressDetail: UpdateDownloadProgressPayload | null
-  isCheckingUpdate: boolean
-  onUpdateNow: () => void
-  onCheckUpdate: () => void
 }
 
-const PROJECT_URL = 'https://github.com/ILoveBingLu/CipherTalk'
-const WEBSITE_URL = 'https://miyu.aiqji.com'
+// Obtained from `git remote get-url origin` for the current checkout.
+const PROJECT_URL = 'https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git'
+const PROJECT_DISPLAY_NAME = 'Cloud-Light125/CipherTalk-SafeFork-1'
+const MAINTAINER_URL = 'https://github.com/Cloud-Light125'
+const WEBSITE_URL = 'https://269332.xyz'
 
-function AboutTab({
-  appVersion,
-  updateInfo,
-  isDownloading,
-  downloadProgress,
-  downloadProgressDetail,
-  isCheckingUpdate,
-  onUpdateNow,
-  onCheckUpdate
-}: AboutTabProps) {
-  const updateVersion = updateInfo?.version || updateInfo?.diagnostics?.targetVersion
-  const transferredBytes = downloadProgressDetail?.transferred ?? updateInfo?.diagnostics?.downloadedBytes ?? 0
-  const totalBytes = downloadProgressDetail?.total ?? updateInfo?.diagnostics?.totalBytes ?? 0
-  const currentYear = new Date().getFullYear()
-  const updateSourceLabel = updateInfo?.updateSource === 'r2' ? 'R2 镜像' : updateInfo?.updateSource === 'custom' ? '自定义源' : updateInfo?.updateSource === 'github' ? 'GitHub' : '默认'
-  const policySourceLabel = updateInfo?.policySource === 'r2' ? 'R2 策略' : updateInfo?.policySource === 'custom' ? '自定义策略' : updateInfo?.policySource === 'github' ? 'GitHub 策略' : '无'
+const ORIGINAL_PROJECT_URL = 'https://github.com/ILoveBingLu/CipherTalk'
+const ORIGINAL_WEBSITE_URL = 'https://miyu.aiqji.com'
 
+interface ExternalLinkProps {
+  href: string
+  onOpen: (url: string) => void
+  children: ReactNode
+  className?: string
+}
+
+function ExternalLink({ href, onOpen, children, className = '' }: ExternalLinkProps) {
+  return (
+    <a
+      href={href}
+      onClick={(event) => {
+        event.preventDefault()
+        onOpen(href)
+      }}
+      className={`min-w-0 max-w-full break-words underline decoration-border underline-offset-4 transition-colors hover:text-accent-foreground ${className}`}
+    >
+      {children}
+    </a>
+  )
+}
+
+function AboutTab({ appVersion }: AboutTabProps) {
   const openExternal = (url: string) => {
     void window.electronAPI.shell.openExternal(url)
   }
@@ -44,74 +47,9 @@ function AboutTab({
     void window.electronAPI.window.openAgreementWindow()
   }
 
-  const renderUpdateContent = () => {
-    if (updateInfo?.hasUpdate) {
-      return (
-        <div className="space-y-4">
-          <Alert status={updateInfo.forceUpdate ? 'warning' : 'success'}>
-            <Alert.Indicator />
-            <Alert.Content>
-              <Alert.Title>
-                {isDownloading
-                  ? `正在下载 ${updateVersion ? formatDisplayVersion(updateVersion) : '新版本'}`
-                  : updateInfo.forceUpdate
-                    ? '检测到强制更新'
-                    : `新版本 ${updateVersion ? formatDisplayVersion(updateVersion) : 'v...'} 可用`}
-              </Alert.Title>
-              {(updateInfo.message || updateInfo.title || updateInfo.releaseNotes) && (
-                <Alert.Description>
-                  {updateInfo.message || updateInfo.title || updateInfo.releaseNotes}
-                </Alert.Description>
-              )}
-            </Alert.Content>
-          </Alert>
-
-          {isDownloading ? (
-            <div className="space-y-3">
-              <ProgressBar value={downloadProgress} valueLabel={`${downloadProgress.toFixed(0)}%`}>
-                <div className="flex items-center justify-between gap-3">
-                  <Label>下载进度</Label>
-                  <ProgressBar.Output />
-                </div>
-                <ProgressBar.Track>
-                  <ProgressBar.Fill />
-                </ProgressBar.Track>
-              </ProgressBar>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
-                <span>{formatFileSize(transferredBytes)} / {formatFileSize(totalBytes)}</span>
-                <span>速度 {formatSpeed(downloadProgressDetail?.bytesPerSecond ?? 0)}</span>
-              </div>
-            </div>
-          ) : (
-            <Button type="button" onPress={onUpdateNow} isDisabled={isDownloading}>
-              <ArrowDownToLine width={16} height={16} /> 立即更新
-            </Button>
-          )}
-        </div>
-      )
-    }
-
-    return (
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Typography.Paragraph size="sm" color="muted">
-          当前版本已安装。可以手动检查是否有新的稳定版本。
-        </Typography.Paragraph>
-        <Button
-          type="button"
-          variant="secondary"
-          onPress={onCheckUpdate}
-          isDisabled={isCheckingUpdate || isDownloading}
-        >
-          <ArrowsRotateLeft width={16} height={16} className={isCheckingUpdate ? 'spin' : undefined} />
-          {isCheckingUpdate ? '检查中...' : '检查更新'}
-        </Button>
-      </div>
-    )
-  }
-
   return (
-    <div className="tab-content space-y-8">
-      <section className="flex flex-col gap-6 pb-6 sm:flex-row sm:items-center sm:justify-between">
+    <div className="tab-content flex min-h-full flex-col gap-8">
+      <section className="flex flex-col gap-6 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-col items-start gap-5 sm:flex-row sm:items-center">
           <img
             src="./About.png"
@@ -131,8 +69,8 @@ function AboutTab({
               本地优先的微信数据浏览、检索与分析工具，面向个人数据归档与回顾场景。
             </Typography.Paragraph>
             <div className="flex flex-wrap items-center gap-2">
-              <Chip size="sm" color={updateInfo?.hasUpdate ? 'warning' : 'success'} variant="soft">
-                <Chip.Label>{updateInfo?.hasUpdate ? '有新版本' : '已是当前版本'}</Chip.Label>
+              <Chip size="sm" color="success" variant="soft">
+                <Chip.Label>本地运行</Chip.Label>
               </Chip>
               <Chip size="sm" variant="secondary">
                 <Chip.Label>本地数据</Chip.Label>
@@ -147,63 +85,61 @@ function AboutTab({
 
       <Separator />
 
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <Typography.Heading level={3} className="text-lg font-semibold text-foreground">软件更新</Typography.Heading>
-            <Typography.Paragraph size="sm" color="muted">检查更新、下载新版本，并查看当前更新状态。</Typography.Paragraph>
-          </div>
-          {renderUpdateContent()}
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <Typography.Heading level={3} className="text-lg font-semibold text-foreground">版本信息</Typography.Heading>
+          <Typography.Paragraph size="sm" color="muted">当前安装版本与数据处理模式。</Typography.Paragraph>
         </div>
-
-        <dl className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+        <dl className="grid gap-4 rounded-xl border border-border bg-surface p-5 sm:grid-cols-2">
           <div className="space-y-1">
             <dt className="text-xs text-muted">当前版本</dt>
             <dd className="text-sm font-medium text-foreground">{appVersion ? formatDisplayVersion(appVersion) : 'v...'}</dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-xs text-muted">更新通道</dt>
-            <dd className="text-sm font-medium text-foreground">{updateSourceLabel}</dd>
-          </div>
-          <div className="space-y-1">
-            <dt className="text-xs text-muted">策略来源</dt>
-            <dd className="text-sm font-medium text-foreground">{policySourceLabel}</dd>
+            <dt className="text-xs text-muted">数据模式</dt>
+            <dd className="text-sm font-medium text-foreground">本地优先</dd>
           </div>
         </dl>
       </section>
 
       <Separator />
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <div className="space-y-1">
-          <Typography.Heading level={3} className="text-lg font-semibold text-foreground">项目与链接</Typography.Heading>
-          <Typography.Paragraph size="sm" color="muted">密语项目、官方网站与用户协议。</Typography.Paragraph>
+          <Typography.Heading level={3} className="text-lg font-semibold text-foreground">当前项目信息</Typography.Heading>
+          <Typography.Paragraph size="sm" color="muted">本版本由 Cloud-Light125 继续维护。</Typography.Paragraph>
         </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full justify-start"
-            onPress={() => openExternal(PROJECT_URL)}
-          >
-            <LogoGithub width={16} height={16} />
-            密语项目地址
-            <ArrowUpRightFromSquare width={14} height={14} className="ml-auto" />
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full justify-start"
-            onPress={() => openExternal(WEBSITE_URL)}
-          >
-            <ArrowUpRightFromSquare width={16} height={16} />
-            官网
-          </Button>
-          <Button type="button" variant="outline" className="w-full justify-start" onPress={openAgreement}>
-            <ShieldCheck width={16} height={16} />
-            用户协议
-          </Button>
-        </div>
+        <dl className="grid min-w-0 gap-x-6 gap-y-5 rounded-xl border border-border bg-surface p-5 sm:grid-cols-2">
+          <div className="min-w-0 space-y-1">
+            <dt className="text-xs text-muted">当前维护者</dt>
+            <dd className="min-w-0 text-sm font-medium text-foreground">
+              <ExternalLink href={MAINTAINER_URL} onOpen={openExternal} className="inline-flex items-center gap-2">
+                <LogoGithub width={16} height={16} className="shrink-0" />
+                <span>Cloud-Light125</span>
+                <ArrowUpRightFromSquare width={13} height={13} className="shrink-0" />
+              </ExternalLink>
+            </dd>
+          </div>
+          <div className="min-w-0 space-y-1">
+            <dt className="text-xs text-muted">项目仓库</dt>
+            <dd className="min-w-0 text-sm font-medium text-foreground">
+              <ExternalLink href={PROJECT_URL} onOpen={openExternal} className="inline-flex items-center gap-2">
+                <LogoGithub width={16} height={16} className="shrink-0" />
+                <span className="break-all">{PROJECT_DISPLAY_NAME}</span>
+                <ArrowUpRightFromSquare width={13} height={13} className="shrink-0" />
+              </ExternalLink>
+            </dd>
+          </div>
+          <div className="min-w-0 space-y-1 sm:col-span-2">
+            <dt className="text-xs text-muted">个人主页</dt>
+            <dd className="min-w-0 text-sm font-medium text-foreground">
+              <ExternalLink href={WEBSITE_URL} onOpen={openExternal} className="inline-flex items-center gap-2">
+                <span>269332.xyz</span>
+                <ArrowUpRightFromSquare width={13} height={13} className="shrink-0" />
+              </ExternalLink>
+            </dd>
+          </div>
+        </dl>
       </section>
 
       <section className="space-y-4">
@@ -216,8 +152,33 @@ function AboutTab({
             </Alert.Description>
           </Alert.Content>
         </Alert>
-        <Typography.Paragraph size="xs" color="muted" className="text-center">
-          © {currentYear} 密语-CipherTalk. All rights reserved.
+        <div className="rounded-lg border border-border/60 bg-surface/40 px-4 py-3">
+          <Typography.Paragraph size="xs" color="muted">
+            用户协议与许可信息
+          </Typography.Paragraph>
+          <Button type="button" variant="outline" size="sm" className="mt-2" onPress={openAgreement}>
+            <ShieldCheck width={16} height={16} />
+            打开用户协议
+          </Button>
+        </div>
+      </section>
+
+      <section className="mt-auto space-y-2 pt-2">
+        <Separator />
+        <Typography.Paragraph size="xs" color="muted" className="mx-auto max-w-2xl text-center text-[11px] leading-4 opacity-75">
+          <span className="block">
+            本项目基于{' '}
+            <ExternalLink href={ORIGINAL_PROJECT_URL} onOpen={openExternal}>ILoveBingLu/CipherTalk</ExternalLink>{' '}
+            继续维护
+          </span>
+          <span className="block">
+            原作者{' '}
+            <ExternalLink href={ORIGINAL_PROJECT_URL} onOpen={openExternal}>ILoveBingLu</ExternalLink>
+            <span className="mx-1">·</span>
+            <ExternalLink href={ORIGINAL_PROJECT_URL} onOpen={openExternal}>原仓库</ExternalLink>
+            <span className="mx-1">·</span>
+            <ExternalLink href={ORIGINAL_WEBSITE_URL} onOpen={openExternal}>原官网</ExternalLink>
+          </span>
         </Typography.Paragraph>
       </section>
     </div>

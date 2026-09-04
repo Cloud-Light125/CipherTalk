@@ -1,0 +1,11 @@
+/* 1800264d0 wcdb_set_client_info */
+
+void wcdb_set_client_info(void *param_1,void *param_2,void *param_3)
+
+{
+                    /* 0x264d0  15  wcdb_set_client_info */
+  FUN_18002ed10(param_1,param_2,param_3);
+  return;
+}
+
+

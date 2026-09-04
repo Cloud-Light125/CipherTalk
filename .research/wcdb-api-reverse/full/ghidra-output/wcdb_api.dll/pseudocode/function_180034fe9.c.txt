@@ -1,0 +1,12 @@
+/* 180034fe9 ~UnsafeData */
+
+void __thiscall WCDB::UnsafeData::~UnsafeData(UnsafeData *this)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180034fe9. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  ~UnsafeData(this);
+  return;
+}
+
+

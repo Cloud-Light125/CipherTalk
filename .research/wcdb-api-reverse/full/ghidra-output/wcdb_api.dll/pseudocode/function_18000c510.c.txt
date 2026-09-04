@@ -1,0 +1,175 @@
+/* 18000c510 FUN_18000c510 */
+
+longlong * FUN_18000c510(longlong *param_1,longlong *param_2,longlong *param_3)
+
+{
+  char cVar1;
+  longlong *plVar2;
+  longlong lVar3;
+  undefined8 *puVar4;
+  longlong *plVar5;
+  longlong *plVar6;
+  longlong *plVar7;
+  longlong *plVar8;
+  
+  param_1[1] = param_1[1] + 1;
+  plVar2 = (longlong *)*param_1;
+  plVar8 = (longlong *)*param_2;
+  param_3[1] = (longlong)plVar8;
+  if (plVar8 == plVar2) {
+    *plVar2 = (longlong)param_3;
+    plVar2[1] = (longlong)param_3;
+    plVar2[2] = (longlong)param_3;
+    *(undefined1 *)(param_3 + 3) = 1;
+    return param_3;
+  }
+  if ((int)param_2[1] == 0) {
+    plVar8[2] = (longlong)param_3;
+    if (plVar8 == (longlong *)plVar2[2]) {
+      plVar2[2] = (longlong)param_3;
+    }
+  }
+  else {
+    *plVar8 = (longlong)param_3;
+    if (plVar8 == (longlong *)*plVar2) {
+      *plVar2 = (longlong)param_3;
+    }
+  }
+  cVar1 = *(char *)(param_3[1] + 0x18);
+  plVar8 = param_3;
+  do {
+    if (cVar1 != '\0') {
+      *(undefined1 *)(plVar2[1] + 0x18) = 1;
+      return param_3;
+    }
+    plVar6 = (longlong *)plVar8[1];
+    lVar3 = *(longlong *)plVar6[1];
+    if (plVar6 == (longlong *)lVar3) {
+      lVar3 = ((longlong *)plVar6[1])[2];
+      if (*(char *)(lVar3 + 0x18) == '\0') {
+        *(undefined1 *)(plVar6 + 3) = 1;
+        *(undefined1 *)(lVar3 + 0x18) = 1;
+        *(undefined1 *)(*(longlong *)(plVar8[1] + 8) + 0x18) = 0;
+        plVar8 = *(longlong **)(plVar8[1] + 8);
+      }
+      else {
+        plVar7 = (longlong *)plVar6[2];
+        plVar5 = plVar6;
+        if (plVar8 == plVar7) {
+          plVar6[2] = *plVar7;
+          if (*(char *)(*plVar7 + 0x19) == '\0') {
+            *(longlong **)(*plVar7 + 8) = plVar6;
+          }
+          plVar7[1] = plVar6[1];
+          if (plVar6 == (longlong *)*(longlong *)(*param_1 + 8)) {
+            *(longlong **)(*param_1 + 8) = plVar7;
+          }
+          else {
+            plVar8 = (longlong *)plVar6[1];
+            if (plVar6 == (longlong *)*plVar8) {
+              *plVar8 = (longlong)plVar7;
+            }
+            else {
+              plVar8[2] = (longlong)plVar7;
+            }
+          }
+          *plVar7 = (longlong)plVar6;
+          plVar6[1] = (longlong)plVar7;
+          plVar5 = plVar7;
+          plVar8 = plVar6;
+        }
+        *(undefined1 *)(plVar5 + 3) = 1;
+        *(undefined1 *)(*(longlong *)(plVar8[1] + 8) + 0x18) = 0;
+        plVar6 = *(longlong **)(plVar8[1] + 8);
+        plVar7 = (longlong *)*plVar6;
+        *plVar6 = plVar7[2];
+        if (*(char *)(plVar7[2] + 0x19) == '\0') {
+          *(longlong **)(plVar7[2] + 8) = plVar6;
+        }
+        plVar7[1] = plVar6[1];
+        if (plVar6 == *(longlong **)(*param_1 + 8)) {
+          *(longlong **)(*param_1 + 8) = plVar7;
+          plVar7[2] = (longlong)plVar6;
+        }
+        else {
+          plVar5 = (longlong *)plVar6[1];
+          if (plVar6 == (longlong *)plVar5[2]) {
+            plVar5[2] = (longlong)plVar7;
+            plVar7[2] = (longlong)plVar6;
+          }
+          else {
+            *plVar5 = (longlong)plVar7;
+            plVar7[2] = (longlong)plVar6;
+          }
+        }
+LAB_18000c75d:
+        plVar6[1] = (longlong)plVar7;
+      }
+    }
+    else {
+      if (*(char *)(lVar3 + 0x18) != '\0') {
+        plVar7 = (longlong *)*plVar6;
+        plVar5 = plVar6;
+        if (plVar8 == plVar7) {
+          *plVar6 = plVar7[2];
+          if (*(char *)(plVar7[2] + 0x19) == '\0') {
+            *(longlong **)(plVar7[2] + 8) = plVar6;
+          }
+          plVar7[1] = plVar6[1];
+          plVar5 = plVar7;
+          if (plVar6 == (longlong *)*(longlong *)(*param_1 + 8)) {
+            *(longlong **)(*param_1 + 8) = plVar7;
+            plVar7[2] = (longlong)plVar6;
+            plVar6[1] = (longlong)plVar7;
+            plVar8 = plVar6;
+          }
+          else {
+            puVar4 = (undefined8 *)plVar6[1];
+            if (plVar6 == (longlong *)puVar4[2]) {
+              puVar4[2] = plVar7;
+              plVar7[2] = (longlong)plVar6;
+              plVar6[1] = (longlong)plVar7;
+              plVar8 = plVar6;
+            }
+            else {
+              *puVar4 = plVar7;
+              plVar7[2] = (longlong)plVar6;
+              plVar6[1] = (longlong)plVar7;
+              plVar8 = plVar6;
+            }
+          }
+        }
+        *(undefined1 *)(plVar5 + 3) = 1;
+        *(undefined1 *)(*(longlong *)(plVar8[1] + 8) + 0x18) = 0;
+        plVar6 = *(longlong **)(plVar8[1] + 8);
+        plVar7 = (longlong *)plVar6[2];
+        plVar6[2] = *plVar7;
+        if (*(char *)(*plVar7 + 0x19) == '\0') {
+          *(longlong **)(*plVar7 + 8) = plVar6;
+        }
+        plVar7[1] = plVar6[1];
+        if (plVar6 == *(longlong **)(*param_1 + 8)) {
+          *(longlong **)(*param_1 + 8) = plVar7;
+        }
+        else {
+          puVar4 = (undefined8 *)plVar6[1];
+          if (plVar6 == (longlong *)*puVar4) {
+            *puVar4 = plVar7;
+          }
+          else {
+            puVar4[2] = plVar7;
+          }
+        }
+        *plVar7 = (longlong)plVar6;
+        goto LAB_18000c75d;
+      }
+      *(undefined1 *)(plVar6 + 3) = 1;
+      *(undefined1 *)(lVar3 + 0x18) = 1;
+      *(undefined1 *)(*(longlong *)(plVar8[1] + 8) + 0x18) = 0;
+      plVar8 = *(longlong **)(plVar8[1] + 8);
+    }
+    cVar1 = *(char *)(plVar8[1] + 0x18);
+  } while( true );
+}
+
+

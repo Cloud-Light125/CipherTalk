@@ -1,0 +1,14 @@
+/* 180035043 prepare */
+
+bool __thiscall WCDB::InnerHandle::prepare(InnerHandle *this,UnsafeStringView *param_1)
+
+{
+  bool bVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180035043. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  bVar1 = prepare(this,param_1);
+  return bVar1;
+}
+
+

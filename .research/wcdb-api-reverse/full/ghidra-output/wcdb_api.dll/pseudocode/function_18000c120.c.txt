@@ -1,0 +1,32 @@
+/* 18000c120 FUN_18000c120 */
+
+uint * FUN_18000c120(uint *param_1,uint *param_2)
+
+{
+  uint *puVar1;
+  uint *puVar2;
+  
+  puVar2 = FUN_18000c190(param_1,param_2);
+  if (puVar2 != param_2) {
+    while (((short)*puVar2 == 0x5c || ((short)*puVar2 == 0x2f))) {
+      puVar2 = (uint *)((longlong)puVar2 + 2);
+      if (puVar2 == param_2) {
+        return param_2;
+      }
+    }
+    while( true ) {
+      puVar1 = (uint *)((longlong)param_2 + -2);
+      if (*(short *)((longlong)param_2 + -2) == 0x5c) break;
+      if (*(short *)((longlong)param_2 + -2) == 0x2f) {
+        return param_2;
+      }
+      param_2 = puVar1;
+      if (puVar2 == puVar1) {
+        return puVar1;
+      }
+    }
+  }
+  return param_2;
+}
+
+

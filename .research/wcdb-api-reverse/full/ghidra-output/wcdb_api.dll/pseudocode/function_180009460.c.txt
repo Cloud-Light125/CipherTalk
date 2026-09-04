@@ -1,0 +1,11 @@
+/* 180009460 FUN_180009460 */
+
+void FUN_180009460(longlong *param_1)
+
+{
+  FUN_180004020(param_1,param_1,*(longlong **)(*param_1 + 8));
+  free((void *)*param_1);
+  return;
+}
+
+

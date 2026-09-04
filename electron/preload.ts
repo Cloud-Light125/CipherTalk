@@ -524,37 +524,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     getPlatformInfo: () => ipcRenderer.invoke('app:getPlatformInfo'),
     getMcpLaunchConfig: () => getMcpLaunchConfigSafe(),
-    getUpdateState: () => ipcRenderer.invoke('app:getUpdateState'),
-    getUpdateSourceInfo: () => ipcRenderer.invoke('app:getUpdateSourceInfo'),
-    checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
-    downloadAndInstall: () => ipcRenderer.invoke('app:downloadAndInstall'),
     getStartupDbConnected: () => ipcRenderer.invoke('app:getStartupDbConnected'),
-    onDownloadProgress: (callback: (progress: {
-      percent: number
-      transferred: number
-      total: number
-      bytesPerSecond: number
-    }) => void) => {
-      ipcRenderer.on('app:downloadProgress', (_, progress) => callback(progress))
-      return () => ipcRenderer.removeAllListeners('app:downloadProgress')
-    },
-    onUpdateAvailable: (callback: (info: {
-      hasUpdate: boolean
-      forceUpdate: boolean
-      currentVersion: string
-      version?: string
-      releaseNotes?: string
-      title?: string
-      message?: string
-      minimumSupportedVersion?: string
-      reason?: 'minimum-version' | 'blocked-version'
-      checkedAt: number
-      updateSource: 'r2' | 'github' | 'custom' | 'none'
-      policySource: 'r2' | 'github' | 'custom' | 'none'
-    }) => void) => {
-      ipcRenderer.on('app:updateAvailable', (_, info) => callback(info))
-      return () => ipcRenderer.removeAllListeners('app:updateAvailable')
-    }
   },
 
   // 窗口控制
@@ -579,7 +549,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return () => ipcRenderer.removeListener('window:navigate', listener)
     },
     openAgreementWindow: () => ipcRenderer.invoke('window:openAgreementWindow'),
-    openPurchaseWindow: () => ipcRenderer.invoke('window:openPurchaseWindow'),
     openWelcomeWindow: (mode?: 'default' | 'add-account') => ipcRenderer.invoke('window:openWelcomeWindow', mode),
     completeWelcome: () => ipcRenderer.invoke('window:completeWelcome'),
     isChatWindowOpen: () => ipcRenderer.invoke('window:isChatWindowOpen'),
@@ -908,15 +877,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
-  // 激活
-  activation: {
-    getDeviceId: () => ipcRenderer.invoke('activation:getDeviceId'),
-    verifyCode: (code: string) => ipcRenderer.invoke('activation:verifyCode', code),
-    activate: (code: string) => ipcRenderer.invoke('activation:activate', code),
-    checkStatus: () => ipcRenderer.invoke('activation:checkStatus'),
-    getTypeDisplayName: (type: string | null) => ipcRenderer.invoke('activation:getTypeDisplayName', type),
-    clearCache: () => ipcRenderer.invoke('activation:clearCache')
-  },
   cache: {
     clearImages: () => ipcRenderer.invoke('cache:clearImages'),
     clearEmojis: () => ipcRenderer.invoke('cache:clearEmojis'),

@@ -1,0 +1,10 @@
+/* 18000bc30 FUN_18000bc30 */
+
+void FUN_18000bc30(longlong param_1)
+
+{
+  WCDB::CipherConfig::~CipherConfig((CipherConfig *)(param_1 + 0x10));
+  return;
+}
+
+

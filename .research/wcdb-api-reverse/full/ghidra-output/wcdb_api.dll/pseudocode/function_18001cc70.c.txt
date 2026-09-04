@@ -1,0 +1,418 @@
+/* 18001cc70 FUN_18001cc70 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+undefined8 FUN_18001cc70(undefined8 *param_1,char *param_2,longlong *param_3)
+
+{
+  ulonglong uVar1;
+  longlong lVar2;
+  code *pcVar3;
+  undefined1 *puVar4;
+  bool bVar5;
+  bool bVar6;
+  bool bVar7;
+  uint uVar8;
+  undefined8 uVar9;
+  InnerHandle *this;
+  UnsafeStringView *pUVar10;
+  undefined8 *puVar11;
+  basic_ostream<char,std::char_traits<char>_> *_Src;
+  undefined8 ****ppppuVar12;
+  char *pcVar13;
+  longlong *plVar14;
+  basic_ostream<char,std::char_traits<char>_> *pbVar15;
+  void *_Dst;
+  undefined8 ***pppuVar16;
+  longlong *_Src_00;
+  undefined1 *puVar17;
+  undefined1 *puVar18;
+  int iVar19;
+  size_t sVar20;
+  ulonglong uVar21;
+  undefined **ppuVar22;
+  undefined8 uStack_250;
+  undefined1 auStack_248 [8];
+  undefined1 auStack_240 [24];
+  size_t asStack_228 [2];
+  undefined4 local_218 [4];
+  longlong alStack_208 [14];
+  undefined8 local_198;
+  undefined4 local_190;
+  basic_ios<char,std::char_traits<char>_> local_180 [104];
+  undefined8 *local_118;
+  undefined8 uStack_110;
+  InnerHandle *local_108;
+  InnerHandle *local_100;
+  undefined8 **local_f8;
+  undefined8 **ppuStack_f0;
+  undefined8 **local_e8;
+  undefined8 **ppuStack_e0;
+  undefined8 ***local_d8;
+  undefined8 uStack_d0;
+  ulonglong local_c8;
+  ulonglong uStack_c0;
+  RecyclableHandle local_b8 [112];
+  ulonglong local_48;
+  
+  puVar17 = auStack_248;
+  puVar18 = auStack_248;
+  local_48 = DAT_18004b4c0 ^ (ulonglong)auStack_248;
+  local_218[0] = 0;
+  if ((InnerDatabase *)*param_1 == (InnerDatabase *)0x0) {
+    uVar9 = 0xfffffffc;
+    puVar18 = auStack_248;
+    goto LAB_18001d3be;
+  }
+  WCDB::InnerDatabase::getHandle((InnerDatabase *)*param_1,SUB81(local_b8,0),false);
+  this = WCDB::RecyclableHandle::get(local_b8);
+  if (this == (InnerHandle *)0x0) {
+    local_118 = (undefined8 *)0x0;
+    uStack_110 = 0;
+    local_108 = this;
+    local_100 = this;
+    local_118 = (undefined8 *)FUN_1800373b0(0x20);
+    local_108 = (InnerHandle *)0x10;
+    local_100 = (InnerHandle *)0x1f;
+    *local_118 = 0x6c646e6148746567;
+    local_118[1] = 0xa5b4e8b1a4e52065;
+    *(undefined1 *)(local_118 + 2) = 0;
+    FUN_180018260(&local_118);
+    if (0xf < local_100) {
+      puVar11 = local_118;
+      if ((0xfff < (longlong)local_100 + 1U) &&
+         (puVar11 = (undefined8 *)local_118[-1], puVar17 = auStack_248,
+         0x1f < (ulonglong)((longlong)local_118 + (-8 - (longlong)puVar11)))) {
+LAB_18001ceae:
+        pcVar3 = (code *)swi(0x29);
+        (*pcVar3)(5);
+        puVar4 = puVar17 + 8;
+        goto LAB_18001ceb5;
+      }
+      free(puVar11);
+    }
+    uVar9 = 0xfffffffd;
+    puVar18 = auStack_248;
+  }
+  else {
+    pcVar13 = param_2;
+    if (0xf < *(ulonglong *)(param_2 + 0x18)) {
+      pcVar13 = *(char **)param_2;
+    }
+    pUVar10 = (UnsafeStringView *)
+              WCDB::UnsafeStringView::UnsafeStringView
+                        ((UnsafeStringView *)&local_118,pcVar13,*(__uint64 *)(param_2 + 0x10));
+    bVar5 = WCDB::InnerHandle::prepare(this,pUVar10);
+    WCDB::UnsafeStringView::~UnsafeStringView((UnsafeStringView *)&local_118);
+    puVar4 = auStack_248;
+    if (bVar5) {
+LAB_18001ceb5:
+      puVar18 = puVar4;
+      *(undefined **)(puVar18 + 0x40) = &DAT_18003cc60;
+      *(undefined8 *)(puVar18 + -8) = 0x18001cecb;
+      std::basic_ios<char,std::char_traits<char>_>::basic_ios<char,std::char_traits<char>_>
+                (local_180);
+      *(undefined4 *)(puVar18 + 0x30) = 8;
+      *(undefined8 *)(puVar18 + -8) = 0x18001ceea;
+      std::basic_ostream<char,std::char_traits<char>_>::basic_ostream<char,std::char_traits<char>_>
+                ((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),
+                 (basic_streambuf<char,std::char_traits<char>_> *)(puVar18 + 0x48),false);
+      *(undefined ***)(puVar18 + (longlong)*(int *)(*(longlong *)(puVar18 + 0x40) + 4) + 0x40) =
+           std::basic_ostringstream<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+      *(int *)(puVar18 + (longlong)*(int *)(*(longlong *)(puVar18 + 0x40) + 4) + 0x3c) =
+           *(int *)(*(longlong *)(puVar18 + 0x40) + 4) + -0x88;
+      *(undefined8 *)(puVar18 + -8) = 0x18001cf1e;
+      std::basic_streambuf<char,std::char_traits<char>_>::
+      basic_streambuf<char,std::char_traits<char>_>
+                ((basic_streambuf<char,std::char_traits<char>_> *)(puVar18 + 0x48));
+      *(undefined ***)(puVar18 + 0x48) =
+           std::basic_stringbuf<char,std::char_traits<char>,std::allocator<char>_>::vftable;
+      local_198 = 0;
+      local_190 = 4;
+      *(undefined8 *)(puVar18 + -8) = 0x18001cf45;
+      FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),'[');
+      bVar5 = true;
+      *(undefined8 *)(puVar18 + -8) = 0x18001cf50;
+      bVar6 = WCDB::InnerHandle::step(this);
+      if (bVar6) {
+        do {
+          *(undefined8 *)(puVar18 + -8) = 0x18001cf68;
+          bVar7 = WCDB::InnerHandle::done(this);
+          if (bVar7) break;
+          if (!bVar5) {
+            *(undefined8 *)(puVar18 + -8) = 0x18001cf81;
+            FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),',');
+          }
+          *(undefined8 *)(puVar18 + -8) = 0x18001cf8d;
+          FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),'{');
+          *(undefined8 *)(puVar18 + -8) = 0x18001cf95;
+          uVar8 = WCDB::InnerHandle::getNumberOfColumns(this);
+          ppuVar22 = (undefined **)(ulonglong)uVar8;
+          iVar19 = 0;
+          if (0 < (int)uVar8) {
+            do {
+              if (iVar19 != 0) {
+                *(undefined8 *)(puVar18 + -8) = 0x18001cfb2;
+                FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),',');
+              }
+              *(undefined8 *)(puVar18 + -8) = 0x18001cfc1;
+              WCDB::InnerHandle::getColumnName(this,(int)&local_118);
+              *(undefined8 *)(puVar18 + -8) = 0x18001cfce;
+              _Src = FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),
+                                   '\"');
+              *(undefined8 *)(puVar18 + -8) = 0x18001cfda;
+              ppppuVar12 = (undefined8 ****)
+                           WCDB::UnsafeStringView::length((UnsafeStringView *)&local_118);
+              *(undefined8 *)(puVar18 + -8) = 0x18001cfe6;
+              pcVar13 = WCDB::UnsafeStringView::data((UnsafeStringView *)&local_118);
+              *(undefined8 *)(puVar18 + -8) = 0x18001cff5;
+              plVar14 = FUN_1800176b0((longlong *)&local_f8,(longlong)pcVar13,(ulonglong)ppppuVar12)
+              ;
+              uVar21 = plVar14[2];
+              if (0xf < (ulonglong)plVar14[3]) {
+                plVar14 = (longlong *)*plVar14;
+              }
+              *(undefined8 *)(puVar18 + -8) = 0x18001d00f;
+              pbVar15 = FUN_1800046a0(_Src,(char *)plVar14,uVar21);
+              *(undefined8 *)(puVar18 + -8) = 0x18001d01e;
+              FUN_180001420(pbVar15,"\":");
+              if ((undefined8 ***)0xf < ppuStack_e0) {
+                pppuVar16 = (undefined8 ***)local_f8;
+                if (((longlong)ppuStack_e0 + 1U < 0x1000) ||
+                   (pppuVar16 = (undefined8 ***)local_f8[-1],
+                   (ulonglong)((longlong)local_f8 + (-8 - (longlong)pppuVar16)) < 0x20)) {
+                  *(undefined8 *)(puVar18 + -8) = 0x18001d05a;
+                  free(pppuVar16);
+                  goto LAB_18001d05a;
+                }
+LAB_18001d1b8:
+                pcVar3 = (code *)swi(0x29);
+                (*pcVar3)(5);
+                puVar18 = puVar18 + 8;
+                uVar1 = local_c8;
+                goto LAB_18001d1bf;
+              }
+LAB_18001d05a:
+              *(undefined8 *)(puVar18 + -8) = 0x18001d069;
+              plVar14 = FUN_18000e260((longlong *)&local_f8,this,iVar19);
+              uVar21 = plVar14[2];
+              if (0xf < (ulonglong)plVar14[3]) {
+                plVar14 = (longlong *)*plVar14;
+              }
+              *(undefined8 *)(puVar18 + -8) = 0x18001d085;
+              FUN_1800046a0((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),
+                            (char *)plVar14,uVar21);
+              if ((undefined8 ***)0xf < ppuStack_e0) {
+                pppuVar16 = (undefined8 ***)local_f8;
+                if ((0xfff < (longlong)ppuStack_e0 + 1U) &&
+                   (pppuVar16 = (undefined8 ***)local_f8[-1],
+                   0x1f < (ulonglong)((longlong)local_f8 + (-8 - (longlong)pppuVar16))))
+                goto LAB_18001d1b8;
+                *(undefined8 *)(puVar18 + -8) = 0x18001d0c1;
+                free(pppuVar16);
+              }
+              *(undefined8 *)(puVar18 + -8) = 0x18001d0cb;
+              WCDB::UnsafeStringView::~UnsafeStringView((UnsafeStringView *)&local_118);
+              iVar19 = iVar19 + 1;
+            } while (iVar19 < (int)uVar8);
+          }
+          bVar5 = false;
+          *(undefined8 *)(puVar18 + -8) = 0x18001d0e5;
+          FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),'}');
+          *(undefined8 *)(puVar18 + -8) = 0x18001d0ed;
+          bVar6 = WCDB::InnerHandle::step(this);
+        } while (bVar6);
+      }
+      ppuVar22 = std::basic_ostringstream<char,std::char_traits<char>,std::allocator<char>_>::
+                 vftable;
+      pcVar3 = *(code **)(*(longlong *)this + 0x78);
+      *(undefined8 *)(puVar18 + -8) = 0x18001d108;
+      (*pcVar3)(this);
+      if (bVar6 == false) {
+        local_d8 = (undefined8 ****)0x0;
+        uStack_d0 = 0;
+        local_c8 = 0;
+        uStack_c0 = 0;
+        sVar20 = 0x78;
+        if (*(ulonglong *)(param_2 + 0x10) < 0x78) {
+          sVar20 = *(ulonglong *)(param_2 + 0x10);
+        }
+        if (0xf < *(ulonglong *)(param_2 + 0x18)) {
+          param_2 = *(char **)param_2;
+        }
+        *(undefined8 *)(puVar18 + -8) = 0x18001d157;
+        FUN_180002340(&local_d8,param_2,sVar20);
+        this = (InnerHandle *)0xd;
+        _Src = (basic_ostream<char,std::char_traits<char>_> *)&DAT_18003d098;
+        if (uStack_c0 - local_c8 < 0xd) {
+          *(undefined8 *)(puVar18 + 0x28) = 0xd;
+          *(undefined **)(puVar18 + 0x20) = &DAT_18003d098;
+          *(undefined8 *)(puVar18 + -8) = 0x18001d21f;
+          ppppuVar12 = (undefined8 ****)
+                       FUN_1800062a0(&local_d8,0xd,0,0,*(void **)(puVar18 + 0x20),
+                                     *(size_t *)(puVar18 + 0x28));
+        }
+        else {
+          uVar1 = local_c8 + 0xd;
+          ppppuVar12 = &local_d8;
+          if (0xf < uStack_c0) {
+            ppppuVar12 = (undefined8 ****)local_d8;
+          }
+          uVar21 = local_c8;
+          if ((&UNK_18003d0a4 < ppppuVar12) ||
+             ((undefined *)((longlong)ppppuVar12 + local_c8) < &DAT_18003d098)) {
+            sVar20 = 0xd;
+            local_c8 = uVar1;
+          }
+          else if (&DAT_18003d098 < ppppuVar12) {
+LAB_18001d1bf:
+            local_c8 = uVar1;
+            sVar20 = (longlong)ppppuVar12 - (longlong)_Src;
+          }
+          else {
+            sVar20 = 0;
+            local_c8 = uVar1;
+          }
+          *(undefined8 *)(puVar18 + -8) = 0x18001d1d9;
+          memmove((undefined *)((longlong)ppppuVar12 + 0xd),ppppuVar12,uVar21 + 1);
+          *(undefined8 *)(puVar18 + -8) = 0x18001d1e7;
+          memcpy(ppppuVar12,_Src,sVar20);
+          *(undefined8 *)(puVar18 + -8) = 0x18001d1fd;
+          memcpy((undefined *)(sVar20 + (longlong)ppppuVar12),_Src + sVar20 + 0xd,
+                 (longlong)this - sVar20);
+          ppppuVar12 = &local_d8;
+        }
+        local_f8 = *ppppuVar12;
+        ppuStack_f0 = ppppuVar12[1];
+        local_e8 = ppppuVar12[2];
+        ppuStack_e0 = ppppuVar12[3];
+        ppppuVar12[2] = (undefined8 ***)0x0;
+        ppppuVar12[3] = (undefined8 ***)0xf;
+        *(undefined1 *)ppppuVar12 = 0;
+        *(undefined8 *)(puVar18 + -8) = 0x18001d24a;
+        FUN_180018260(&local_f8);
+        if ((undefined8 ***)0xf < ppuStack_e0) {
+          pppuVar16 = (undefined8 ***)local_f8;
+          if ((0xfff < (longlong)ppuStack_e0 + 1U) &&
+             (pppuVar16 = (undefined8 ***)local_f8[-1],
+             0x1f < (ulonglong)((longlong)local_f8 + (-8 - (longlong)pppuVar16)))) {
+            pcVar3 = (code *)swi(0x29);
+            (*pcVar3)(5);
+            puVar18 = puVar18 + 8;
+            goto LAB_18001d2d2;
+          }
+          *(undefined8 *)(puVar18 + -8) = 0x18001d282;
+          free(pppuVar16);
+        }
+        if (0xf < uStack_c0) {
+          ppppuVar12 = (undefined8 ****)local_d8;
+          if ((0xfff < uStack_c0 + 1) &&
+             (ppppuVar12 = (undefined8 ****)local_d8[-1],
+             (undefined *)0x1f < (undefined *)((longlong)local_d8 + (-8 - (longlong)ppppuVar12)))) {
+LAB_18001d3e8:
+            pcVar3 = (code *)swi(0x29);
+            (*pcVar3)(5);
+            pcVar3 = (code *)swi(3);
+            uVar9 = (*pcVar3)();
+            return uVar9;
+          }
+          *(undefined8 *)(puVar18 + -8) = 0x18001d2c1;
+          free(ppppuVar12);
+        }
+        uVar9 = 0xfffffffb;
+      }
+      else {
+LAB_18001d2d2:
+        *(undefined8 *)(puVar18 + -8) = 0x18001d2de;
+        FUN_1800011f0((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x40),']');
+        *(undefined8 *)(puVar18 + -8) = 0x18001d2ec;
+        plVar14 = FUN_180020170((longlong)(puVar18 + 0x40),(longlong *)&local_f8);
+        lVar2 = plVar14[2];
+        *(undefined8 *)(puVar18 + -8) = 0x18001d2fc;
+        _Dst = malloc(lVar2 + 1);
+        if (_Dst != (void *)0x0) {
+          _Src_00 = plVar14;
+          if (0xf < (ulonglong)plVar14[3]) {
+            _Src_00 = (longlong *)*plVar14;
+          }
+          lVar2 = plVar14[2];
+          *(undefined8 *)(puVar18 + -8) = 0x18001d322;
+          memcpy(_Dst,_Src_00,lVar2 + 1);
+        }
+        *param_3 = (longlong)_Dst;
+        if ((undefined8 ***)0xf < ppuStack_e0) {
+          pppuVar16 = (undefined8 ***)local_f8;
+          if ((0xfff < (longlong)ppuStack_e0 + 1U) &&
+             (pppuVar16 = (undefined8 ***)local_f8[-1],
+             0x1f < (ulonglong)((longlong)local_f8 + (-8 - (longlong)pppuVar16))))
+          goto LAB_18001d3e8;
+          *(undefined8 *)(puVar18 + -8) = 0x18001d361;
+          free(pppuVar16);
+        }
+        uVar9 = 0xfffffffb;
+        if (*param_3 != 0) {
+          uVar9 = 0;
+        }
+      }
+      *(undefined ***)(puVar18 + (longlong)*(int *)(*(longlong *)(puVar18 + 0x40) + 4) + 0x40) =
+           ppuVar22;
+      *(int *)(puVar18 + (longlong)*(int *)(*(longlong *)(puVar18 + 0x40) + 4) + 0x3c) =
+           *(int *)(*(longlong *)(puVar18 + 0x40) + 4) + -0x88;
+      *(undefined8 *)(puVar18 + -8) = 0x18001d39a;
+      FUN_180009380((basic_streambuf<char,std::char_traits<char>_> *)(puVar18 + 0x48));
+      *(undefined8 *)(puVar18 + -8) = 0x18001d3a5;
+      std::basic_ostream<char,std::char_traits<char>_>::~basic_ostream<char,std::char_traits<char>_>
+                ((basic_ostream<char,std::char_traits<char>_> *)(puVar18 + 0x50));
+      *(undefined8 *)(puVar18 + -8) = 0x18001d3af;
+      std::basic_ios<char,std::char_traits<char>_>::~basic_ios<char,std::char_traits<char>_>
+                (local_180);
+    }
+    else {
+      local_118 = (undefined8 *)0x0;
+      uStack_110 = 0;
+      local_108 = (InnerHandle *)0x0;
+      local_100 = (InnerHandle *)0x0;
+      sVar20 = 0x78;
+      if (*(ulonglong *)(param_2 + 0x10) < 0x78) {
+        sVar20 = *(ulonglong *)(param_2 + 0x10);
+      }
+      if (0xf < *(ulonglong *)(param_2 + 0x18)) {
+        param_2 = *(char **)param_2;
+      }
+      FUN_180002340(&local_118,param_2,sVar20);
+      puVar11 = FUN_1800017f0(&local_f8,&DAT_18003d080,(char *)&local_118);
+      FUN_180018260(puVar11);
+      if ((undefined8 ***)0xf < ppuStack_e0) {
+        pppuVar16 = (undefined8 ***)local_f8;
+        if ((0xfff < (longlong)ppuStack_e0 + 1U) &&
+           (pppuVar16 = (undefined8 ***)local_f8[-1],
+           0x1f < (ulonglong)((longlong)local_f8 + (-8 - (longlong)pppuVar16)))) {
+          pcVar3 = (code *)swi(0x29);
+          (*pcVar3)(5);
+          puVar17 = auStack_240;
+          goto LAB_18001ceae;
+        }
+        free(pppuVar16);
+      }
+      local_e8 = (undefined8 ***)0x0;
+      ppuStack_e0 = (undefined8 ***)0xf;
+      local_f8 = (undefined8 **)((ulonglong)local_f8 & 0xffffffffffffff00);
+      if (0xf < local_100) {
+        puVar11 = local_118;
+        if ((0xfff < (longlong)local_100 + 1U) &&
+           (puVar11 = (undefined8 *)local_118[-1],
+           0x1f < (ulonglong)((longlong)local_118 + (-8 - (longlong)puVar11)))) goto LAB_18001ceae;
+        free(puVar11);
+      }
+      (**(code **)(*(longlong *)this + 0x78))(this);
+      uVar9 = 0xfffffffb;
+    }
+  }
+  *(undefined8 *)(puVar18 + -8) = 0x18001d3bc;
+  WCDB::RecyclableHandle::~RecyclableHandle(local_b8);
+LAB_18001d3be:
+  *(undefined8 *)(puVar18 + -8) = 0x18001d3cd;
+  return uVar9;
+}
+
+

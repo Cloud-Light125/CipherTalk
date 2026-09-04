@@ -1,11 +1,9 @@
 import type { MainProcessContext } from '../context'
 import { registerAccountHandlers } from './accountHandlers'
-import { registerActivationHandlers } from './activationHandlers'
 import { registerAgentCanvasHandlers } from './agentCanvasHandlers'
 import { registerAgentWorkspaceHandlers } from './agentWorkspaceHandlers'
 import { registerAiHandlers } from './aiHandlers'
 import { registerAppHandlers } from './appHandlers'
-import { registerAppUpdateHandlers } from './appUpdateHandlers'
 import { registerAuthHandlers } from './authHandlers'
 import { registerCacheHandlers } from './cacheHandlers'
 import { registerChatHandlers } from './chatHandlers'
@@ -41,7 +39,6 @@ export function registerModularIpcHandlers(ctx: MainProcessContext): void {
   registerDataHandlers(ctx)
   registerSystemHandlers()
   registerAppHandlers(ctx)
-  registerAppUpdateHandlers(ctx)
   registerAuthHandlers(ctx)
   registerWindowHandlers(ctx)
   registerWxKeyHandlers(ctx)
@@ -54,7 +51,6 @@ export function registerModularIpcHandlers(ctx: MainProcessContext): void {
   registerRelayOneHandlers(ctx)
   registerSnsHandlers(ctx)
   registerExportHandlers(ctx)
-  registerActivationHandlers(ctx)
   registerCacheHandlers(ctx)
   registerLogHandlers(ctx)
   registerLocalCodingAgentHandlers(ctx)

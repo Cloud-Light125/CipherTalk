@@ -1,0 +1,25 @@
+/* 180037460 FUN_180037460 */
+
+undefined8 FUN_180037460(void)
+
+{
+  bool bVar1;
+  undefined7 extraout_var;
+  undefined8 uVar2;
+  ulonglong uVar3;
+  
+  bVar1 = FUN_180038130();
+  if ((int)CONCAT71(extraout_var,bVar1) != 0) {
+    uVar2 = FUN_180037e10();
+    return CONCAT71((int7)((ulonglong)uVar2 >> 8),1);
+  }
+  uVar3 = FUN_180038120();
+  uVar3 = _configure_narrow_argv(uVar3 & 0xffffffff);
+  if ((int)uVar3 != 0) {
+    return uVar3 & 0xffffffffffffff00;
+  }
+  uVar2 = _initialize_narrow_environment();
+  return CONCAT71((int7)((ulonglong)uVar2 >> 8),1);
+}
+
+

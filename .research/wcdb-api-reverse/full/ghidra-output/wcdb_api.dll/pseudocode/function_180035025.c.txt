@@ -1,0 +1,12 @@
+/* 180035025 ~CipherConfig */
+
+void __thiscall WCDB::CipherConfig::~CipherConfig(CipherConfig *this)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180035025. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  ~CipherConfig(this);
+  return;
+}
+
+

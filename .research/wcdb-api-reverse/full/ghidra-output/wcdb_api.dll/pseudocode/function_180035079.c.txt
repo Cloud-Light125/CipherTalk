@@ -1,0 +1,14 @@
+/* 180035079 getNumberOfColumns */
+
+int __thiscall WCDB::InnerHandle::getNumberOfColumns(InnerHandle *this)
+
+{
+  int iVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180035079. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  iVar1 = getNumberOfColumns(this);
+  return iVar1;
+}
+
+

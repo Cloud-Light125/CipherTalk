@@ -1,0 +1,19 @@
+/* 18000cd70 FUN_18000cd70 */
+
+DWORD FUN_18000cd70(HANDLE param_1,LPWIN32_FIND_DATAW param_2)
+
+{
+  DWORD DVar1;
+  
+  while ((param_2->cFileName[0] == L'.' &&
+         ((param_2->cFileName[1] == L'\0' ||
+          ((param_2->cFileName[1] == L'.' && (param_2->cFileName[2] == L'\0'))))))) {
+    DVar1 = FUN_180036860(param_1,param_2);
+    if (DVar1 != 0) {
+      return DVar1;
+    }
+  }
+  return 0;
+}
+
+

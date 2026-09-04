@@ -53,14 +53,6 @@ interface ConfigSchema {
   theme: string
   themeMode: string
   language: string
-  releaseAnnouncementVersion: string
-  releaseAnnouncementId: string
-  releaseAnnouncementContentId: string
-  releaseAnnouncementBody: string
-  releaseAnnouncementNotes: string
-  releaseAnnouncementSeenVersion: string
-  releaseAnnouncementSeenId: string
-  releaseAnnouncementSeenContentId: string
   narrationAudioEnabled: boolean | null
   homeBackgroundSource: 'preset' | 'custom'
   homeBackgroundPreset: 'beijing' | 'beijing2'
@@ -71,9 +63,6 @@ interface ConfigSchema {
 
   // 协议相关
   agreementVersion: number
-
-  // 激活相关
-  activationData: string
 
   // STT 相关
   sttLanguages: string[]
@@ -369,14 +358,6 @@ const defaults: ConfigSchema = {
   theme: 'cloud-dancer',
   themeMode: 'system',
   language: 'zh-CN',
-  releaseAnnouncementVersion: '',
-  releaseAnnouncementId: '',
-  releaseAnnouncementContentId: '',
-  releaseAnnouncementBody: '',
-  releaseAnnouncementNotes: '',
-  releaseAnnouncementSeenVersion: '',
-  releaseAnnouncementSeenId: '',
-  releaseAnnouncementSeenContentId: '',
   narrationAudioEnabled: null,
   homeBackgroundSource: 'preset',
   homeBackgroundPreset: 'beijing',
@@ -396,7 +377,6 @@ const defaults: ConfigSchema = {
   sttOnlineTimeoutMs: 60000,
   sttOnlineMaxConcurrency: 2,
   agreementVersion: 0,
-  activationData: '',
   logLevel: 'WARN', // 默认只记录警告和错误
   skipIntegrityCheck: false, // 默认进行完整性检查
   autoUpdateDatabase: true,  // 默认开启自动更新

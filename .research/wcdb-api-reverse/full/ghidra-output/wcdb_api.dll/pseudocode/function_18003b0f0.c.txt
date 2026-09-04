@@ -1,0 +1,32 @@
+/* 18003b0f0 FUN_18003b0f0 */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+void FUN_18003b0f0(void)
+
+{
+  code *pcVar1;
+  void *pvVar2;
+  void *_Memory;
+  
+  if (0xf < DAT_18004b1a0) {
+    pvVar2 = (void *)CONCAT71(DAT_18004b188._1_7_,(undefined1)DAT_18004b188);
+    _Memory = pvVar2;
+    if ((0xfff < DAT_18004b1a0 + 1) &&
+       (_Memory = *(void **)((longlong)pvVar2 + -8),
+       0x1f < (ulonglong)((longlong)pvVar2 + (-8 - (longlong)_Memory)))) {
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      pcVar1 = (code *)swi(3);
+      (*pcVar1)();
+      return;
+    }
+    free(_Memory);
+  }
+  _DAT_18004b198 = 0;
+  DAT_18004b1a0 = 0xf;
+  DAT_18004b188._0_1_ = 0;
+  return;
+}
+
+

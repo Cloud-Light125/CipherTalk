@@ -4,11 +4,11 @@
   "description": "CipherTalk（密语）插件开发套件 —— 数据 API + React UI 组件库（/ui）+ 脚手架 CLI，一个包全搞定：在沙箱中调用聊天数据、媒体、转写、搜索、导出、AI 等宿主能力",
   "keywords": ["ciphertalk", "密语", "plugin", "sdk", "ui", "react", "wechat"],
   "license": "CC-BY-NC-SA-4.0",
-  "author": "ILoveBingLu",
+  "author": "Cloud-Light125",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ILoveBingLu/CipherTalk.git",
+    "url": "git+https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git",
     "directory": "plugin-sdk"
   },
   "main": "./ciphertalk-plugin-sdk.js",

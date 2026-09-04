@@ -1,0 +1,126 @@
+/* 180034360 FUN_180034360 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+uint * FUN_180034360(uint *param_1)
+
+{
+  code *pcVar1;
+  wchar_t *_Str;
+  size_t sVar2;
+  uint *puVar3;
+  void *pvVar4;
+  undefined1 *puVar5;
+  undefined1 *puVar6;
+  undefined1 *puVar7;
+  undefined8 uStack_f0;
+  undefined1 auStack_e8 [8];
+  undefined1 auStack_e0 [24];
+  uint *local_c8;
+  void *local_b8;
+  undefined8 uStack_b0;
+  undefined8 local_a8;
+  ulonglong local_a0;
+  void *local_98;
+  undefined8 uStack_90;
+  undefined8 local_88;
+  ulonglong local_80;
+  void *local_78;
+  undefined8 uStack_70;
+  undefined8 local_68;
+  ulonglong local_60;
+  uint local_58 [8];
+  ulonglong local_38;
+  
+  puVar5 = auStack_e8;
+  puVar6 = auStack_e8;
+  local_38 = DAT_18004b4c0 ^ (ulonglong)auStack_e8;
+  local_c8 = param_1;
+  _Str = _wgetenv(L"LOCALAPPDATA");
+  if ((((_Str != (wchar_t *)0x0) && (*_Str != L'\0')) ||
+      (_Str = _wgetenv(L"APPDATA"), puVar7 = auStack_e8, _Str != (wchar_t *)0x0)) &&
+     (puVar7 = auStack_e8, *_Str != L'\0')) {
+    local_78 = (void *)0x0;
+    uStack_70 = 0;
+    local_68 = 0;
+    local_60 = 0;
+    FUN_180002440(&local_78,L"wcdb-license-v1.jws",0x13);
+    local_98 = (void *)0x0;
+    uStack_90 = 0;
+    local_88 = 0;
+    local_80 = 0;
+    FUN_180002440(&local_98,L"CipherTalk",10);
+    sVar2 = wcslen(_Str);
+    local_b8 = (void *)0x0;
+    uStack_b0 = 0;
+    local_a8 = 0;
+    local_a0 = 0;
+    FUN_180002440(&local_b8,_Str,sVar2);
+    puVar3 = FUN_18000a0f0(local_58,(uint *)&local_b8,(uint *)&local_98);
+    FUN_18000a0f0(param_1,puVar3,(uint *)&local_78);
+    FUN_18000d0e0((longlong *)local_58);
+    if (local_a0 < 8) {
+LAB_1800344a7:
+      local_a8 = 0;
+      local_a0 = 7;
+      local_b8 = (void *)((ulonglong)local_b8 & 0xffffffffffff0000);
+      if (7 < local_80) {
+        pvVar4 = local_98;
+        if ((0xfff < local_80 * 2 + 2) &&
+           (pvVar4 = *(void **)((longlong)local_98 + -8),
+           0x1f < (ulonglong)((longlong)local_98 + (-8 - (longlong)pvVar4)))) goto LAB_180034550;
+        free(pvVar4);
+      }
+      local_88 = 0;
+      local_80 = 7;
+      local_98 = (void *)((ulonglong)local_98 & 0xffffffffffff0000);
+      puVar7 = auStack_e8;
+      if (local_60 < 8) goto LAB_180034577;
+      pvVar4 = local_78;
+      if ((local_60 * 2 + 2 < 0x1000) ||
+         (pvVar4 = *(void **)((longlong)local_78 + -8),
+         (ulonglong)((longlong)local_78 + (-8 - (longlong)pvVar4)) < 0x20)) {
+        free(pvVar4);
+        puVar7 = auStack_e8;
+        goto LAB_180034577;
+      }
+    }
+    else {
+      pvVar4 = local_b8;
+      if ((local_a0 * 2 + 2 < 0x1000) ||
+         (pvVar4 = *(void **)((longlong)local_b8 + -8),
+         (ulonglong)((longlong)local_b8 + (-8 - (longlong)pvVar4)) < 0x20)) {
+        free(pvVar4);
+        goto LAB_1800344a7;
+      }
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      puVar5 = auStack_e0;
+LAB_180034550:
+      pcVar1 = (code *)swi(0x29);
+      (*pcVar1)(5);
+      puVar6 = puVar5 + 8;
+    }
+    pcVar1 = (code *)swi(0x29);
+    (*pcVar1)(5);
+    puVar7 = puVar6 + 8;
+  }
+  param_1[4] = 0;
+  param_1[5] = 0;
+  param_1[6] = 0;
+  param_1[7] = 0;
+  param_1[0] = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  param_1[4] = 0;
+  param_1[5] = 0;
+  param_1[6] = 7;
+  param_1[7] = 0;
+  *(undefined2 *)param_1 = 0;
+LAB_180034577:
+  *(undefined8 *)(puVar7 + -8) = 0x180034586;
+  return param_1;
+}
+
+

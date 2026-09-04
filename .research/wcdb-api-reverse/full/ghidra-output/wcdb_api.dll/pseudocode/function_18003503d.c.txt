@@ -1,0 +1,14 @@
+/* 18003503d get */
+
+InnerHandle * __thiscall WCDB::RecyclableHandle::get(RecyclableHandle *this)
+
+{
+  InnerHandle *pIVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x00018003503d. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  pIVar1 = get(this);
+  return pIVar1;
+}
+
+

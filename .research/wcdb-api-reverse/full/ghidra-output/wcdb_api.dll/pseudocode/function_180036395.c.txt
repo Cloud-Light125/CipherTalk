@@ -1,0 +1,13 @@
+/* 180036395 _Xbad_alloc */
+
+void __cdecl std::_Xbad_alloc(void)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180036395. Too many branches */
+                    /* WARNING: Subroutine does not return */
+                    /* WARNING: Treating indirect jump as call */
+  _Xbad_alloc();
+  return;
+}
+
+

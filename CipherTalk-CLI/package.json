@@ -3,15 +3,16 @@
   "version": "0.1.3",
   "description": "密语 CLI：用于脚本化读取和导出微信本地数据",
   "license": "MIT",
+  "author": "Cloud-Light125",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ILoveBingLu/CipherTalk.git",
+    "url": "git+https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git",
     "directory": "CipherTalk-CLI"
   },
-  "homepage": "https://github.com/ILoveBingLu/CipherTalk/tree/main/CipherTalk-CLI",
+  "homepage": "https://github.com/Cloud-Light125/CipherTalk-SafeFork-1/tree/main/CipherTalk-CLI",
   "bugs": {
-    "url": "https://github.com/ILoveBingLu/CipherTalk/issues"
+    "url": "https://github.com/Cloud-Light125/CipherTalk-SafeFork-1/issues"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"

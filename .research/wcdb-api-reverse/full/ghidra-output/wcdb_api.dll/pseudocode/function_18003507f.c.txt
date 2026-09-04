@@ -1,0 +1,12 @@
+/* 18003507f InnerDatabase */
+
+void __thiscall WCDB::InnerDatabase::InnerDatabase(InnerDatabase *this,UnsafeStringView *param_1)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x00018003507f. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  InnerDatabase(this,param_1);
+  return;
+}
+
+

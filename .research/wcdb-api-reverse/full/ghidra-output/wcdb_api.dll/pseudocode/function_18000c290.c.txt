@@ -1,0 +1,91 @@
+/* 18000c290 FUN_18000c290 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+uint * FUN_18000c290(longlong param_1,uint *param_2,uint param_3)
+
+{
+  uint uVar1;
+  DWORD DVar2;
+  uint uVar3;
+  LPCWSTR pWVar4;
+  bool bVar5;
+  undefined1 auStack_58 [32];
+  ulonglong local_38 [2];
+  uint local_28;
+  int local_24;
+  ulonglong local_18;
+  
+  local_18 = DAT_18004b4c0 ^ (ulonglong)auStack_58;
+  *param_2 = 0;
+  param_2[1] = 0xffff;
+  if ((*(uint *)(param_1 + 0x1c) & param_3) == param_3) {
+    param_2[2] = 0;
+    uVar1 = *(uint *)(param_1 + 0x10);
+    uVar3 = 0x16d;
+    if ((uVar1 & 1) == 0) {
+      uVar3 = 0x1ff;
+    }
+    param_2[1] = uVar3;
+    if ((uVar1 >> 10 & 1) != 0) {
+      if (*(int *)(param_1 + 0x14) == -0x5ffffff4) {
+LAB_18000c364:
+        uVar1 = 4;
+        goto LAB_18000c3be;
+      }
+      if (*(int *)(param_1 + 0x14) == -0x5ffffffd) {
+LAB_18000c372:
+        uVar1 = 10;
+        goto LAB_18000c3be;
+      }
+    }
+    uVar1 = (uVar1 & 0x10 | 0x20) >> 4;
+    goto LAB_18000c3be;
+  }
+  if ((*(uint *)(param_1 + 0x1c) & 2) == 0) {
+    uVar1 = 0xffffffff;
+  }
+  else {
+    uVar1 = *(uint *)(param_1 + 0x10);
+  }
+  pWVar4 = (LPCWSTR)(param_1 + 0x20);
+  if (7 < *(ulonglong *)(param_1 + 0x38)) {
+    pWVar4 = *(LPCWSTR *)pWVar4;
+  }
+  DVar2 = FUN_180036b80(pWVar4,local_38,param_3,uVar1);
+  param_2[2] = DVar2;
+  if (DVar2 == 0) {
+    uVar1 = 0x16d;
+    if ((local_28 & 1) == 0) {
+      uVar1 = 0x1ff;
+    }
+    param_2[1] = uVar1;
+    if ((local_28 >> 10 & 1) != 0) {
+      if (local_24 == -0x5ffffff4) goto LAB_18000c364;
+      if (local_24 == -0x5ffffffd) goto LAB_18000c372;
+    }
+    uVar1 = ((local_28 & 0x10) != 0) + 2;
+    goto LAB_18000c3be;
+  }
+  param_2[1] = 0xffff;
+  if (DVar2 < 0x41) {
+    if (((DVar2 != 0x40) && (DVar2 != 2)) && (DVar2 != 3)) {
+      bVar5 = DVar2 == 0x35;
+LAB_18000c3b3:
+      if (!bVar5) {
+        uVar1 = 0;
+        goto LAB_18000c3be;
+      }
+    }
+  }
+  else if ((DVar2 != 0x7b) && (DVar2 != 0xa1)) {
+    bVar5 = DVar2 == 0x10b;
+    goto LAB_18000c3b3;
+  }
+  uVar1 = 1;
+LAB_18000c3be:
+  *param_2 = uVar1;
+  return param_2;
+}
+
+

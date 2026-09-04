@@ -1,0 +1,84 @@
+/* 1800081a0 FUN_1800081a0 */
+
+undefined8 * FUN_1800081a0(undefined8 *param_1,undefined8 *param_2)
+
+{
+  ulonglong uVar1;
+  code *pcVar2;
+  undefined8 uVar3;
+  ulonglong uVar4;
+  longlong lVar5;
+  void *_Dst;
+  size_t sVar6;
+  undefined1 *puVar7;
+  undefined8 uStack_50;
+  undefined1 auStack_48 [40];
+  
+  puVar7 = auStack_48;
+  *param_1 = 0;
+  param_1[1] = 0;
+  _Dst = (void *)0x0;
+  param_1[2] = 0;
+  param_1[3] = 0;
+  uVar1 = param_2[2];
+  if (7 < (ulonglong)param_2[3]) {
+    param_2 = (undefined8 *)*param_2;
+  }
+  if (0x7ffffffffffffffe < uVar1) {
+                    /* WARNING: Subroutine does not return */
+    FUN_18000d170();
+  }
+  if (uVar1 < 8) {
+    param_1[2] = uVar1;
+    param_1[3] = 7;
+    uVar3 = param_2[1];
+    *param_1 = *param_2;
+    param_1[1] = uVar3;
+    return param_1;
+  }
+  uVar4 = uVar1 | 7;
+  if (uVar4 < 0x7fffffffffffffff) goto LAB_18000824a;
+  sVar6 = 0xfffffffffffffffe;
+  puVar7 = auStack_48;
+  uVar4 = 0x7ffffffffffffffe;
+  do {
+    if (sVar6 < 0x1000) {
+      *(undefined8 *)(puVar7 + -8) = 0x18000828d;
+      _Dst = (void *)FUN_1800373b0(sVar6);
+      goto LAB_18000828d;
+    }
+    if (sVar6 + 0x27 <= sVar6) {
+LAB_1800082bd:
+                    /* WARNING: Subroutine does not return */
+      *(undefined **)(puVar7 + -8) = &UNK_1800082c2;
+      FUN_18000cdd0();
+    }
+    *(undefined8 *)(puVar7 + -8) = 0x18000823b;
+    lVar5 = FUN_1800373b0(sVar6 + 0x27);
+    if (lVar5 != 0) {
+      _Dst = (void *)(lVar5 + 0x27U & 0xffffffffffffffe0);
+      *(longlong *)((longlong)_Dst - 8) = lVar5;
+      goto LAB_18000828d;
+    }
+    pcVar2 = (code *)swi(0x29);
+    uVar4 = (*pcVar2)(5);
+    puVar7 = puVar7 + 8;
+LAB_18000824a:
+    if (uVar4 < 10) {
+      uVar4 = 10;
+    }
+    if (0x7fffffffffffffff < uVar4 + 1) goto LAB_1800082bd;
+    sVar6 = (uVar4 + 1) * 2;
+    if (sVar6 == 0) {
+LAB_18000828d:
+      *param_1 = _Dst;
+      param_1[2] = uVar1;
+      param_1[3] = uVar4;
+      *(undefined8 *)(puVar7 + -8) = 0x1800082ab;
+      memcpy(_Dst,param_2,uVar1 * 2 + 2);
+      return param_1;
+    }
+  } while( true );
+}
+
+

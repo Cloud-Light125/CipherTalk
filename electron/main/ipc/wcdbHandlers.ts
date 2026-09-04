@@ -1,6 +1,6 @@
 import { ipcMain, webContents } from 'electron'
 import { existsSync } from 'fs'
-import { basename, join } from 'path'
+import { basename, join, normalize, resolve } from 'path'
 import { dbPathService } from '../../services/dbPathService'
 import { wcdbService } from '../../services/wcdbService'
 import { monitorBridge } from '../../services/monitorBridge'
@@ -15,10 +15,22 @@ type WcdbConnectionInput = {
 }
 
 function normalizeConnectionInput(dbPath: string, hexKey: string, wxid: string): WcdbConnectionInput {
+  const trimmedDbPath = String(dbPath || '').trim()
   return {
-    dbPath: String(dbPath || '').trim(),
+    dbPath: trimmedDbPath ? normalize(resolve(trimmedDbPath)) : '',
     hexKey: String(hexKey || '').trim(),
     wxid: String(wxid || '').trim()
+  }
+}
+
+function describeKey(hexKey: string): Record<string, unknown> {
+  const value = String(hexKey || '').trim()
+  return {
+    keyPresent: value.length > 0,
+    keyLength: value.length,
+    keyLengthExpected: 64,
+    keyLengthValid: value.length === 64,
+    keyFormatValid: /^[0-9a-fA-F]{64}$/.test(value)
   }
 }
 
@@ -65,7 +77,8 @@ function validateConnectionInput(input: WcdbConnectionInput): string | null {
 }
 
 function validateResolveInput(dbPath: string, hexKey: string): { dbPath: string; hexKey: string; error?: string } {
-  const normalizedDbPath = String(dbPath || '').trim()
+  const trimmedDbPath = String(dbPath || '').trim()
+  const normalizedDbPath = trimmedDbPath ? normalize(resolve(trimmedDbPath)) : ''
   const normalizedHexKey = String(hexKey || '').trim()
 
   if (!normalizedDbPath) return { dbPath: normalizedDbPath, hexKey: normalizedHexKey, error: '请选择微信数据目录' }
@@ -100,7 +113,14 @@ export function registerWcdbHandlers(ctx: MainProcessContext): void {
   ipcMain.handle('wcdb:testConnection', async (_, dbPath: string, hexKey: string, wxid: string, isAutoConnect = false) => {
     const logPrefix = isAutoConnect ? '自动连接' : '手动测试'
     const input = normalizeConnectionInput(dbPath, hexKey, wxid)
-    ctx.getLogService()?.info('WCDB', `${logPrefix}数据库连接`, { dbPath: input.dbPath, wxid: input.wxid, isAutoConnect })
+    const keyInfo = describeKey(input.hexKey)
+    console.error('[wcdbHandlers][diagnostic] IPC wcdb:testConnection', {
+      normalizedAccountDirectory: input.dbPath,
+      wxid: input.wxid,
+      isAutoConnect,
+      ...keyInfo
+    })
+    ctx.getLogService()?.info('WCDB', `${logPrefix}数据库连接`, { dbPath: input.dbPath, wxid: input.wxid, isAutoConnect, ...keyInfo })
 
     const validationError = validateConnectionInput(input)
     if (validationError) {
@@ -110,7 +130,7 @@ export function registerWcdbHandlers(ctx: MainProcessContext): void {
         error: validationError,
         dbPath: input.dbPath,
         wxid: input.wxid,
-        keyLength: input.hexKey.length,
+        ...keyInfo,
         isAutoConnect
       }
       if (logLevel === 'warn') {
@@ -131,7 +151,7 @@ export function registerWcdbHandlers(ctx: MainProcessContext): void {
         error: result.error || '未知错误',
         dbPath: input.dbPath,
         wxid: input.wxid,
-        keyLength: input.hexKey.length,
+        ...keyInfo,
         isAutoConnect
       }
 
@@ -147,6 +167,10 @@ export function registerWcdbHandlers(ctx: MainProcessContext): void {
   ipcMain.handle('wcdb:resolveValidWxid', async (_, dbPath: string, hexKey: string) => {
     try {
       const input = validateResolveInput(dbPath, hexKey)
+      console.error('[wcdbHandlers][diagnostic] IPC wcdb:resolveValidWxid', {
+        normalizedAccountDirectory: input.dbPath,
+        ...describeKey(input.hexKey)
+      })
       if (input.error) {
         return { success: false, error: input.error }
       }
@@ -156,8 +180,21 @@ export function registerWcdbHandlers(ctx: MainProcessContext): void {
         return { success: false, error: '未检测到账号目录' }
       }
 
+      console.error('[wcdbHandlers][diagnostic] candidate account directories', {
+        normalizedAccountDirectory: input.dbPath,
+        candidateCount: wxids.length,
+        wxids
+      })
+
       for (const wxid of wxids) {
         const result = await wcdbService.testConnection(input.dbPath, input.hexKey, wxid)
+        console.error('[wcdbHandlers][diagnostic] candidate account verification result', {
+          normalizedAccountDirectory: input.dbPath,
+          wxid,
+          success: result.success,
+          error: result.error || null,
+          ...describeKey(input.hexKey)
+        })
         if (result.success) {
           return { success: true, wxid }
         }

@@ -1,0 +1,90 @@
+/* 180024e00 wcdb_init */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+int wcdb_init(void)
+
+{
+  code *pcVar1;
+  undefined8 *puVar2;
+  int iVar3;
+  char *pcVar4;
+  ulonglong uVar5;
+  undefined1 *puVar6;
+  undefined1 auStack_68 [8];
+  undefined1 auStack_60 [24];
+  undefined *local_48;
+  undefined8 local_40;
+  undefined8 local_38;
+  undefined8 uStack_30;
+  undefined8 local_28;
+  ulonglong uStack_20;
+  ulonglong local_18;
+  
+                    /* 0x24e00  10  wcdb_init */
+  puVar6 = auStack_68;
+  local_18 = DAT_18004b4c0 ^ (ulonglong)auStack_68;
+  iVar3 = FUN_18001f250();
+  if (iVar3 == 0) {
+    local_48 = &DAT_18004b000;
+    iVar3 = _Mtx_lock(&DAT_18004b000);
+    if (iVar3 != 0) {
+LAB_180024f77:
+                    /* WARNING: Subroutine does not return */
+      *(undefined8 *)(puVar6 + -8) = 0x180024f81;
+      std::_Throw_Cpp_error(5);
+    }
+    if (DAT_18004b04c == 0x7fffffff) {
+      DAT_18004b04c = 0x7ffffffe;
+                    /* WARNING: Subroutine does not return */
+      std::_Throw_Cpp_error(6);
+    }
+    DAT_18004bca8 = 1;
+    if (0x18ff < (ulonglong)((longlong)DAT_18004bc98 - (longlong)DAT_18004bc90)) {
+      FUN_180011310(0x18004bc90,&local_40,DAT_18004bc90);
+    }
+    local_38 = (char *)0x0;
+    uStack_30 = 0;
+    local_28 = 0;
+    uStack_20 = 0;
+    pcVar4 = (char *)FUN_1800373b0(0x20);
+    local_28 = 0x14;
+    uStack_20 = 0x1f;
+    builtin_strncpy(pcVar4,"wcdb_api initialized",0x15);
+    puVar2 = DAT_18004bc98;
+    if (DAT_18004bc98 == DAT_18004bca0) {
+      local_38 = pcVar4;
+      FUN_180003af0((longlong *)&DAT_18004bc90,DAT_18004bc98,&local_38);
+      uVar5 = uStack_20;
+    }
+    else {
+      local_38._0_4_ = SUB84(pcVar4,0);
+      local_38._4_4_ = (undefined4)((ulonglong)pcVar4 >> 0x20);
+      *(undefined4 *)DAT_18004bc98 = (undefined4)local_38;
+      *(undefined4 *)((longlong)puVar2 + 4) = local_38._4_4_;
+      *(undefined4 *)(puVar2 + 1) = (undefined4)uStack_30;
+      *(undefined4 *)((longlong)puVar2 + 0xc) = uStack_30._4_4_;
+      puVar2[2] = 0x14;
+      puVar2[3] = 0x1f;
+      local_38 = (char *)((ulonglong)pcVar4 & 0xffffffffffffff00);
+      DAT_18004bc98 = DAT_18004bc98 + 4;
+      uVar5 = 0xf;
+    }
+    if (0xf < uVar5) {
+      pcVar4 = local_38;
+      if ((0xfff < uVar5 + 1) &&
+         (pcVar4 = *(char **)(local_38 + -8), (char *)0x1f < local_38 + (-8 - (longlong)pcVar4))) {
+        pcVar1 = (code *)swi(0x29);
+        (*pcVar1)(5);
+        puVar6 = auStack_60;
+        goto LAB_180024f77;
+      }
+      free(pcVar4);
+    }
+    _Mtx_unlock(&DAT_18004b000);
+    iVar3 = 0;
+  }
+  return iVar3;
+}
+
+

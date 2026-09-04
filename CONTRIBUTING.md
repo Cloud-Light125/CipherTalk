@@ -49,8 +49,8 @@
 ```bash
 # Fork 项目到你的 GitHub 账号
 # 克隆你的 fork
-git clone https://github.com/ILoveBingLu/miyu.git
-cd miyu
+git clone https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git
+cd CipherTalk-SafeFork-1
 
 # 安装依赖
 npm install

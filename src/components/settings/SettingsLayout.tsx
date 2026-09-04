@@ -1,23 +1,19 @@
 ﻿import { lazy, Suspense, useState, useEffect, useRef } from 'react'
-import { useSearchParams, useLocation } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Tabs, ScrollShadow, Skeleton, toast, type Key as HeroKey } from '@heroui/react'
 import { useAppStore } from '../../stores/appStore'
-import type { UpdateDownloadProgressPayload } from '../../types/electron'
 import type { AccountProfile } from '../../types/account'
 import { dialog } from '../../services/ipc'
 import * as configService from '../../services/config'
 import { testAndOpenWcdb } from '../../services/wcdbConnection'
 import AboutTab from './tabs/AboutTab'
-import ActivationTab from './tabs/ActivationTab'
 import AppearanceTab from './tabs/AppearanceTab'
 import SecurityTab from './tabs/SecurityTab'
-import type { UpdateInfo } from './types'
-import { formatFileSize } from './utils'
 import { useSettingsStore } from './settingsStore'
 import { usePluginStore, ensurePluginStoreSubscribed, selectEnabledPlugins } from '../../stores/pluginStore'
 import PluginHost from '../../features/plugins/PluginHost'
 import { ConfirmDialog, FloatingSaveButton } from './ui'
-import { ArrowDownToLine, ArrowRotateLeft, ArrowsRotateLeft, Bulb, Check, ChevronDown, CircleCheck, CircleExclamation, CircleInfo, Database, Eye, EyeSlash, FaceSmile, FolderMagnifier, FolderOpen, HardDrive, Key, Layers, Lock, Magnifier, Microphone, Minus, Palette, Person, Picture, PlugConnection, Plus, Shield, ShieldCheck, Sparkles, Thunderbolt, TrashBin, Xmark } from '@gravity-ui/icons'
+import { ArrowRotateLeft, Bulb, Check, ChevronDown, CircleCheck, CircleExclamation, CircleInfo, Database, Eye, EyeSlash, FaceSmile, FolderMagnifier, FolderOpen, HardDrive, Layers, Lock, Magnifier, Microphone, Minus, Palette, Person, Picture, PlugConnection, Plus, ShieldCheck, Sparkles, Thunderbolt, TrashBin, Xmark } from '@gravity-ui/icons'
 import '../../pages/SettingsPage.css'
 
 const AISummarySettings = lazy(() => import('../ai/AISummarySettings'))
@@ -27,7 +23,7 @@ const SttTab = lazy(() => import('./tabs/SttTab'))
 const MemoryTab = lazy(() => import('./tabs/MemoryTab'))
 const PluginsTab = lazy(() => import('./tabs/PluginsTab'))
 
-type SettingsTab = 'appearance' | 'database' | 'stt' | 'ai' | 'memory' | 'data' | 'plugins' | 'security' | 'activation' | 'about'
+type SettingsTab = 'appearance' | 'database' | 'stt' | 'ai' | 'memory' | 'data' | 'plugins' | 'security' | 'about'
 
 const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
   { id: 'appearance', label: '外观', icon: Palette },
@@ -38,7 +34,6 @@ const tabs: { id: SettingsTab; label: string; icon: React.ElementType }[] = [
   { id: 'memory', label: '记忆', icon: Bulb },
   { id: 'data', label: '数据管理', icon: HardDrive },
   { id: 'plugins', label: '插件', icon: PlugConnection },
-  // { id: 'activation', label: '激活', icon: Shield },
   { id: 'about', label: '关于', icon: CircleInfo }
 ]
 
@@ -146,7 +141,6 @@ function SettingsTabSkeleton() {
 
 function SettingsLayout() {
   const [searchParams] = useSearchParams()
-  const location = useLocation()
   const { setDbConnected, setLoading, userInfo } = useAppStore()
   const hydrateSettings = useSettingsStore(s => s.hydrate)
   const commitSettings = useSettingsStore(s => s.commit)
@@ -203,12 +197,7 @@ function SettingsLayout() {
   const [isLoading, setIsLoadingState] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [isGettingKey, setIsGettingKey] = useState(false)
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [downloadProgress, setDownloadProgress] = useState(0)
-  const [downloadProgressDetail, setDownloadProgressDetail] = useState<UpdateDownloadProgressPayload | null>(null)
   const [appVersion, setAppVersion] = useState('')
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [keyStatus, setKeyStatus] = useState('')
   const [showDecryptKey, setShowDecryptKey] = useState(false)
   const [showXorKey, setShowXorKey] = useState(false)
@@ -586,69 +575,6 @@ function SettingsLayout() {
     }
   }
 
-  const syncUpdateState = async () => {
-    try {
-      const state = await window.electronAPI.app.getUpdateState?.()
-      if (!state) return
-      setUpdateInfo(state)
-      const phase = state.diagnostics?.phase
-      setIsDownloading(phase === 'downloading' || phase === 'installing')
-      if (typeof state.diagnostics?.progressPercent === 'number') {
-        setDownloadProgress(state.diagnostics.progressPercent)
-      }
-    } catch (error) {
-      console.error('同步更新状态失败:', error)
-    }
-  }
-
-  // 监听下载进度
-  useEffect(() => {
-    syncUpdateState()
-
-    const removeListener = window.electronAPI.app.onDownloadProgress?.((progress: UpdateDownloadProgressPayload) => {
-      setDownloadProgress(progress.percent)
-      setDownloadProgressDetail(progress)
-      setIsDownloading(true)
-      setUpdateInfo((current) => {
-        if (!current) return current
-        return {
-          ...current,
-          diagnostics: {
-            phase: 'downloading',
-            strategy: current.diagnostics?.strategy || 'unknown',
-            fallbackToFull: current.diagnostics?.fallbackToFull || false,
-            lastError: current.diagnostics?.lastError,
-            lastEvent: current.diagnostics?.lastEvent,
-            progressPercent: progress.percent,
-            downloadedBytes: progress.transferred,
-            totalBytes: progress.total,
-            targetVersion: current.version || current.diagnostics?.targetVersion,
-            lastUpdatedAt: Date.now()
-          }
-        }
-      })
-    })
-    return () => removeListener?.()
-  }, [])
-
-  const handleCheckUpdate = async () => {
-    if (isDownloading || updateInfo?.diagnostics?.phase === 'installing') return
-    setIsCheckingUpdate(true)
-    try {
-      const result = await window.electronAPI.app.checkForUpdates()
-      if (result.hasUpdate) {
-        setUpdateInfo(result)
-        showMessage(result.forceUpdate ? `检测到强制更新 ${result.version}` : `发现新版本 ${result.version}`, true)
-      } else {
-        showMessage('当前已是最新版本', true)
-      }
-    } catch (e) {
-      showMessage(`检查更新失败: ${e}`, false)
-    } finally {
-      setIsCheckingUpdate(false)
-    }
-  }
-
   const showMessage = (text: string, success: boolean) => {
     if (success) toast.success(text, { timeout: 3000 })
     else toast.danger(text, { timeout: 3000 })
@@ -740,35 +666,6 @@ function SettingsLayout() {
       showMessage(`${showClearDialog.title}失败: ${e}`, false)
     } finally {
       setShowClearDialog(null)
-    }
-  }
-
-  const handleUpdateNow = async () => {
-    if (isDownloading) return
-    setIsDownloading(true)
-    setDownloadProgress(0)
-    setUpdateInfo((current) => current ? {
-      ...current,
-      diagnostics: {
-        phase: 'downloading',
-        strategy: current.diagnostics?.strategy || 'unknown',
-        fallbackToFull: current.diagnostics?.fallbackToFull || false,
-        lastError: undefined,
-        lastEvent: '开始下载更新',
-        progressPercent: 0,
-        downloadedBytes: 0,
-        totalBytes: current.diagnostics?.totalBytes,
-        targetVersion: current.version || current.diagnostics?.targetVersion,
-        lastUpdatedAt: Date.now()
-      }
-    } : current)
-    try {
-      showMessage('正在下载更新...', true)
-      await window.electronAPI.app.downloadAndInstall()
-    } catch (e) {
-      showMessage(`更新失败: ${e}`, false)
-      setIsDownloading(false)
-      await syncUpdateState()
     }
   }
 
@@ -1281,20 +1178,6 @@ function SettingsLayout() {
     }
   }
 
-  // 检查导航传递的更新信息
-  useEffect(() => {
-    if (location.state?.updateInfo) {
-      setUpdateInfo(location.state.updateInfo)
-      const phase = location.state.updateInfo.diagnostics?.phase
-      setIsDownloading(phase === 'downloading' || phase === 'installing')
-      if (typeof location.state.updateInfo.diagnostics?.progressPercent === 'number') {
-        setDownloadProgress(location.state.updateInfo.diagnostics.progressPercent)
-      }
-    } else {
-      syncUpdateState()
-    }
-  }, [location.state])
-
   return (
     <div className="settings-page">
       {/* 清除确认对话框 */}
@@ -1401,17 +1284,9 @@ function SettingsLayout() {
             <PluginHost pluginId={activePluginTab.pluginId} viewId={activePluginTab.view} />
           </div>
         )}
-        {activeTab === 'activation' && <ActivationTab />}
         {activeTab === 'about' && (
           <AboutTab
             appVersion={appVersion}
-            updateInfo={updateInfo}
-            isDownloading={isDownloading}
-            downloadProgress={downloadProgress}
-            downloadProgressDetail={downloadProgressDetail}
-            isCheckingUpdate={isCheckingUpdate}
-            onUpdateNow={handleUpdateNow}
-            onCheckUpdate={handleCheckUpdate}
           />
         )}
       </ScrollShadow>

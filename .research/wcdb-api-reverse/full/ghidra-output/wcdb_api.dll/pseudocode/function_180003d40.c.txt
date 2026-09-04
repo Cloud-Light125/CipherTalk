@@ -1,0 +1,144 @@
+/* 180003d40 FUN_180003d40 */
+
+undefined8 * FUN_180003d40(longlong *param_1,undefined8 *param_2,undefined8 *param_3)
+
+{
+  ulonglong uVar1;
+  undefined8 *puVar2;
+  longlong lVar3;
+  undefined8 *puVar4;
+  code *pcVar5;
+  undefined8 uVar6;
+  undefined8 *puVar7;
+  ulonglong uVar8;
+  size_t sVar9;
+  longlong lVar10;
+  undefined8 *puVar11;
+  undefined1 *puVar12;
+  undefined1 *puVar13;
+  ulonglong uVar14;
+  undefined8 *puVar15;
+  undefined1 auStack_38 [8];
+  undefined1 auStack_30 [24];
+  
+  puVar13 = auStack_38;
+  puVar12 = auStack_38;
+  lVar3 = *param_1;
+  lVar10 = param_1[1] - lVar3 >> 5;
+  if (lVar10 == 0x7ffffffffffffff) {
+                    /* WARNING: Subroutine does not return */
+    FUN_18000d190();
+  }
+  uVar8 = param_1[2] - lVar3 >> 5;
+  if (uVar8 <= 0x7ffffffffffffff - (uVar8 >> 1)) {
+    uVar1 = lVar10 + 1;
+    uVar8 = (uVar8 >> 1) + uVar8;
+    uVar14 = uVar1;
+    if (uVar1 <= uVar8) {
+      uVar14 = uVar8;
+    }
+    if (uVar14 < 0x800000000000000) {
+      puVar15 = (undefined8 *)0x0;
+      sVar9 = uVar14 * 0x20;
+      if (sVar9 != 0) {
+        if (sVar9 < 0x1000) {
+          puVar15 = (undefined8 *)FUN_1800373b0(sVar9);
+          puVar13 = auStack_38;
+        }
+        else {
+          if (sVar9 + 0x27 <= sVar9) goto LAB_180003f81;
+          lVar10 = FUN_1800373b0(sVar9 + 0x27);
+          if (lVar10 == 0) {
+            pcVar5 = (code *)swi(0x29);
+            lVar10 = (*pcVar5)(5);
+            puVar12 = auStack_30;
+          }
+          puVar15 = (undefined8 *)(lVar10 + 0x27U & 0xffffffffffffffe0);
+          puVar15[-1] = lVar10;
+          puVar13 = puVar12;
+        }
+      }
+      uVar8 = (longlong)param_2 - lVar3 & 0xffffffffffffffe0;
+      *(undefined8 *)(uVar8 + (longlong)puVar15) = 0;
+      ((undefined8 *)(uVar8 + (longlong)puVar15))[1] = 0;
+      *(undefined8 *)(uVar8 + 0x10 + (longlong)puVar15) = 0;
+      puVar2 = (undefined8 *)(uVar8 + (longlong)puVar15);
+      puVar2[3] = 0;
+      uVar6 = param_3[1];
+      *puVar2 = *param_3;
+      puVar2[1] = uVar6;
+      uVar6 = param_3[3];
+      puVar2[2] = param_3[2];
+      puVar2[3] = uVar6;
+      param_3[2] = 0;
+      param_3[3] = 7;
+      *(undefined2 *)param_3 = 0;
+      puVar4 = (undefined8 *)param_1[1];
+      puVar7 = (undefined8 *)*param_1;
+      puVar11 = puVar15;
+      if (param_2 == puVar4) {
+        for (; puVar7 != puVar4; puVar7 = puVar7 + 4) {
+          *puVar11 = 0;
+          puVar11[1] = 0;
+          puVar11[2] = 0;
+          puVar11[3] = 0;
+          uVar6 = puVar7[1];
+          *puVar11 = *puVar7;
+          puVar11[1] = uVar6;
+          uVar6 = puVar7[3];
+          puVar11[2] = puVar7[2];
+          puVar11[3] = uVar6;
+          puVar7[2] = 0;
+          puVar7[3] = 7;
+          *(undefined2 *)puVar7 = 0;
+          puVar11 = puVar11 + 4;
+        }
+      }
+      else {
+        for (; puVar7 != param_2; puVar7 = puVar7 + 4) {
+          *puVar11 = 0;
+          puVar11[1] = 0;
+          puVar11[2] = 0;
+          puVar11[3] = 0;
+          uVar6 = puVar7[1];
+          *puVar11 = *puVar7;
+          puVar11[1] = uVar6;
+          uVar6 = puVar7[3];
+          puVar11[2] = puVar7[2];
+          puVar11[3] = uVar6;
+          puVar7[2] = 0;
+          puVar7[3] = 7;
+          *(undefined2 *)puVar7 = 0;
+          puVar11 = puVar11 + 4;
+        }
+        puVar4 = (undefined8 *)param_1[1];
+        puVar7 = puVar2;
+        for (; param_2 != puVar4; param_2 = param_2 + 4) {
+          puVar11 = puVar7 + 4;
+          *puVar11 = 0;
+          puVar7[5] = 0;
+          puVar7[6] = 0;
+          puVar7[7] = 0;
+          uVar6 = param_2[1];
+          *puVar11 = *param_2;
+          puVar7[5] = uVar6;
+          uVar6 = param_2[3];
+          puVar7[6] = param_2[2];
+          puVar7[7] = uVar6;
+          param_2[2] = 0;
+          param_2[3] = 7;
+          *(undefined2 *)param_2 = 0;
+          puVar7 = puVar11;
+        }
+      }
+      *(undefined8 *)(puVar13 + -8) = 0x180003f5b;
+      FUN_18000b930(param_1,(longlong)puVar15,uVar1,uVar14);
+      return puVar2;
+    }
+  }
+LAB_180003f81:
+                    /* WARNING: Subroutine does not return */
+  FUN_18000cdd0();
+}
+
+

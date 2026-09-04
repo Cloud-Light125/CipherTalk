@@ -1,0 +1,43 @@
+/* 180029d10 FUN_180029d10 */
+
+longlong * FUN_180029d10(longlong *param_1,undefined8 *param_2)
+
+{
+  longlong lVar1;
+  uint uVar2;
+  longlong *plVar3;
+  longlong *local_58;
+  longlong *plStack_50;
+  longlong *local_48;
+  undefined8 uStack_40;
+  longlong *local_38;
+  
+  FUN_180026fc0(param_1,(longlong *)&local_48,param_2);
+  if (*(char *)((longlong)local_38 + 0x19) == '\0') {
+    uVar2 = FUN_18000aa10(param_1,param_2,local_38 + 4);
+    if ((char)uVar2 == '\0') goto LAB_180029dc2;
+  }
+  if (param_1[1] == 0x333333333333333) {
+                    /* WARNING: Subroutine does not return */
+    FUN_18000ce90();
+  }
+  lVar1 = *param_1;
+  plStack_50 = (longlong *)0x0;
+  local_58 = param_1;
+  plVar3 = (longlong *)FUN_1800373b0(0x50);
+  plStack_50 = plVar3;
+  FUN_180007c00(plVar3 + 4,param_2);
+  *(undefined4 *)(plVar3 + 8) = 0;
+  plVar3[9] = 0;
+  *plVar3 = lVar1;
+  plVar3[1] = lVar1;
+  plVar3[2] = lVar1;
+  *(undefined2 *)(plVar3 + 3) = 0;
+  local_58 = local_48;
+  plStack_50 = (longlong *)uStack_40;
+  local_38 = FUN_18000c510(param_1,(longlong *)&local_58,plVar3);
+LAB_180029dc2:
+  return local_38 + 8;
+}
+
+

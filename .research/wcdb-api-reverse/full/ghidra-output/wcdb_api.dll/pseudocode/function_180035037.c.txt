@@ -1,0 +1,12 @@
+/* 180035037 ~RecyclableHandle */
+
+void __thiscall WCDB::RecyclableHandle::~RecyclableHandle(RecyclableHandle *this)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x000180035037. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  ~RecyclableHandle(this);
+  return;
+}
+
+

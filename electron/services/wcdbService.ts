@@ -7,7 +7,7 @@ import { utilityProcess } from 'electron'
 import type { UtilityProcess } from 'electron'
 import { EventEmitter } from 'events'
 import { existsSync } from 'fs'
-import { join } from 'path'
+import { join, normalize, resolve } from 'path'
 import { ConfigService } from './config'
 import { getAppPath, getAppVersion, getUserDataPath, isElectronPackaged } from './runtimePaths'
 import { getElectronWorkerEnv } from './workerEnvironment'
@@ -18,6 +18,20 @@ type Pending = { resolve: (value: any) => void; reject: (reason: any) => void }
 type OpenPayload = { dbPath: string; hexKey: string; wxid: string }
 
 const PARAMS_UNSUPPORTED = 'native 未支持参数化查询'
+
+function describeConnectionPayload(payload: { dbPath?: string; hexKey?: string; wxid?: string }): Record<string, unknown> {
+  const dbPath = String(payload.dbPath || '').trim()
+  const hexKey = String(payload.hexKey || '').trim()
+  return {
+    normalizedAccountDirectory: dbPath ? normalize(resolve(dbPath)) : '',
+    wxid: String(payload.wxid || '').trim(),
+    keyPresent: hexKey.length > 0,
+    keyLength: hexKey.length,
+    keyLengthExpected: 64,
+    keyLengthValid: hexKey.length === 64,
+    keyFormatValid: /^[0-9a-fA-F]{64}$/.test(hexKey)
+  }
+}
 
 function bufferToHex(buffer: Buffer): string {
   return Array.from(buffer)
@@ -103,7 +117,15 @@ export class WcdbService extends EventEmitter {
   // ========= 公共 API（保持与旧实现一致） =========
   async testConnection(dbPath: string, hexKey: string, wxid: string): Promise<{ success: boolean; error?: string; sessionCount?: number }> {
     try {
-      return await this.call('testConnection', { dbPath, hexKey, wxid })
+      const payload = { dbPath, hexKey, wxid }
+      console.error('[wcdbService][diagnostic] IPC/service -> utility type=testConnection', describeConnectionPayload(payload))
+      const result = await this.call('testConnection', payload)
+      console.error('[wcdbService][diagnostic] utility -> service type=testConnection', {
+        ...describeConnectionPayload(payload),
+        success: Boolean(result?.success),
+        error: result?.error || null
+      })
+      return result
     } catch (e) {
       return {
         success: false,
@@ -112,13 +134,10 @@ export class WcdbService extends EventEmitter {
     }
   }
 
-  async checkLicense(): Promise<{ success: boolean; error?: string }> {
-    return this.call('checkLicense', {})
-  }
-
   async open(dbPath: string, hexKey: string, wxid: string): Promise<boolean> {
     this.shuttingDown = false
     const payload = { dbPath, hexKey, wxid }
+    console.error('[wcdbService][diagnostic] IPC/service -> utility type=open', describeConnectionPayload(payload))
     this.lastOpenPayload = payload
     this.openPromise = this.call<boolean>('open', payload)
       .finally(() => {
@@ -295,6 +314,11 @@ export class WcdbService extends EventEmitter {
             reject: (err) => {
               rejectInitOnce(err instanceof Error ? err : new Error(String(err)))
             }
+          })
+          console.error('[wcdbService][diagnostic] service -> utility type=setPaths', {
+            resourcesPath,
+            userDataPath,
+            appVersion
           })
           this.postToUtility(worker, { id, type: 'setPaths', payload: { resourcesPath, userDataPath, appVersion } })
           return

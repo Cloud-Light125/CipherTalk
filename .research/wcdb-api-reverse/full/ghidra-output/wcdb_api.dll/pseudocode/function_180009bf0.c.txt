@@ -1,0 +1,32 @@
+/* 180009bf0 FUN_180009bf0 */
+
+void FUN_180009bf0(longlong param_1)
+
+{
+  longlong *plVar1;
+  code *pcVar2;
+  void *_Memory;
+  longlong *plVar3;
+  
+  if (*(longlong *)(param_1 + 8) == 0) {
+    return;
+  }
+  plVar1 = *(longlong **)(param_1 + 0x20);
+  for (plVar3 = *(longlong **)(param_1 + 0x18); plVar3 != plVar1; plVar3 = plVar3 + 4) {
+    FUN_18000d070(plVar3);
+  }
+  _Memory = *(void **)(param_1 + 8);
+  if (0xfff < (ulonglong)(*(longlong *)(param_1 + 0x10) << 5)) {
+    if ((ulonglong)((longlong)_Memory + (-8 - (longlong)*(void **)((longlong)_Memory + -8))) < 0x20)
+    {
+      free(*(void **)((longlong)_Memory + -8));
+      return;
+    }
+    pcVar2 = (code *)swi(0x29);
+    _Memory = (void *)(*pcVar2)(5);
+  }
+  free(_Memory);
+  return;
+}
+
+

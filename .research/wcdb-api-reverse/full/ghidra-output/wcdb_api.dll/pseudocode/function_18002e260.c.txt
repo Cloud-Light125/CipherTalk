@@ -1,0 +1,31 @@
+/* 18002e260 FUN_18002e260 */
+
+longlong * FUN_18002e260(longlong *param_1,undefined8 param_2,longlong *param_3)
+
+{
+  longlong local_res10;
+  longlong *local_res18;
+  undefined8 local_res20;
+  undefined8 local_20;
+  undefined8 local_18;
+  
+  *param_1 = 0;
+  param_1[1] = 0;
+  param_1[2] = 0;
+  param_1[3] = 0xf;
+  *(undefined1 *)param_1 = 0;
+  if ((ulonglong)param_3[3] < 0x10) {
+    local_res10 = param_3[2] + (longlong)param_3;
+  }
+  else {
+    local_res10 = param_3[2] + *param_3;
+    param_3 = (longlong *)*param_3;
+  }
+  local_18 = 100;
+  local_res18 = param_3;
+  local_20 = param_2;
+  FUN_180027090(&local_res20,&local_20,&local_res18,&local_res10,param_1);
+  return param_1;
+}
+
+

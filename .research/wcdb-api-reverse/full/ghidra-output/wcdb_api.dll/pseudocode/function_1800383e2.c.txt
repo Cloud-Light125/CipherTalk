@@ -1,0 +1,12 @@
+/* 1800383e2 _crt_atexit */
+
+void _crt_atexit(void)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x0001800383e2. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  _crt_atexit();
+  return;
+}
+
+

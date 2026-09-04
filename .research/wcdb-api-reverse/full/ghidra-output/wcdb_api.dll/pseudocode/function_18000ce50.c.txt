@@ -1,0 +1,20 @@
+/* 18000ce50 FUN_18000ce50 */
+
+void FUN_18000ce50(undefined4 param_1)
+
+{
+  undefined8 *puVar1;
+  undefined8 local_58;
+  undefined8 uStack_50;
+  undefined4 local_48 [4];
+  undefined8 ****local_38 [7];
+  
+  puVar1 = (undefined8 *)FUN_18000c800(local_48,param_1);
+  local_58 = *puVar1;
+  uStack_50 = puVar1[1];
+  FUN_180008ed0(local_38,(undefined4 *)&local_58);
+                    /* WARNING: Subroutine does not return */
+  _CxxThrowException(local_38,(ThrowInfo *)&DAT_180047550);
+}
+
+

@@ -1,0 +1,27 @@
+/* 180037660 FUN_180037660 */
+
+/* WARNING: Removing unreachable block (ram,0x0001800376e6) */
+/* WARNING: Enum "SectionFlags": Some values do not have unique names */
+
+ulonglong FUN_180037660(longlong param_1)
+
+{
+  IMAGE_SECTION_HEADER *pIVar1;
+  
+  pIVar1 = &IMAGE_SECTION_HEADER_180000218;
+  while( true ) {
+    if (pIVar1 == (IMAGE_SECTION_HEADER *)&DAT_180000308) {
+      return 0x180000300;
+    }
+    if (((ulonglong)(uint)pIVar1->VirtualAddress <= param_1 - 0x180000000U) &&
+       (param_1 - 0x180000000U <
+        (ulonglong)((pIVar1->Misc).PhysicalAddress + pIVar1->VirtualAddress))) break;
+    pIVar1 = pIVar1 + 1;
+  }
+  if ((int)pIVar1->Characteristics < 0) {
+    return (ulonglong)pIVar1 & 0xffffffffffffff00;
+  }
+  return CONCAT71((int7)((ulonglong)pIVar1 >> 8),1);
+}
+
+

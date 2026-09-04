@@ -1,0 +1,31 @@
+/* 180026b30 FUN_180026b30 */
+
+ulonglong FUN_180026b30(undefined8 *param_1,undefined8 *param_2)
+
+{
+  size_t _Size;
+  int iVar1;
+  undefined8 *_Buf2;
+  uint7 uVar2;
+  undefined4 extraout_var;
+  
+  _Buf2 = param_2;
+  if (0xf < (ulonglong)param_2[3]) {
+    _Buf2 = (undefined8 *)*param_2;
+  }
+  _Size = param_1[2];
+  if (0xf < (ulonglong)param_1[3]) {
+    param_1 = (undefined8 *)*param_1;
+  }
+  uVar2 = (uint7)((ulonglong)_Buf2 >> 8);
+  if (_Size == param_2[2]) {
+    if (_Size != 0) {
+      iVar1 = memcmp(param_1,_Buf2,_Size);
+      return CONCAT71((int7)(CONCAT44(extraout_var,iVar1) >> 8),iVar1 == 0) ^ 1;
+    }
+    return (ulonglong)uVar2 << 8;
+  }
+  return (ulonglong)uVar2 << 8 ^ 1;
+}
+
+

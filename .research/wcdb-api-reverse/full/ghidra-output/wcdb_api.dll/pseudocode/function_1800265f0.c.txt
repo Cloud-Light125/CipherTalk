@@ -1,0 +1,11 @@
+/* 1800265f0 wcdb_set_trusted_time */
+
+undefined8 wcdb_set_trusted_time(longlong param_1)
+
+{
+                    /* 0x265f0  17  wcdb_set_trusted_time */
+  FUN_18000d2d0(param_1);
+  return 0;
+}
+
+

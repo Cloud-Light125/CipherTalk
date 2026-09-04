@@ -1,0 +1,12 @@
+/* 18003506d getColumnName */
+
+void __thiscall WCDB::InnerHandle::getColumnName(InnerHandle *this,int param_1)
+
+{
+                    /* WARNING: Could not recover jumptable at 0x00018003506d. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  getColumnName(this,param_1);
+  return;
+}
+
+

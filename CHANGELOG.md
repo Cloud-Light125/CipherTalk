@@ -722,4 +722,4 @@
 
 ---
 
-更多详细信息请查看 [GitHub Releases](https://github.com/ILoveBingLu/CipherTalk/releases)。
+更多详细信息请查看 [GitHub Releases](https://github.com/Cloud-Light125/CipherTalk-SafeFork-1/releases)。

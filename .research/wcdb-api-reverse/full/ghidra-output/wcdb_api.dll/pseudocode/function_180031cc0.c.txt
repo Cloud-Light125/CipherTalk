@@ -1,0 +1,9 @@
+/* 180031cc0 FUN_180031cc0 */
+
+undefined * FUN_180031cc0(void)
+
+{
+  return &DAT_18004bce0;
+}
+
+

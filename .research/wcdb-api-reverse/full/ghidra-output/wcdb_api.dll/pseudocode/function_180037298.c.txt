@@ -1,0 +1,16 @@
+/* 180037298 sync */
+
+int __thiscall
+std::basic_streambuf<char,std::char_traits<char>_>::sync
+          (basic_streambuf<char,std::char_traits<char>_> *this)
+
+{
+  int iVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x000180037298. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  iVar1 = sync(this);
+  return iVar1;
+}
+
+

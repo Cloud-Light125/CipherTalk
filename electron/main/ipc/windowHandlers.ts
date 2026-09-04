@@ -285,11 +285,6 @@ export function registerWindowHandlers(ctx: MainProcessContext): void {
     return true
   })
 
-  ipcMain.handle('window:openPurchaseWindow', async () => {
-    ctx.getWindowManager().openPurchaseWindow()
-    return true
-  })
-
   ipcMain.handle('window:openWelcomeWindow', async (_, mode?: 'default' | 'add-account') => {
     ctx.getWindowManager().openWelcomeWindow(mode || 'default')
     return true

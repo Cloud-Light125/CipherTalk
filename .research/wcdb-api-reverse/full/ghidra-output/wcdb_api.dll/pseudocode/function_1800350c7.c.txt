@@ -1,0 +1,15 @@
+/* 1800350c7 BCryptHashData */
+
+NTSTATUS __stdcall
+BCryptHashData(BCRYPT_HASH_HANDLE hHash,PUCHAR pbInput,ULONG cbInput,ULONG dwFlags)
+
+{
+  NTSTATUS NVar1;
+  
+                    /* WARNING: Could not recover jumptable at 0x0001800350c7. Too many branches */
+                    /* WARNING: Treating indirect jump as call */
+  NVar1 = BCryptHashData(hHash,pbInput,cbInput,dwFlags);
+  return NVar1;
+}
+
+

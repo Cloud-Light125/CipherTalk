@@ -1,0 +1,97 @@
+/* 180036930 FUN_180036930 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+undefined8 FUN_180036930(undefined8 param_1,undefined8 param_2)
+
+{
+  BOOL BVar1;
+  DWORD DVar2;
+  int iVar3;
+  HANDLE hFile;
+  HANDLE hObject;
+  undefined1 auStack_e8 [32];
+  _BY_HANDLE_FILE_INFORMATION *local_c8;
+  bool local_b8;
+  undefined2 uStack_b7;
+  undefined1 uStack_b5;
+  DWORD DStack_b4;
+  undefined1 local_b0 [56];
+  _BY_HANDLE_FILE_INFORMATION local_78;
+  ulonglong local_40 [3];
+  ulonglong local_28;
+  
+  local_28 = DAT_18004b4c0 ^ (ulonglong)auStack_e8;
+  local_b0._8_4_ = 0x2000000;
+  local_b0._12_4_ = 0;
+  local_b0._0_4_ = 0x20;
+  local_b0._4_4_ = 0;
+  local_c8 = (_BY_HANDLE_FILE_INFORMATION *)local_b0;
+  local_b0._16_4_ = 0;
+  local_b0._20_4_ = 0;
+  local_b0._24_4_ = 0;
+  local_b0._28_4_ = 0;
+  hFile = (HANDLE)CreateFile2(0,0x80,7,3);
+  if ((hFile == (HANDLE)0xffffffffffffffff) && (DStack_b4 = GetLastError(), DStack_b4 != 0)) {
+    local_b8 = false;
+    goto LAB_180036b4d;
+  }
+  BVar1 = GetFileInformationByHandleEx(hFile,0x12,local_b0 + 0x20,0x18);
+  if (BVar1 == 0) {
+    DVar2 = GetLastError();
+    if ((DVar2 == 0x32) || (DVar2 == 0x57)) {
+      BVar1 = GetFileInformationByHandle(hFile,&local_78);
+      if (BVar1 != 0) {
+        local_b0._32_8_ = (ulonglong)local_78._24_8_ >> 0x20;
+        local_b0._40_4_ = local_78.nFileIndexHigh;
+        local_b0._44_4_ = local_78.nFileIndexLow;
+        local_b0._48_8_ = 0;
+        goto LAB_180036a27;
+      }
+      DVar2 = GetLastError();
+    }
+    if (DVar2 != 0) {
+      if ((hFile != (HANDLE)0xffffffffffffffff) && (BVar1 = CloseHandle(hFile), BVar1 == 0))
+      goto LAB_180036b27;
+      local_b8 = false;
+      DStack_b4 = DVar2;
+      goto LAB_180036b4d;
+    }
+  }
+LAB_180036a27:
+  local_78.ftCreationTime.dwHighDateTime = 0x2000000;
+  local_78.ftLastAccessTime.dwLowDateTime = 0;
+  local_c8 = &local_78;
+  local_78.dwFileAttributes = 0x20;
+  local_78.ftCreationTime.dwLowDateTime = 0;
+  local_78.ftLastAccessTime.dwHighDateTime = 0;
+  local_78.ftLastWriteTime.dwLowDateTime = 0;
+  local_78.ftLastWriteTime.dwHighDateTime = 0;
+  local_78.dwVolumeSerialNumber = 0;
+  hObject = (HANDLE)CreateFile2(param_2,0x80,7,3);
+  if ((hObject != (HANDLE)0xffffffffffffffff) || (DVar2 = GetLastError(), DVar2 == 0)) {
+    DVar2 = FUN_180036520(hObject,local_40);
+    if (DVar2 == 0) {
+      iVar3 = memcmp(local_b0 + 0x20,local_40,0x18);
+      if (((hObject != (HANDLE)0xffffffffffffffff) && (BVar1 = CloseHandle(hObject), BVar1 == 0)) ||
+         ((hFile != (HANDLE)0xffffffffffffffff && (BVar1 = CloseHandle(hFile), BVar1 == 0))))
+      goto LAB_180036b27;
+      DStack_b4 = 0;
+      local_b8 = iVar3 == 0;
+      goto LAB_180036b4d;
+    }
+    if ((hObject != (HANDLE)0xffffffffffffffff) && (BVar1 = CloseHandle(hObject), BVar1 == 0))
+    goto LAB_180036b27;
+  }
+  if ((hFile != (HANDLE)0xffffffffffffffff) && (BVar1 = CloseHandle(hFile), BVar1 == 0)) {
+LAB_180036b27:
+                    /* WARNING: Subroutine does not return */
+    abort();
+  }
+  local_b8 = false;
+  DStack_b4 = DVar2;
+LAB_180036b4d:
+  return CONCAT44(DStack_b4,CONCAT13(uStack_b5,CONCAT21(uStack_b7,local_b8)));
+}
+
+

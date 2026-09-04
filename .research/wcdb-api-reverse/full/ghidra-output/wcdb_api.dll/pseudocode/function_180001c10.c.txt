@@ -1,0 +1,24 @@
+/* 180001c10 FUN_180001c10 */
+
+longlong * FUN_180001c10(longlong *param_1,void *param_2,size_t param_3)
+
+{
+  longlong lVar1;
+  longlong *plVar2;
+  
+  lVar1 = param_1[2];
+  if ((ulonglong)(param_1[3] - lVar1) < param_3) {
+    plVar2 = FUN_180006110(param_1,param_3,0,param_2,param_3);
+    return plVar2;
+  }
+  param_1[2] = lVar1 + param_3;
+  plVar2 = param_1;
+  if (0xf < (ulonglong)param_1[3]) {
+    plVar2 = (longlong *)*param_1;
+  }
+  memmove((void *)((longlong)plVar2 + lVar1),param_2,param_3);
+  *(undefined1 *)((longlong)plVar2 + lVar1 + param_3) = 0;
+  return param_1;
+}
+
+

@@ -1,0 +1,33 @@
+/* 180007420 FUN_180007420 */
+
+char * FUN_180007420(char *param_1,ulonglong param_2)
+
+{
+  undefined1 auVar1 [16];
+  longlong lVar2;
+  ulonglong uVar3;
+  char *pcVar4;
+  
+  if (9 < param_2) {
+    do {
+      pcVar4 = param_1;
+      auVar1._8_8_ = 0;
+      auVar1._0_8_ = param_2;
+      lVar2 = SUB168(ZEXT816(0x47ae147ae147ae15) * auVar1,8);
+      param_1 = pcVar4 + -2;
+      uVar3 = (param_2 - lVar2 >> 1) + lVar2 >> 6;
+      *(undefined2 *)param_1 =
+           *(undefined2 *)(&DAT_18003c920 + (param_2 + uVar3 * -100 & 0xffffffff) * 2);
+      param_2 = uVar3;
+    } while (9 < uVar3);
+    if (uVar3 != 0) {
+      param_1 = pcVar4 + -3;
+      *param_1 = (char)uVar3 + '0';
+    }
+    return param_1;
+  }
+  param_1[-1] = (char)param_2 + '0';
+  return param_1 + -1;
+}
+
+

@@ -1,0 +1,57 @@
+/* 18000b9f0 FUN_18000b9f0 */
+
+LPWSTR FUN_18000b9f0(LPWSTR param_1,UINT param_2,undefined8 *param_3)
+
+{
+  LPCSTR pCVar1;
+  int iVar2;
+  ulonglong uVar3;
+  ulonglong uVar4;
+  LPWSTR pWVar5;
+  
+  param_1[0] = L'\0';
+  param_1[1] = L'\0';
+  param_1[2] = L'\0';
+  param_1[3] = L'\0';
+  param_1[4] = L'\0';
+  param_1[5] = L'\0';
+  param_1[6] = L'\0';
+  param_1[7] = L'\0';
+  param_1[8] = L'\0';
+  param_1[9] = L'\0';
+  param_1[10] = L'\0';
+  param_1[0xb] = L'\0';
+  param_1[0xc] = L'\a';
+  param_1[0xd] = L'\0';
+  param_1[0xe] = L'\0';
+  param_1[0xf] = L'\0';
+  *param_1 = L'\0';
+  uVar4 = param_3[1];
+  if (uVar4 != 0) {
+    if (0x7fffffff < uVar4) {
+                    /* WARNING: Subroutine does not return */
+      FUN_18000ce10(0x16);
+    }
+    pCVar1 = (LPCSTR)*param_3;
+    uVar3 = FUN_180036670(param_2,pCVar1,(int)uVar4,(LPWSTR)0x0,0);
+    iVar2 = (int)(uVar3 >> 0x20);
+    if (iVar2 != 0) {
+                    /* WARNING: Subroutine does not return */
+      FUN_18000ce50(iVar2);
+    }
+    FUN_18001da10((undefined8 *)param_1,(longlong)(int)uVar3,0);
+    pWVar5 = param_1;
+    if (7 < *(ulonglong *)(param_1 + 0xc)) {
+      pWVar5 = *(LPWSTR *)param_1;
+    }
+    uVar4 = FUN_180036670(param_2,pCVar1,(int)uVar4,pWVar5,(int)uVar3);
+    iVar2 = (int)(uVar4 >> 0x20);
+    if (iVar2 != 0) {
+                    /* WARNING: Subroutine does not return */
+      FUN_18000ce50(iVar2);
+    }
+  }
+  return param_1;
+}
+
+

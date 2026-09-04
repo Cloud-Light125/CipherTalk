@@ -1,4 +1,4 @@
-import { basename, delimiter, dirname, join } from 'path'
+import { basename, delimiter, dirname, join, normalize, resolve } from 'path'
 import { existsSync, readdirSync, statSync } from 'fs'
 import { createRequire } from 'module'
 
@@ -14,6 +14,29 @@ function ensureDirInPath(dir: string): void {
   const segments = current.split(delimiter)
   if (segments.some((seg) => seg.toLowerCase() === dir.toLowerCase())) return
   process.env.PATH = `${dir}${delimiter}${current}`
+}
+
+const EXPECTED_HEX_KEY_LENGTH = 64
+
+function normalizeWcdbPath(input: string): string {
+  const value = String(input || '').trim()
+  return value ? normalize(resolve(value)) : ''
+}
+
+function describeKey(hexKey: string): { keyPresent: boolean; keyLength: number; keyLengthExpected: number; keyLengthValid: boolean; keyFormatValid: boolean } {
+  const value = String(hexKey || '').trim()
+  return {
+    keyPresent: value.length > 0,
+    keyLength: value.length,
+    keyLengthExpected: EXPECTED_HEX_KEY_LENGTH,
+    keyLengthValid: value.length === EXPECTED_HEX_KEY_LENGTH,
+    keyFormatValid: /^[0-9a-fA-F]{64}$/.test(value)
+  }
+}
+
+// Native diagnostics must never be allowed to echo a 64-character hex key.
+function redactSensitiveLogText(value: string): string {
+  return String(value || '').replace(/[0-9a-fA-F]{64}/g, (token) => `[redacted-hex:${token.length}]`)
 }
 
 /**
@@ -57,7 +80,6 @@ export class WcdbCore {
   private wcdbGetMonitorPipeName: any = null
   private wcdbSetMyWxid: any = null
   private wcdbSetClientInfo: any = null
-  private wcdbCheckLicense: any = null
 
   // 管道监控状态
   private monitorPipeClient: any = null
@@ -65,10 +87,10 @@ export class WcdbCore {
   private monitorReconnectTimer: any = null
   private monitorPipePath: string = ''
 
-  setPaths(resourcesPath: string, userDataPath: string, appVersion: string): void {
+  setPaths(resourcesPath: string, userDataPath: string, appVersion = ''): void {
     this.resourcesPath = resourcesPath
     this.userDataPath = userDataPath
-    this.appVersion = appVersion
+    this.appVersion = String(appVersion || '')
   }
 
   getUserDataPath(): string | null { return this.userDataPath }
@@ -137,15 +159,35 @@ export class WcdbCore {
       this.wcdbGetMonitorPipeName = tryBind('int32 wcdb_get_monitor_pipe_name(_Out_ void** outName)')
       this.wcdbSetMyWxid = tryBind('int32 wcdb_set_my_wxid(int64 handle, const char* wxid)')
       this.wcdbSetClientInfo = tryBind('int32 wcdb_set_client_info(const char* applicationId, const char* clientType, const char* appVersion)')
-      this.wcdbCheckLicense = tryBind('int32 wcdb_check_license()')
-      if (!this.wcdbSetClientInfo || !this.wcdbCheckLicense) {
-        return { success: false, error: 'WCDB 原生库版本过旧，请升级到 1.1.0 或更高版本' }
+      if (!this.wcdbSetClientInfo) {
+        console.error('[wcdbCore][diagnostic] native call=wcdb_set_client_info', {
+          called: false,
+          returnCode: null,
+          applicationId: 'ciphertalk',
+          clientType: 'cli',
+          appVersion: this.appVersion,
+          licenseCheckCalled: false
+        })
+        return { success: false, error: 'WCDB 原生库版本过旧，缺少 wcdb_set_client_info' }
       }
+
       const clientInfoResult = this.wcdbSetClientInfo('ciphertalk', 'cli', this.appVersion)
+      console.error('[wcdbCore][diagnostic] native call=wcdb_set_client_info', {
+        called: true,
+        returnCode: clientInfoResult,
+        applicationId: 'ciphertalk',
+        clientType: 'cli',
+        appVersion: this.appVersion,
+        licenseCheckCalled: false
+      })
       if (clientInfoResult !== 0) return { success: false, error: this.mapStatusCode(clientInfoResult) }
-      const licenseResult = this.wcdbCheckLicense()
-      if (licenseResult !== 0) return { success: false, error: this.mapStatusCode(licenseResult) }
+
       const initResult = this.wcdbInit()
+      console.error('[wcdbCore][diagnostic] native call=wcdb_init', {
+        returnCode: initResult,
+        afterClientInfo: true,
+        licenseCheckCalled: false
+      })
       if (initResult !== 0) {
         return { success: false, error: this.mapStatusCode(initResult) }
       }
@@ -155,10 +197,6 @@ export class WcdbCore {
     } catch (e: any) {
       return { success: false, error: `WCDB 初始化异常: ${e.message || String(e)}` }
     }
-  }
-
-  async checkLicense(): Promise<{ success: boolean; error?: string }> {
-    return this.initialize()
   }
 
   // ============== 路径解析 ==============
@@ -228,15 +266,24 @@ export class WcdbCore {
     return null
   }
 
-  private tryOpenWithCandidates(sessionDbPaths: string[], hexKey: string): { success: boolean; handle?: number; matchedPath?: string; errors: string[] } {
+  private tryOpenWithCandidates(sessionDbPaths: string[], hexKey: string, wxid: string, normalizedAccountDirectory: string): { success: boolean; handle?: number; matchedPath?: string; errors: string[] } {
     const errors: string[] = []
     for (const sessionDbPath of sessionDbPaths) {
       const handleOut = [0]
-      const result = this.wcdbOpenAccount(sessionDbPath, hexKey, handleOut)
+      const nativeSessionDbPath = normalizeWcdbPath(sessionDbPath)
+      const result = this.wcdbOpenAccount(nativeSessionDbPath, hexKey, handleOut)
+      console.error('[wcdbCore][diagnostic] native call=wcdb_open_account (wcdb_open)', {
+        returnCode: result,
+        normalizedAccountDirectory,
+        nativeSessionDbPath,
+        wxid,
+        ...describeKey(hexKey),
+        handle: handleOut[0]
+      })
       if (result === 0 && handleOut[0] > 0) {
-        return { success: true, handle: handleOut[0], matchedPath: sessionDbPath, errors }
+        return { success: true, handle: handleOut[0], matchedPath: nativeSessionDbPath, errors }
       }
-      errors.push(`${sessionDbPath} => ${this.mapStatusCode(result)}`)
+      errors.push(`${nativeSessionDbPath} => ${this.mapStatusCode(result)}`)
     }
     return { success: false, errors }
   }
@@ -244,17 +291,37 @@ export class WcdbCore {
   // ============== 连接生命周期 ==============
   async open(dbPath: string, hexKey: string, wxid: string): Promise<boolean> {
     try {
+      const normalizedDbPath = normalizeWcdbPath(dbPath)
+      const normalizedHexKey = String(hexKey || '').trim()
+      const normalizedWxid = String(wxid || '').trim()
+      console.error('[wcdbCore][diagnostic] account verification input', {
+        operation: 'open',
+        normalizedAccountDirectory: normalizedDbPath,
+        wxid: normalizedWxid,
+        ...describeKey(normalizedHexKey)
+      })
       if (
         this.handle !== null &&
-        this.currentPath === dbPath &&
-        this.currentKey === hexKey &&
-        this.currentWxid === wxid
+        this.currentPath === normalizedDbPath &&
+        this.currentKey === normalizedHexKey &&
+        this.currentWxid === normalizedWxid
       ) {
         return true
       }
 
       const initRes = await this.initialize()
-      if (!initRes.success) return false
+      if (!initRes.success) {
+        console.error('[wcdbCore][diagnostic] native call=wcdb_open_account (wcdb_open)', {
+          called: false,
+          returnCode: null,
+          blockedBy: 'wcdb_init',
+          normalizedAccountDirectory: normalizedDbPath,
+          wxid: normalizedWxid,
+          reason: initRes.error || 'wcdb_init failed',
+          ...describeKey(normalizedHexKey)
+        })
+        return false
+      }
 
       if (this.handle !== null) {
         this.close()
@@ -262,9 +329,9 @@ export class WcdbCore {
         if (!reinitRes.success) return false
       }
 
-      const dbStoragePath = this.resolveDbStoragePath(dbPath, wxid)
+      const dbStoragePath = this.resolveDbStoragePath(normalizedDbPath, normalizedWxid)
       if (!dbStoragePath) {
-        console.error('数据库目录不存在:', dbPath)
+        console.error('数据库目录不存在:', normalizedDbPath)
         return false
       }
 
@@ -274,7 +341,7 @@ export class WcdbCore {
         return false
       }
 
-      const openResult = this.tryOpenWithCandidates(sessionDbPaths, hexKey)
+      const openResult = this.tryOpenWithCandidates(sessionDbPaths, normalizedHexKey, normalizedWxid, normalizedDbPath)
       if (!openResult.success || !openResult.handle) {
         await this.printLogs()
         return false
@@ -284,16 +351,16 @@ export class WcdbCore {
       if (handle <= 0) return false
 
       this.handle = handle
-      this.currentPath = dbPath
-      this.currentKey = hexKey
-      this.currentWxid = wxid
+      this.currentPath = normalizedDbPath
+      this.currentKey = normalizedHexKey
+      this.currentWxid = normalizedWxid
       this.currentDbStoragePath = dbStoragePath
       this.initialized = true
 
       // 可选：若 native 支持，则绑定当前 wxid
-      if (this.wcdbSetMyWxid && wxid) {
+      if (this.wcdbSetMyWxid && normalizedWxid) {
         try {
-          this.wcdbSetMyWxid(this.handle, wxid)
+          this.wcdbSetMyWxid(this.handle, normalizedWxid)
         } catch (e) {
           console.warn('wcdb_set_my_wxid 调用失败（可忽略）:', e)
         }
@@ -332,7 +399,16 @@ export class WcdbCore {
     // 因此 testConnection 不再独立 open+shutdown，改成走 open() 复用句柄。
     // 后续查询会命中 open() 的缓存命中分支，零代价。
     try {
-      const ok = await this.open(dbPath, hexKey, wxid)
+      const normalizedDbPath = normalizeWcdbPath(dbPath)
+      const normalizedHexKey = String(hexKey || '').trim()
+      const normalizedWxid = String(wxid || '').trim()
+      console.error('[wcdbCore][diagnostic] account verification input', {
+        operation: 'testConnection',
+        normalizedAccountDirectory: normalizedDbPath,
+        wxid: normalizedWxid,
+        ...describeKey(normalizedHexKey)
+      })
+      const ok = await this.open(normalizedDbPath, normalizedHexKey, normalizedWxid)
       if (!ok) {
         const logs = await this.printLogs()
         return { success: false, error: `数据库打开失败${logs ? ` | logs=${logs}` : ''}` }
@@ -781,9 +857,10 @@ export class WcdbCore {
       const result = this.wcdbGetLogs(outPtr)
       if (result === 0 && outPtr[0]) {
         const jsonStr = this.koffi.decode(outPtr[0], 'char', -1)
-        console.error('WCDB 内部日志:', jsonStr)
+        const safeJsonStr = redactSensitiveLogText(String(jsonStr || ''))
+        console.error('[wcdbCore][diagnostic] WCDB native logs', safeJsonStr)
         this.wcdbFreeString(outPtr[0])
-        return jsonStr
+        return safeJsonStr
       }
     } catch (e) {
       console.error('获取 WCDB 日志失败:', e)
@@ -801,34 +878,12 @@ export class WcdbCore {
       case -5: return '查询执行失败'
       case -6: return 'WCDB 尚未初始化'
       case -7: return 'WCDB 表结构不匹配'
-      case -8: return '软件偷来的吧！'
-      case -9: return '签名到期，停止使用'
-      case -10: return '靠，你从哪搞得软件？'
-      case -11: return '首次必须联网获取时间'
-      case -12: return '签名无效'
-      case -13: return '请勿使用盗版'
-      case -14: return '您已被禁用'
-      case -15: return '已停用'
-      case -16: return '云端授权服务请求失败'
-      case -17: return '当前 CipherTalk CLI 版本不受支持，请更新后重试'
-      case -18: return '当前 WCDB 原生库版本不受支持，请更新 CLI 后重试'
       default: return `WCDB 错误码: ${code}`
     }
   }
 
   private mapCursorStatusCode(code: number, prefix: string): string {
     if (code === -7) return 'message schema mismatch：当前账号消息表结构与程序要求不一致'
-    if (code === -8) return `${prefix}: ${code}（软件偷来的吧！）`
-    if (code === -9) return `${prefix}: ${code}（签名到期，停止使用）`
-    if (code === -10) return `${prefix}: ${code}（靠，你从哪搞得软件？）`
-    if (code === -11) return `${prefix}: ${code}（首次必须联网获取时间）`
-    if (code === -12) return `${prefix}: ${code}（签名无效）`
-    if (code === -13) return `${prefix}: ${code}（请勿使用盗版）`
-    if (code === -14) return `${prefix}: ${code}（您已被禁用）`
-    if (code === -15) return `${prefix}: ${code}（已停用）`
-    if (code === -16) return `${prefix}: ${code}（云端授权服务请求失败）`
-    if (code === -17) return `${prefix}: ${code}（当前 CLI 版本不受支持）`
-    if (code === -18) return `${prefix}: ${code}（当前 WCDB 原生库版本不受支持）`
     if (code === -3) return `${prefix}: ${code}（消息数据库未找到）`
     return `${prefix}: ${code}`
   }

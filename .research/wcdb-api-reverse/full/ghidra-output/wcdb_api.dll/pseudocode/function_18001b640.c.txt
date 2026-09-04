@@ -1,0 +1,53 @@
+/* 18001b640 FUN_18001b640 */
+
+uint FUN_18001b640(basic_streambuf<char,std::char_traits<char>_> *param_1,uint param_2)
+
+{
+  basic_streambuf<char,std::char_traits<char>_> *pbVar1;
+  int iVar2;
+  char *pcVar3;
+  char *pcVar4;
+  basic_streambuf<char,std::char_traits<char>_> *pbVar5;
+  
+  pcVar3 = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+  if (pcVar3 != (char *)0x0) {
+    pcVar3 = std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+    pcVar4 = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+    if ((pcVar3 < pcVar4) &&
+       ((param_2 == 0xffffffff ||
+        (pcVar3 = std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1),
+        (byte)pcVar3[-1] == param_2)))) {
+      std::basic_streambuf<char,std::char_traits<char>_>::_Gndec(param_1);
+      if (param_2 != 0xffffffff) {
+        return param_2;
+      }
+      return 0;
+    }
+  }
+  if ((*(FILE **)(param_1 + 0x80) != (FILE *)0x0) && (param_2 != 0xffffffff)) {
+    if ((*(longlong *)(param_1 + 0x68) == 0) &&
+       (iVar2 = ungetc(param_2 & 0xff,*(FILE **)(param_1 + 0x80)), iVar2 != -1)) {
+      return param_2;
+    }
+    pbVar1 = param_1 + 0x70;
+    pbVar5 = (basic_streambuf<char,std::char_traits<char>_> *)
+             std::basic_streambuf<char,std::char_traits<char>_>::gptr(param_1);
+    if (pbVar5 != pbVar1) {
+      *pbVar1 = SUB41(param_2,0);
+      pbVar5 = (basic_streambuf<char,std::char_traits<char>_> *)
+               std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+      if (pbVar5 != pbVar1) {
+        pcVar3 = std::basic_streambuf<char,std::char_traits<char>_>::eback(param_1);
+        *(char **)(param_1 + 0x88) = pcVar3;
+        pcVar3 = std::basic_streambuf<char,std::char_traits<char>_>::egptr(param_1);
+        *(char **)(param_1 + 0x90) = pcVar3;
+      }
+      std::basic_streambuf<char,std::char_traits<char>_>::setg
+                (param_1,(char *)pbVar1,(char *)pbVar1,(char *)(param_1 + 0x71));
+      return param_2;
+    }
+  }
+  return 0xffffffff;
+}
+
+

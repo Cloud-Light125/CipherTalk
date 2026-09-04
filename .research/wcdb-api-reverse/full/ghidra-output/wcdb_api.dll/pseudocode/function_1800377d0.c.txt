@@ -1,0 +1,122 @@
+/* 1800377d0 FUN_1800377d0 */
+
+/* WARNING: Function: __security_check_cookie replaced with injection: security_check_cookie */
+
+ulonglong * FUN_1800377d0(ulonglong *param_1,longlong param_2,int *param_3)
+
+{
+  byte bVar1;
+  code *pcVar2;
+  uint uVar3;
+  longlong lVar4;
+  ulonglong *puVar5;
+  uint uVar6;
+  byte *pbVar7;
+  byte *pbVar8;
+  undefined1 *_Memory;
+  ulonglong uVar9;
+  uint uVar10;
+  byte bVar11;
+  uint uVar12;
+  
+  uVar9 = (ulonglong)*param_3;
+  if ((uVar9 & 4) != 0) {
+    param_1 = (ulonglong *)((longlong)param_3[1] + (longlong)param_1 & (longlong)-param_3[2]);
+  }
+  pbVar7 = (byte *)(*(longlong *)(param_2 + 8) +
+                   (ulonglong)*(uint *)(*(longlong *)(param_2 + 0x10) + 8));
+  bVar1 = pbVar7[3];
+  if (2 < (*pbVar7 & 7)) {
+    uVar10 = bVar1 & 0x1f;
+    if ((bVar1 & 0x1f) != 0) {
+      if ((*pbVar7 & 0x40) == 0) {
+        lVar4 = (ulonglong)uVar10 + 4;
+      }
+      else {
+        lVar4 = (ulonglong)uVar10 * 2 + 5;
+      }
+      pbVar7 = pbVar7 + lVar4;
+      uVar12 = 0;
+      pbVar8 = pbVar7;
+      uVar6 = uVar12;
+      if (bVar1 >> 5 != 0) {
+        do {
+          pbVar7 = pbVar8 + 3;
+          uVar3 = (uint)(*pbVar8 >> 3);
+          if (uVar3 != 0) {
+            if ((*pbVar8 & 2) == 0) {
+              pbVar7 = pbVar8 + (ulonglong)uVar3 + 6;
+            }
+            else {
+              pbVar7 = pbVar7 + (ulonglong)uVar3 * 2 + 4;
+            }
+          }
+          uVar6 = uVar6 + 1;
+          pbVar8 = pbVar7;
+        } while (uVar6 < bVar1 >> 5);
+      }
+      if ((bVar1 & 0x1f) != 0) {
+        do {
+          bVar1 = *pbVar7;
+          bVar11 = bVar1;
+          if (((bVar1 < 4) || (bVar11 = bVar1 & 0xf, (byte)(bVar11 - 8) < 3)) ||
+             (bVar11 = bVar1 & 7, (byte)(bVar11 - 4) < 4)) {
+            if (bVar11 == 0) break;
+            if (0x20 < bVar11) goto switchD_18003790f_caseD_4;
+          }
+          else {
+            if ((bVar1 & 0x3f) != 0x20) goto switchD_18003790f_caseD_4;
+            bVar11 = 0x20;
+          }
+                    /* WARNING (jumptable): Sanity check requires truncation of jumptable */
+                    /* WARNING: Could not find normalized switch variable to match jumptable */
+          switch(*(byte *)((longlong)&UINT_180037988 + (ulonglong)bVar11)) {
+          case 0:
+            lVar4 = 2;
+            break;
+          case 1:
+            lVar4 = 5;
+            break;
+          case 2:
+            lVar4 = 3;
+            break;
+          case 3:
+            lVar4 = 1;
+            break;
+          case 4:
+switchD_18003790f_caseD_4:
+            FUN_1800377a0();
+            pcVar2 = (code *)swi(3);
+            puVar5 = (ulonglong *)(*pcVar2)();
+            return puVar5;
+          case 5:
+            _Memory = (undefined1 *)
+                      ((uVar9 - (longlong)
+                                ((ulonglong)
+                                 (&switchD_18003790f::switchdataD_180037974)
+                                 [*(byte *)((longlong)&UINT_180037988 + (ulonglong)bVar11)] +
+                                0x180000000)) + -8);
+            if (&DAT_0000001f < _Memory) {
+              pcVar2 = (code *)swi(0x29);
+              (*pcVar2)(5);
+              free(_Memory);
+            }
+            else {
+              free((void *)((ulonglong)
+                            (&switchD_18003790f::switchdataD_180037974)
+                            [*(byte *)((longlong)&UINT_180037988 + (ulonglong)bVar11)] + 0x180000000
+                           ));
+            }
+            *param_1 = (ulonglong)uVar10;
+            return param_1;
+          }
+          pbVar7 = pbVar7 + lVar4;
+          uVar12 = uVar12 + 1;
+        } while (uVar12 < uVar10);
+      }
+    }
+  }
+  return (ulonglong *)(uVar9 & 0xfffffffffffffff8);
+}
+
+
