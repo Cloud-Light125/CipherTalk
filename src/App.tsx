@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Button, Chip, Modal, Toast, toast, Typography } from '@heroui/react'
 
@@ -256,78 +256,81 @@ function App() {
     }
   }
 
-  // 启动时自动检查配置并连接数据库
+  const connectActiveAccount = useCallback(async (trustStartupConnection: boolean) => {
+    try {
+      const activeAccount = await configService.getActiveAccount()
+      const dbPath = activeAccount?.dbPath || ''
+      const decryptKey = activeAccount?.decryptKey || ''
+      const wxid = activeAccount?.wxid || ''
+
+      if (!activeAccount || !dbPath || !decryptKey || !wxid) {
+        setDbConnected(false)
+        useAppStore.getState().setUserInfo(null)
+        return
+      }
+
+      const startupConnected = trustStartupConnection
+        ? await window.electronAPI.app.getStartupDbConnected?.()
+        : false
+      if (!startupConnected) {
+        console.log('检测到活动账号变化，正在连接数据库...')
+        const result = await testAndOpenWcdb(window.electronAPI.wcdb, dbPath, decryptKey, wxid, true)
+        if (!result.success) {
+          console.log('自动连接失败:', result.error)
+          setDbConnected(false)
+          useAppStore.getState().setUserInfo(null)
+          return
+        }
+      } else {
+        console.log('启动时已通过启动屏连接数据库，跳过重复连接')
+      }
+
+      setDbConnected(true, dbPath)
+      useAppStore.getState().setMyWxid(wxid)
+
+      try {
+        const result = await window.electronAPI.chat.getMyUserInfo()
+        const dbUser = result.success ? result.userInfo : null
+        // 微信自己的联系人记录在部分数据库版本中不存在。此时仍使用已经验证的
+        // 账号资料，避免把“资料查询不到”错误显示为“数据库未连接”。
+        useAppStore.getState().setUserInfo({
+          wxid: dbUser?.wxid || wxid,
+          nickName: dbUser?.nickName?.trim() || activeAccount.displayName?.trim() || '',
+          alias: dbUser?.alias?.trim() || activeAccount.wechatNumber?.trim() || '',
+          avatarUrl: dbUser?.avatarUrl || ''
+        })
+        console.log('用户信息预加载完成')
+      } catch (e) {
+        console.error('预加载用户信息失败:', e)
+        useAppStore.getState().setUserInfo({
+          wxid,
+          nickName: activeAccount.displayName?.trim() || '',
+          alias: activeAccount.wechatNumber?.trim() || '',
+          avatarUrl: ''
+        })
+      }
+
+      if (window.location.hash === '#/' || window.location.hash === '') {
+        navigate('/export')
+      }
+    } catch (e) {
+      console.error('自动连接出错:', e)
+      setDbConnected(false)
+      useAppStore.getState().setUserInfo(null)
+    }
+  }, [navigate, setDbConnected])
+
+  // 启动时自动检查配置并连接数据库；新增账号窗口完成后会再次触发同一流程。
   useEffect(() => {
     // 独立窗口不需要自动连接主数据库
     if (isChatWindow || isMomentsWindow || isAgreementWindow || isWelcomeWindow || isPosterStyleWindow || location.pathname === '/image-viewer-window' || location.pathname === '/pet-window' || location.pathname === '/reply-tile-window' || location.pathname === '/chat-summary') return
 
-    const autoConnect = async () => {
-      try {
-        const dbPath = await configService.getDbPath()
-        const decryptKey = await configService.getDecryptKey()
-        const wxid = await configService.getMyWxid()
-
-        // 如果配置完整，检查启动时是否已经连接
-        if (dbPath && decryptKey && wxid) {
-          // 先检查启动屏阶段是否已经成功连接
-          const startupConnected = await window.electronAPI.app.getStartupDbConnected?.()
-          if (startupConnected) {
-            console.log('启动时已通过启动屏连接数据库，跳过重复连接')
-            setDbConnected(true, dbPath)
-            // 预加载用户信息
-            await preloadUserInfo()
-            // 如果当前在欢迎页，进入默认的导出数据页
-            if (window.location.hash === '#/' || window.location.hash === '') {
-              navigate('/export')
-            }
-            return
-          }
-
-          // 启动屏未连接，执行自动连接
-          console.log('检测到已保存的配置，正在自动连接...')
-          const result = await testAndOpenWcdb(window.electronAPI.wcdb, dbPath, decryptKey, wxid, true)
-
-          if (result.success) {
-            console.log('自动连接成功')
-            setDbConnected(true, dbPath)
-            // 预加载用户信息
-            await preloadUserInfo()
-            // 如果当前在欢迎页，进入默认的导出数据页
-            if (window.location.hash === '#/' || window.location.hash === '') {
-              navigate('/export')
-            }
-          } else {
-            console.log('自动连接失败:', result.error)
-          }
-        }
-      } catch (e) {
-        console.error('自动连接出错:', e)
-      }
-    }
-
-    // 预加载用户信息
-    const preloadUserInfo = async () => {
-      try {
-        const result = await window.electronAPI.chat.getMyUserInfo()
-        if (result.success && result.userInfo) {
-          useAppStore.getState().setUserInfo({
-            wxid: result.userInfo.wxid,
-            nickName: result.userInfo.nickName,
-            alias: result.userInfo.alias,
-            avatarUrl: result.userInfo.avatarUrl
-          })
-          console.log('用户信息预加载完成')
-        } else {
-          useAppStore.getState().setUserInfo(null)
-        }
-      } catch (e) {
-        console.error('预加载用户信息失败:', e)
-        useAppStore.getState().setUserInfo(null)
-      }
-    }
-
-    autoConnect()
-  }, [isChatWindow, isMomentsWindow, isAgreementWindow, isPosterStyleWindow, isWelcomeWindow, location.pathname, navigate, setDbConnected])
+    void connectActiveAccount(true)
+    const off = window.electronAPI.config.onChanged(({ key }) => {
+      if (key === 'activeAccount') void connectActiveAccount(false)
+    })
+    return off
+  }, [connectActiveAccount, isChatWindow, isMomentsWindow, isAgreementWindow, isPosterStyleWindow, isWelcomeWindow, location.pathname])
 
   // 独立聊天窗口 - 只显示聊天页面，无侧边栏
   if (isChatWindow) {

@@ -1409,6 +1409,9 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
       } else {
         mainWindow.show()
         mainWindow.focus()
+        // 新增账号在独立欢迎窗口中完成，主窗口不会重新挂载。
+        // 显式通知它重新读取活动账号并重连，避免一直保留启动时的空配置状态。
+        mainWindow.webContents.send('config:changed', { key: 'activeAccount', value: null })
       }
 
       return true
