@@ -1,8 +1,6 @@
 ; 高 DPI 支持
 ManifestDPIAware true
 
-!include "WordFunc.nsh"
-
 ; 左下角品牌栏（替换默认的 Nullsoft 字样）
 !macro customHeader
   BrandingText "CloudLight WeChat"
@@ -38,17 +36,13 @@ ManifestDPIAware true
   System::Call 'USER32::SetProcessDPIAware()'
 !macroend
 
-; 在安装开始前修正安装目录
-!macro preInit
-  ; 如果安装目录不以 CloudLight WeChat 结尾，自动追加
-  ${WordFind} "$INSTDIR" "\" "-1" $R0
-  ${If} $R0 != "CloudLight WeChat"
-    StrCpy $INSTDIR "$INSTDIR\CloudLight WeChat"
-  ${EndIf}
-!macroend
-
 ; 安装完成后检测并安装 VC++ Redistributable
 !macro customInstall
+  ; 产品重命后清理旧名称快捷方式，避免用户继续启动旧版 CipherTalk。
+  Delete "$DESKTOP\CipherTalk.lnk"
+  Delete "$SMPROGRAMS\CipherTalk.lnk"
+  Delete "$SMPROGRAMS\CipherTalk\CipherTalk.lnk"
+
   IfSilent skipVC ; 如果是静默安装（外壳调用），则跳过内部检查，避免MessageBox阻塞
   
   ; 检查 VC++ 2015-2022 x64 是否已安装

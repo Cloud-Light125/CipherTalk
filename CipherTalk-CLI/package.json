@@ -7,12 +7,12 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git",
+    "url": "git+https://github.com/Cloud-Light125/CipherTalk.git",
     "directory": "CipherTalk-CLI"
   },
-  "homepage": "https://github.com/Cloud-Light125/CipherTalk-SafeFork-1/tree/main/CipherTalk-CLI",
+  "homepage": "https://github.com/Cloud-Light125/CipherTalk/tree/main/CipherTalk-CLI",
   "bugs": {
-    "url": "https://github.com/Cloud-Light125/CipherTalk-SafeFork-1/issues"
+    "url": "https://github.com/Cloud-Light125/CipherTalk/issues"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"

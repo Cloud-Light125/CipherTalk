@@ -7,13 +7,13 @@
 **一款现代化的微信聊天记录查看与分析工具**
 
 [![License](https://img.shields.io/badge/license-CC--BY--NC--SA--4.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2026.905.0-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-2026.906.0-green.svg)](package.json)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D6.svg?logo=windows)]()
 [![Electron](https://img.shields.io/badge/Electron-39-47848F.svg?logo=electron)]()
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react)]()
 [![Telegram](https://img.shields.io/badge/Telegram-Join%20Group-26A5E4.svg?logo=telegram)](https://t.me/CipherTalk)
 
-当前维护：**Cloud-Light125**  ·  [项目仓库](https://github.com/Cloud-Light125/CipherTalk-SafeFork-1)  ·  [主页](https://269332.xyz)  ·  [GitHub](https://github.com/Cloud-Light125)
+当前维护：**Cloud-Light125**  ·  [项目仓库](https://github.com/Cloud-Light125/CipherTalk)  ·  [主页](https://269332.xyz)  ·  [GitHub](https://github.com/Cloud-Light125)
 
 [![项目主页](https://img.shields.io/badge/项目主页-269332.xyz-000000?style=for-the-badge)](https://269332.xyz)
 
@@ -219,8 +219,8 @@ npm run build
 ## 🤝 Contributors
 感谢所有贡献者
 
-<a href="https://github.com/Cloud-Light125/CipherTalk-SafeFork-1/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Cloud-Light125/CipherTalk-SafeFork-1" />
+<a href="https://github.com/Cloud-Light125/CipherTalk/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Cloud-Light125/CipherTalk" />
 </a>
 
 ---
@@ -229,11 +229,11 @@ npm run build
 
 <div align="center">
 
-<a href="https://www.star-history.com/#Cloud-Light125/CipherTalk-SafeFork-1&type=date&legend=top-left">
+<a href="https://www.star-history.com/#Cloud-Light125/CipherTalk&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Cloud-Light125/CipherTalk-SafeFork-1&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Cloud-Light125/CipherTalk-SafeFork-1&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Cloud-Light125/CipherTalk-SafeFork-1&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Cloud-Light125/CipherTalk&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Cloud-Light125/CipherTalk&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Cloud-Light125/CipherTalk&type=date&legend=top-left" />
  </picture>
 </a>
 

@@ -236,10 +236,10 @@ const ctx: MainProcessContext = {
 ctx.setWindowManager(createWindowManager(ctx))
 markStartupMilestone('startup:window-manager-created')
 
-// Windows 通知用 AppUserModelID 作为显示的应用名，必须与 electron-builder 的 appId 一致，
-// 否则 toast 标题会回退成 Electron 默认名称。
+// Windows 通知和安装升级身份沿用原 appId，避免产品重命名后被 NSIS
+// 识别为另一款应用并行安装。显示名称仍由 productName / app.setName 控制。
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.cloudlight.wechat')
+  app.setAppUserModelId('com.ciphertalk.app')
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock()

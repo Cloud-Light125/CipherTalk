@@ -8,7 +8,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git",
+    "url": "git+https://github.com/Cloud-Light125/CipherTalk.git",
     "directory": "plugin-sdk"
   },
   "main": "./ciphertalk-plugin-sdk.js",

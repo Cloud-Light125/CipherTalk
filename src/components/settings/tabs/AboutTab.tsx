@@ -7,9 +7,8 @@ interface AboutTabProps {
   appVersion: string
 }
 
-// Obtained from `git remote get-url origin` for the current checkout.
-const PROJECT_URL = 'https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git'
-const PROJECT_DISPLAY_NAME = 'Cloud-Light125/CipherTalk-SafeFork-1'
+const PROJECT_URL = 'https://github.com/Cloud-Light125/CipherTalk'
+const PROJECT_DISPLAY_NAME = 'Cloud-Light125/CipherTalk'
 const MAINTAINER_URL = 'https://github.com/Cloud-Light125'
 const WEBSITE_URL = 'https://269332.xyz'
 
