@@ -7,15 +7,26 @@ import { utilityProcess } from 'electron'
 import type { UtilityProcess } from 'electron'
 import { EventEmitter } from 'events'
 import { existsSync } from 'fs'
-import { join, normalize, resolve } from 'path'
+import { join } from 'path'
 import { ConfigService } from './config'
 import { getAppPath, getAppVersion, getUserDataPath, isElectronPackaged } from './runtimePaths'
 import { getElectronWorkerEnv } from './workerEnvironment'
+import type { NativeRuntimeInfo } from './wcdbCore'
 
 type UtilityRequest = { id: number; type: string; payload?: any }
 type UtilityResponse = { id: number; result?: any; error?: string; type?: string; payload?: any }
 type Pending = { resolve: (value: any) => void; reject: (reason: any) => void }
 type OpenPayload = { dbPath: string; hexKey: string; wxid: string }
+type WcdbServiceOptions = {
+  resourcesPath?: string
+  userDataPath?: string
+  appVersion?: string
+  utilityPath?: string
+  packagedNodeModulesPath?: string
+  workerEnv?: NodeJS.ProcessEnv
+  runtimeMode?: 'legacy' | 'candidate'
+}
+type UtilityShutdownResult = { exited: boolean; forced: boolean }
 
 const PARAMS_UNSUPPORTED = 'native 未支持参数化查询'
 
@@ -23,14 +34,21 @@ function describeConnectionPayload(payload: { dbPath?: string; hexKey?: string; 
   const dbPath = String(payload.dbPath || '').trim()
   const hexKey = String(payload.hexKey || '').trim()
   return {
-    normalizedAccountDirectory: dbPath ? normalize(resolve(dbPath)) : '',
-    wxid: String(payload.wxid || '').trim(),
+    accountPathProvided: Boolean(dbPath),
+    wxidProvided: Boolean(String(payload.wxid || '').trim()),
     keyPresent: hexKey.length > 0,
     keyLength: hexKey.length,
     keyLengthExpected: 64,
     keyLengthValid: hexKey.length === 64,
     keyFormatValid: /^[0-9a-fA-F]{64}$/.test(hexKey)
   }
+}
+
+function redactDiagnosticText(value: unknown): string {
+  return String(value || '')
+    .replace(/[0-9a-fA-F]{64}/g, '[redacted-hex:64]')
+    .replace(/[A-Za-z]:[\\/][^"'`\r\n,}\]]+/g, '[redacted-path]')
+    .replace(/\\\\[^"'`\r\n,}\]]+/g, '[redacted-path]')
 }
 
 function bufferToHex(buffer: Buffer): string {
@@ -99,6 +117,7 @@ function filterUtilityLogText(text: string): string {
   return text
     .split(/\r?\n/)
     .filter((line) => !shouldSuppressUtilityLogLine(line))
+    .map((line) => redactDiagnosticText(line))
     .join('\n')
     .trim()
 }
@@ -113,6 +132,12 @@ export class WcdbService extends EventEmitter {
   private restartTimer: NodeJS.Timeout | null = null
   private shuttingDown = false
   private monitorRequested = false
+  private readonly options: WcdbServiceOptions
+
+  constructor(options: WcdbServiceOptions = {}) {
+    super()
+    this.options = options
+  }
 
   // ========= 公共 API（保持与旧实现一致） =========
   async testConnection(dbPath: string, hexKey: string, wxid: string): Promise<{ success: boolean; error?: string; sessionCount?: number }> {
@@ -123,7 +148,7 @@ export class WcdbService extends EventEmitter {
       console.error('[wcdbService][diagnostic] utility -> service type=testConnection', {
         ...describeConnectionPayload(payload),
         success: Boolean(result?.success),
-        error: result?.error || null
+        error: result?.error ? redactDiagnosticText(result.error) : null
       })
       return result
     } catch (e) {
@@ -153,6 +178,15 @@ export class WcdbService extends EventEmitter {
   }
 
   shutdown(): void {
+    void this.shutdownWorker(1500)
+  }
+
+  /** Internal canary shutdown that waits for the utility process to exit. */
+  async shutdownForCanary(timeoutMs = 2000): Promise<UtilityShutdownResult> {
+    return this.shutdownWorker(timeoutMs)
+  }
+
+  private async shutdownWorker(timeoutMs: number): Promise<UtilityShutdownResult> {
     this.shuttingDown = true
     this.monitorRequested = false
     this.lastOpenPayload = null
@@ -161,26 +195,37 @@ export class WcdbService extends EventEmitter {
     this.worker = null
     this.initPromise = null
     this.rejectAllPending('wcdb utility process shutdown')
+    let shutdownResult: UtilityShutdownResult = { exited: true, forced: false }
     if (w) {
-      let exited = false
-      let forceKillTimer: NodeJS.Timeout | null = setTimeout(() => {
-        forceKillTimer = null
-        if (exited) return
-        try { w.kill() } catch { /* ignore */ }
-      }, 1500)
-      w.once('exit', () => {
-        exited = true
-        if (forceKillTimer) {
-          clearTimeout(forceKillTimer)
-          forceKillTimer = null
+      shutdownResult = await new Promise<UtilityShutdownResult>((resolve) => {
+        let settled = false
+        let forced = false
+        let killTimer: NodeJS.Timeout | null = null
+        let settleTimer: NodeJS.Timeout | null = null
+        const finish = () => {
+          if (settled) return
+          settled = true
+          if (killTimer) clearTimeout(killTimer)
+          if (settleTimer) clearTimeout(settleTimer)
+          resolve({ exited: !forced, forced })
         }
+        w.once('exit', finish)
+        w.once('error', finish)
+        killTimer = setTimeout(() => {
+          forced = true
+          try { w.kill() } catch { /* ignore */ }
+          // UtilityProcess.kill normally emits exit; this keeps the canary
+          // runner bounded even if Electron loses that event.
+          settleTimer = setTimeout(finish, 250)
+        }, Math.max(0, timeoutMs))
+        this.postToUtility(w, { id: ++this.seq, type: 'shutdown', payload: {} })
       })
-      this.postToUtility(w, { id: ++this.seq, type: 'shutdown', payload: {} })
     }
     if (this.restartTimer) {
       clearTimeout(this.restartTimer)
       this.restartTimer = null
     }
+    return shutdownResult
   }
 
   async execQuery(kind: string, path: string, sql: string): Promise<{ success: boolean; rows?: any[]; error?: string }> {
@@ -228,6 +273,17 @@ export class WcdbService extends EventEmitter {
     await this.call('stopMonitor', {})
   }
 
+  /** Internal canary diagnostic. It never returns account keys or query data. */
+  async getNativeRuntimeInfo(): Promise<NativeRuntimeInfo> {
+    return this.call<NativeRuntimeInfo>('getNativeRuntimeInfo', {})
+  }
+
+  /** Internal canary close with an acknowledgement, unlike the legacy fire-and-forget close(). */
+  async closeForCanary(): Promise<void> {
+    this.lastOpenPayload = null
+    await this.call<{ success: boolean }>('close', {})
+  }
+
   async decryptSnsImage(encryptedData: Buffer, _key: string): Promise<Buffer> {
     return encryptedData
   }
@@ -253,9 +309,9 @@ export class WcdbService extends EventEmitter {
       let worker: UtilityProcess
       try {
         worker = utilityProcess.fork(utilityPath, [], {
-          serviceName: 'CipherTalk WCDB',
+          serviceName: 'CloudLight WeChat WCDB',
           stdio: 'pipe',
-          env: getElectronWorkerEnv(),
+          env: this.resolveWorkerEnv(),
           allowLoadingUnsignedLibraries: process.platform === 'darwin'
         })
       } catch (e: any) {
@@ -298,11 +354,10 @@ export class WcdbService extends EventEmitter {
         if (msg?.id === 0 && msg.type === 'ready') {
           const appPath = getAppPath()
           const resourcesRoot = process.resourcesPath || appPath
-          const resourcesPath = isElectronPackaged()
-            ? join(resourcesRoot, 'resources')
-            : join(appPath, 'resources')
-          const userDataPath = getUserDataPath()
-          const appVersion = getAppVersion()
+          const resourcesPath = this.options.resourcesPath
+            || (isElectronPackaged() ? join(resourcesRoot, 'resources') : join(appPath, 'resources'))
+          const userDataPath = this.options.userDataPath || getUserDataPath()
+          const appVersion = this.options.appVersion || getAppVersion()
           const id = ++this.seq
           this.pending.set(id, {
             resolve: () => {
@@ -316,11 +371,15 @@ export class WcdbService extends EventEmitter {
             }
           })
           console.error('[wcdbService][diagnostic] service -> utility type=setPaths', {
-            resourcesPath,
-            userDataPath,
-            appVersion
+            resourcesPathProvided: Boolean(resourcesPath),
+            userDataPathProvided: Boolean(userDataPath),
+            appVersion: redactDiagnosticText(appVersion)
           })
-          this.postToUtility(worker, { id, type: 'setPaths', payload: { resourcesPath, userDataPath, appVersion } })
+          this.postToUtility(worker, {
+            id,
+            type: 'setPaths',
+            payload: { resourcesPath, userDataPath, appVersion, runtimeMode: this.options.runtimeMode }
+          })
           return
         }
 
@@ -377,7 +436,7 @@ export class WcdbService extends EventEmitter {
       this.initWorker()
         .then(() => this.restoreStateAfterRestart())
         .catch((e) => {
-          console.error('[wcdbService] 自动重启失败:', e?.message || e)
+          console.error('[wcdbService] 自动重启失败:', redactDiagnosticText(e?.message || e))
         })
     }, RESTART_DELAY_MS)
   }
@@ -386,7 +445,7 @@ export class WcdbService extends EventEmitter {
     if (this.shuttingDown || !this.worker) return
 
     const reopened = await this.ensureOpen().catch((e) => {
-      console.error('[wcdbService] 自动重启后 reopen 失败:', e?.message || e)
+      console.error('[wcdbService] 自动重启后 reopen 失败:', redactDiagnosticText(e?.message || e))
       return false
     })
     if (!reopened || !this.monitorRequested) return
@@ -397,7 +456,7 @@ export class WcdbService extends EventEmitter {
         console.warn('[wcdbService] 自动重启后重新注册 native monitor 失败')
       }
     } catch (e: any) {
-      console.warn('[wcdbService] 自动重启后重新注册 native monitor 异常:', e?.message || e)
+      console.warn('[wcdbService] 自动重启后重新注册 native monitor 异常:', redactDiagnosticText(e?.message || e))
     }
   }
 
@@ -478,7 +537,7 @@ export class WcdbService extends EventEmitter {
   }
 
   private formatTestConnectionError(error: unknown): string {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = redactDiagnosticText(error instanceof Error ? error.message : String(error))
     if (!this.isRecoverableUtilityExit(error)) return message
 
     return [
@@ -534,6 +593,9 @@ export class WcdbService extends EventEmitter {
    * 解析 wcdbUtilityProcess.js 路径。packaged 模式优先使用 asar.unpacked，避免子进程加载原生依赖时踩到 asar 边界。
    */
   private resolveUtilityPath(): string | null {
+    if (this.options.utilityPath && existsSync(this.options.utilityPath)) {
+      return this.options.utilityPath
+    }
     const appPath = getAppPath()
     const resourcesRoot = process.resourcesPath || appPath
     const candidates = isElectronPackaged()
@@ -548,8 +610,20 @@ export class WcdbService extends EventEmitter {
           join(__dirname, UTILITY_FILE),
           join(__dirname, '..', UTILITY_FILE),
           join(appPath, 'dist-electron', UTILITY_FILE)
-        ]
+    ]
     return candidates.find((c) => existsSync(c)) || null
+  }
+
+  private resolveWorkerEnv(): NodeJS.ProcessEnv {
+    const env = {
+      ...getElectronWorkerEnv(),
+      ...(this.options.workerEnv || {})
+    }
+    const packagedNodeModulesPath = this.options.packagedNodeModulesPath
+    if (packagedNodeModulesPath) {
+      env.NODE_PATH = packagedNodeModulesPath
+    }
+    return env
   }
 }
 

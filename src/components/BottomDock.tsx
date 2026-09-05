@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { House, Comment, Database, Gear, ArrowDownToLine, Aperture, FaceRobot, LogoMcp, PersonGear, BookOpen, Ghost } from '@gravity-ui/icons'
+import { Comment, Database, Gear, ArrowDownToLine, Aperture, FaceRobot, LogoMcp, PersonGear, BookOpen, Ghost } from '@gravity-ui/icons'
 import type { IconComponent } from '@/types/icon'
 import MacOSDock, { type DockApp } from '@/components/ui/mac-os-dock'
 import { useThemeStore } from '@/stores/themeStore'
@@ -38,8 +38,7 @@ function BottomDock() {
   const location = useLocation()
   const autoHideSetting = useThemeStore(s => s.dockAutoHide)
   const deviceStatus = useDeviceConnectStatus()
-  // 首页强制显示 Dock：避免用户进入软件后找不到导航
-  const autoHide = autoHideSetting && location.pathname !== '/home'
+  const autoHide = autoHideSetting
   const [visible, setVisible] = useState(true)
   const [deviceConnectOpen, setDeviceConnectOpen] = useState(false)
   const [remotePhoneOpen, setRemotePhoneOpen] = useState(false)
@@ -130,15 +129,14 @@ function BottomDock() {
 
   // 顺序与侧边栏导航一致（Sidebar.tsx navItems + 底部 ClawLink/设置）
   const allApps: DockApp[] = [
-    { id: 'home', name: '首页', icon: makeIcon(House) },
+    { id: 'export', name: '导出数据', icon: makeIcon(ArrowDownToLine) },
+    { id: 'chat', name: '聊天查看', icon: makeIcon(Comment) },
+    { id: 'moments', name: '朋友圈', icon: makeIcon(Aperture) },
+    { id: 'data-management', name: '数据管理', icon: makeIcon(Database) },
     { id: 'agent', name: 'CT-Agent', icon: makeIcon(FaceRobot) },
     { id: 'personas', name: 'AI 克隆', icon: makeIcon(PersonGear) },
     { id: 'diary', name: '日记', icon: makeIcon(BookOpen) },
     { id: 'pets', name: 'AI 宠物', icon: makeIcon(Ghost) },
-    { id: 'chat', name: '聊天查看', icon: makeIcon(Comment) },
-    { id: 'moments', name: '朋友圈', icon: makeIcon(Aperture) },
-    { id: 'export', name: '导出数据', icon: makeIcon(ArrowDownToLine) },
-    { id: 'data-management', name: '数据管理', icon: makeIcon(Database) },
     { id: 'mcp', name: 'MCP & Skills', icon: makeIcon(LogoMcp) },
     { id: 'settings', name: '设置', icon: makeIcon(Gear) },
     { id: 'remote-phone', name: '密语 App', icon: (
@@ -158,7 +156,6 @@ function BottomDock() {
 
   const handleAppClick = (appId: string) => {
     switch (appId) {
-      case 'home': navigate('/home'); break
       case 'agent': navigate('/agent'); break
       case 'personas': navigate('/personas'); break
       case 'diary': navigate('/diary'); break

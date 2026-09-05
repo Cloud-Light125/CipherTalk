@@ -86,11 +86,11 @@ GitHub Release 资产包括 Windows 和 macOS 安装包。
 
 Windows 产物为：
 
-- `CipherTalk-x.y.z-Setup.exe`
+- `CloudLight WeChat-x.y.z-Setup.exe`
 
 macOS 产物为：
 
-- `CipherTalk-x.y.z-Setup.dmg`
+- `CloudLight WeChat-x.y.z-Setup.dmg`
 
 构建与发布阶段只校验安装包文件存在，不生成版本清单或强制安装策略文件。
 

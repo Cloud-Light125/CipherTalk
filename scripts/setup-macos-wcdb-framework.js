@@ -60,7 +60,7 @@ function safeUnlink(targetPath) {
 function setupMacosWcdbFramework(context) {
     if (context.electronPlatformName !== 'darwin') return;
 
-    const productName = context.packager?.appInfo?.productFilename || 'CipherTalk';
+    const productName = context.packager?.appInfo?.productFilename || 'CloudLight WeChat';
     const appBundle = path.join(context.appOutDir, `${productName}.app`);
     if (!fs.existsSync(appBundle)) {
         console.warn(`[macos-wcdb-framework] App bundle 不存在，跳过: ${appBundle}`);

@@ -37,7 +37,7 @@ let manifestCache: { pets: ManifestPet[]; fetchedAt: number } | null = null
 const MANIFEST_TTL_MS = 10 * 60 * 1000
 
 function petsDir(configService?: ConfigService | null): string {
-  const cacheBasePath = configService?.getCacheBasePath() || path.join(app.getPath('userData'), 'CipherTalk')
+  const cacheBasePath = configService?.getCacheBasePath() || app.getPath('userData')
   return path.join(cacheBasePath, 'pets')
 }
 

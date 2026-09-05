@@ -46,7 +46,7 @@ function pruneImageNativeAddons(context) {
     const archDir = resolveNativeArch(context.arch);
     const targetFileName = `${IMAGE_NATIVE_PREFIX}${platformDir}-${archDir}${IMAGE_NATIVE_SUFFIX}`;
     const targetKey = `${platformDir}-${archDir}`;
-    const productName = context.packager?.appInfo?.productFilename || 'CipherTalk';
+    const productName = context.packager?.appInfo?.productFilename || 'CloudLight WeChat';
     const resourceRoots = uniqueExistingDirs([
         path.join(context.appOutDir, 'resources'),
         path.join(context.appOutDir, 'Contents', 'Resources'),
@@ -96,7 +96,7 @@ function verifyImageNativePacked(context) {
         return;
     }
 
-    const productName = context.packager?.appInfo?.productFilename || 'CipherTalk';
+    const productName = context.packager?.appInfo?.productFilename || 'CloudLight WeChat';
     const resourceRoots = uniqueExistingDirs([
         path.join(context.appOutDir, 'resources'),
         path.join(context.appOutDir, 'Contents', 'Resources'),
@@ -140,7 +140,7 @@ function verifySharpVipsPacked(context) {
         return;
     }
 
-    const productName = context.packager?.appInfo?.productFilename || 'CipherTalk';
+    const productName = context.packager?.appInfo?.productFilename || 'CloudLight WeChat';
     const resourceRoots = uniqueExistingDirs([
         path.join(context.appOutDir, 'resources'),
         path.join(context.appOutDir, 'Contents', 'Resources'),
@@ -177,7 +177,7 @@ function verifyFfmpegStaticPacked(context) {
         );
     }
 
-    const productName = context.packager?.appInfo?.productFilename || 'CipherTalk';
+    const productName = context.packager?.appInfo?.productFilename || 'CloudLight WeChat';
     const resourceRoots = uniqueExistingDirs([
         path.join(context.appOutDir, 'resources'),
         path.join(context.appOutDir, 'Contents', 'Resources'),
@@ -226,7 +226,7 @@ function verifyCodexRuntimeAbsent(context) {
 function pruneWhisperResources(context) {
     if (context.electronPlatformName !== 'win32') return;
 
-    const productName = context.packager?.appInfo?.productFilename || 'CipherTalk';
+    const productName = context.packager?.appInfo?.productFilename || 'CloudLight WeChat';
     const resourceRoots = uniqueExistingDirs([
         path.join(context.appOutDir, 'resources'),
         path.join(context.appOutDir, 'Contents', 'Resources'),
@@ -289,7 +289,7 @@ exports.default = async function (context) {
     verifyCodexRuntimeAbsent(context);
 
     if (context.electronPlatformName === 'darwin') {
-        const productName = context.packager?.appInfo?.productFilename || 'CipherTalk';
+        const productName = context.packager?.appInfo?.productFilename || 'CloudLight WeChat';
         const launcherCandidates = [
             path.join(context.appOutDir, 'ciphertalk-mcp'),
             path.join(context.appOutDir, `${productName}.app`, 'Contents', 'MacOS', 'ciphertalk-mcp')

@@ -20,7 +20,7 @@
 - 不推荐：`https://api.example.com/v1/chat/completions`
 - 不推荐：`https://api.example.com/v1/responses`
 
-CipherTalk 会根据所选协议自动补充请求端点。局域网服务可以填写类似 `http://127.0.0.1:8000/v1` 的地址。
+CloudLight WeChat 会根据所选协议自动补充请求端点。局域网服务可以填写类似 `http://127.0.0.1:8000/v1` 的地址。
 
 ## 协议选择
 

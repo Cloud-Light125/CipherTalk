@@ -1,5 +1,6 @@
-import { basename, delimiter, dirname, join, normalize, resolve } from 'path'
-import { existsSync, readdirSync, statSync } from 'fs'
+import { createHash } from 'crypto'
+import { basename, delimiter, dirname, isAbsolute, join, normalize, resolve } from 'path'
+import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'fs'
 import { decodeMessageContent, getRowField, coerceRowNumber, quoteInt64ServerIds } from './chat/rowDecoders'
 import { formatWcdbOpenFailure } from './wcdbOpenFailure'
 
@@ -14,6 +15,143 @@ const MSG_TYPE_COLUMNS = [
 const SERVER_ID_COLUMNS = ['server_id', 'msg_svr_id', 'msgSvrId', 'MsgSvrID']
 
 const EXPECTED_HEX_KEY_LENGTH = 64
+const EXPECTED_LEGACY_WCDB_SHA256 = 'DE80DC7B9117076F7F77E5AB5D6EE8DC44F8D3829C10549A800AF2E4E219EBF8'
+const EXPECTED_LEGACY_API_SHA256 = '479D66298C17190D2FCD5CF42F0D5BC2EEAE7669F7380DB773ECB36CE918C68E'
+const EXPECTED_CANDIDATE_WCDB_SHA256 = '057CE34A59AE38B2892E7C108D0BE6DB616E3CE00A2221FCC8BB694A443EA965'
+const EXPECTED_CANDIDATE_TAG = 'v2.1.16'
+const EXPECTED_CANDIDATE_COMMIT = 'df808591b9f9a9ab42156006819c3550d5af13a3'
+const CANDIDATE_VERIFICATION_FIELDS = [
+  'exports',
+  'self_test',
+  'real_session',
+  'multi_database_routing',
+  'wrong_key',
+  'write_rejection',
+  'repeat_lifecycle',
+  'unsupported_abi',
+  'empty_path_session_routing',
+  'empty_path_contact_routing',
+  'empty_path_general_routing',
+  'empty_path_sns_routing',
+  'explicit_path_precedence',
+  'empty_message_path_rejected',
+  'unknown_empty_kind_rejected',
+  'session_layout_validation'
+] as const
+
+type CompiledWcdbPolicy = {
+  requestedMode: 'legacy' | 'candidate-preferred'
+  policySource: 'compiled-production-policy' | 'legacy-canary-env'
+  candidateRelativeDirectory: string | null
+  candidateApiSha256: string | null
+  candidateWcdbSha256: string | null
+  wcdbTag: string | null
+  wcdbCommit: string | null
+  legacyApiSha256: string
+  legacyWcdbSha256: string
+}
+
+const DEFAULT_CANDIDATE_POLICY: CompiledWcdbPolicy = {
+  requestedMode: 'candidate-preferred',
+  policySource: 'compiled-production-policy',
+  candidateRelativeDirectory: 'wcdb-capi-candidate',
+  candidateApiSha256: '1320DFA82C1A7D1AF5B66FBBA32A3731FEFE92DFF7A4B085159BCE70F95A1767',
+  candidateWcdbSha256: '057CE34A59AE38B2892E7C108D0BE6DB616E3CE00A2221FCC8BB694A443EA965',
+  wcdbTag: 'v2.1.16',
+  wcdbCommit: 'df808591b9f9a9ab42156006819c3550d5af13a3',
+  legacyApiSha256: EXPECTED_LEGACY_API_SHA256,
+  legacyWcdbSha256: EXPECTED_LEGACY_WCDB_SHA256
+}
+
+// The normal Electron source contains the production policy directly. This
+// keeps ordinary packaged builds reproducible even when no build-time policy
+// environment variable is present. Test-only runtimeMode options can still
+// select an isolated legacy or candidate root explicitly.
+const COMPILED_WCDB_POLICY: CompiledWcdbPolicy = DEFAULT_CANDIDATE_POLICY
+
+// Phase-seven measured the production legacy DLLs: their hashes match, but
+// native initialization fails before account open/query. Keep explicit
+// runtimeMode="legacy" available for diagnostics, but never auto-fallback to
+// that runtime in the ordinary compiled production path.
+const COMPILED_LEGACY_FALLBACK_ENABLED = false
+
+type SelectedRuntimeMode = 'legacy' | 'candidate' | 'none'
+type RuntimeMode = 'production' | 'candidate' | 'none'
+type FallbackStage = 'none' | 'pre-load' | 'load' | 'bind' | 'initialize' | 'legacy-load'
+type RuntimeModeOverride = 'legacy' | 'candidate'
+
+type CandidateRuntimeState = {
+  apiPath: string
+  wcdbPath: string
+  apiSha256: string | null
+  wcdbSha256: string | null
+  manifestTag: string | null
+  manifestCommit: string | null
+  candidateManifestVerified: boolean
+  candidateApiSha256Verified: boolean
+  candidateWcdbSha256Verified: boolean
+}
+
+type LegacyRuntimeState = {
+  apiPath: string
+  wcdbPath: string
+  apiSha256: string | null
+  wcdbSha256: string | null
+  legacyApiSha256Verified: boolean
+  legacyWcdbSha256Verified: boolean
+}
+
+class CandidateValidationError extends Error {
+  constructor(
+    public readonly category: string,
+    public readonly state: CandidateRuntimeState,
+    message: string
+  ) {
+    super(message)
+    this.name = 'CandidateValidationError'
+  }
+}
+
+class NativeAttemptError extends Error {
+  constructor(
+    public readonly stage: Exclude<FallbackStage, 'none' | 'pre-load' | 'legacy-load'>,
+    public readonly category: string,
+    message: string
+  ) {
+    super(message)
+    this.name = 'NativeAttemptError'
+  }
+}
+
+export type NativeRuntimeInfo = {
+  // `mode` is retained for the phase-five diagnostic contract. Production
+  // callers should use selectedMode, which distinguishes fail-closed `none`.
+  mode: RuntimeMode
+  selectedMode: SelectedRuntimeMode
+  requestedMode: 'legacy' | 'candidate-preferred'
+  policySource: string
+  fallbackOccurred: boolean
+  fallbackStage: FallbackStage
+  fallbackReasonCategory: string | null
+  fallbackReason: string | null
+  candidateManifestVerified: boolean
+  candidateApiSha256Verified: boolean
+  candidateWcdbSha256Verified: boolean
+  legacyApiSha256Verified: boolean
+  legacyWcdbSha256Verified: boolean
+  utilityPid: number
+  initialized: boolean
+  nativeLoadAttempted?: boolean
+  apiPath: string
+  wcdbPath: string
+  apiSha256: string | null
+  wcdbSha256: string | null
+  manifestTag: string | null
+  manifestCommit: string | null
+  manifestVerified: boolean
+}
+
+type NativeRuntimeSelection = NativeRuntimeInfo
 
 function normalizeWcdbPath(input: string): string {
   const value = String(input || '').trim()
@@ -33,7 +171,42 @@ function describeKey(hexKey: string): { keyPresent: boolean; keyLength: number; 
 
 // Native diagnostics must never be allowed to echo a 64-character hex key.
 function redactSensitiveLogText(value: string): string {
-  return String(value || '').replace(/[0-9a-fA-F]{64}/g, (token) => `[redacted-hex:${token.length}]`)
+  return String(value || '')
+    .replace(/[0-9a-fA-F]{64}/g, (token) => `[redacted-hex:${token.length}]`)
+    .replace(/[A-Za-z]:[\\/][^"'`\r\n,}\]]+/g, '[redacted-path]')
+    .replace(/\\\\[^"'`\r\n,}\]]+/g, '[redacted-path]')
+}
+
+function normalizedComparePath(input: string): string {
+  return normalize(resolve(input)).replace(/[\\/]+$/, '').toLowerCase()
+}
+
+function samePath(left: string, right: string): boolean {
+  return normalizedComparePath(left) === normalizedComparePath(right)
+}
+
+function pathWithin(child: string, parent: string): boolean {
+  const normalizedChild = normalizedComparePath(child)
+  const normalizedParent = normalizedComparePath(parent)
+  return normalizedChild === normalizedParent || normalizedChild.startsWith(`${normalizedParent}\\`)
+}
+
+function sha256File(filePath: string): string {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex').toUpperCase()
+}
+
+function emptyCandidateRuntimeState(): CandidateRuntimeState {
+  return {
+    apiPath: '',
+    wcdbPath: '',
+    apiSha256: null,
+    wcdbSha256: null,
+    manifestTag: null,
+    manifestCommit: null,
+    candidateManifestVerified: false,
+    candidateApiSha256Verified: false,
+    candidateWcdbSha256Verified: false
+  }
 }
 
 /**
@@ -54,6 +227,9 @@ export class WcdbCore {
   private resourcesPath: string | null = null
   private userDataPath: string | null = null
   private appVersion = ''
+  private runtimeModeOverride: RuntimeModeOverride | null = null
+  private nativeRuntimeSelection: NativeRuntimeSelection | null = null
+  private nativeLoadAttempted = false
 
   // 已暴露的 C 符号
   private wcdbInit: any = null
@@ -82,26 +258,446 @@ export class WcdbCore {
   private monitorReconnectTimer: any = null
   private monitorPipePath: string = ''
 
-  setPaths(resourcesPath: string, userDataPath: string, appVersion = ''): void {
+  setPaths(resourcesPath: string, userDataPath: string, appVersion = '', runtimeMode?: RuntimeModeOverride): void {
     this.resourcesPath = resourcesPath
     this.userDataPath = userDataPath
     this.appVersion = String(appVersion || '')
+    this.runtimeModeOverride = runtimeMode === 'legacy' || runtimeMode === 'candidate' ? runtimeMode : null
   }
 
   getUserDataPath(): string | null { return this.userDataPath }
 
+  /**
+   * Internal, key-free diagnostic surface used by the Electron canary runner.
+   * Candidate validation is deliberately performed here too, before Koffi loads
+   * a native library. The production policy is compile-time data; no runtime
+   * environment variable can opt a normal production bundle into candidate.
+   */
+  getNativeRuntimeInfo(): NativeRuntimeInfo {
+    const selection = this.nativeRuntimeSelection || this.resolveNativeRuntime()
+    this.nativeRuntimeSelection = selection
+    return {
+      ...selection,
+      utilityPid: process.pid,
+      initialized: this.initialized,
+      nativeLoadAttempted: this.nativeLoadAttempted
+    }
+  }
+
+  /**
+   * The service normally passes this directory after deriving it from
+   * process.resourcesPath. The fallback is only for the direct phase-five tsc
+   * canary and development execution; it is never an environment-path override.
+   */
+  private getResourceDirectory(): string {
+    const configured = String(this.resourcesPath || '').trim()
+    if (configured) return normalize(resolve(configured))
+    const processResourcesPath = String((process as any).resourcesPath || '').trim()
+    const derived = processResourcesPath
+      ? join(processResourcesPath, 'resources')
+      : join(process.cwd(), 'resources')
+    return normalize(resolve(derived))
+  }
+
   private getLibraryPath(): string {
-    const baseDir = this.resourcesPath || join(process.cwd(), 'resources')
+    const baseDir = this.getResourceDirectory()
     if (process.platform === 'darwin') return join(baseDir, 'macos', 'libwcdb_api.dylib')
     return join(baseDir, 'wcdb_api.dll')
   }
 
   private getWindowsCoreLibraryPath(): string {
-    const baseDir = this.resourcesPath || join(process.cwd(), 'resources')
+    const baseDir = this.getResourceDirectory()
     return join(baseDir, 'WCDB.dll')
   }
 
-  private prepareWindowsDllSearchPath(libraryPath: string): { success: boolean; error?: string } {
+  private makeLegacySelection(
+    policy: CompiledWcdbPolicy | null,
+    legacy: LegacyRuntimeState,
+    fallback: Partial<Pick<NativeRuntimeInfo, 'fallbackOccurred' | 'fallbackStage' | 'fallbackReasonCategory' | 'fallbackReason'>> = {}
+  ): NativeRuntimeSelection {
+    const selectedMode: SelectedRuntimeMode = legacy.legacyApiSha256Verified && legacy.legacyWcdbSha256Verified
+      ? 'legacy'
+      : policy?.requestedMode === 'candidate-preferred' ? 'none' : 'legacy'
+    const mode: RuntimeMode = selectedMode === 'none' ? 'none' : 'production'
+    return {
+      mode,
+      selectedMode,
+      requestedMode: policy?.requestedMode || 'legacy',
+      policySource: policy?.policySource || 'legacy-canary-env',
+      fallbackOccurred: fallback.fallbackOccurred ?? false,
+      fallbackStage: fallback.fallbackStage ?? 'none',
+      fallbackReasonCategory: fallback.fallbackReasonCategory ?? null,
+      fallbackReason: fallback.fallbackReason ?? null,
+      candidateManifestVerified: false,
+      candidateApiSha256Verified: false,
+      candidateWcdbSha256Verified: false,
+      legacyApiSha256Verified: legacy.legacyApiSha256Verified,
+      legacyWcdbSha256Verified: legacy.legacyWcdbSha256Verified,
+      utilityPid: process.pid,
+      initialized: this.initialized,
+      apiPath: selectedMode === 'legacy' ? legacy.apiPath : '',
+      wcdbPath: selectedMode === 'legacy' ? legacy.wcdbPath : '',
+      apiSha256: selectedMode === 'legacy' ? legacy.apiSha256 : null,
+      wcdbSha256: selectedMode === 'legacy' ? legacy.wcdbSha256 : null,
+      manifestTag: null,
+      manifestCommit: null,
+      manifestVerified: false
+    }
+  }
+
+  private makeCandidateSelection(
+    policy: CompiledWcdbPolicy,
+    candidate: CandidateRuntimeState,
+    legacy: LegacyRuntimeState
+  ): NativeRuntimeSelection {
+    return {
+      mode: 'candidate',
+      selectedMode: 'candidate',
+      requestedMode: policy.requestedMode,
+      policySource: policy.policySource,
+      fallbackOccurred: false,
+      fallbackStage: 'none',
+      fallbackReasonCategory: null,
+      fallbackReason: null,
+      candidateManifestVerified: candidate.candidateManifestVerified,
+      candidateApiSha256Verified: candidate.candidateApiSha256Verified,
+      candidateWcdbSha256Verified: candidate.candidateWcdbSha256Verified,
+      legacyApiSha256Verified: legacy.legacyApiSha256Verified,
+      legacyWcdbSha256Verified: legacy.legacyWcdbSha256Verified,
+      utilityPid: process.pid,
+      initialized: this.initialized,
+      apiPath: candidate.apiPath,
+      wcdbPath: candidate.wcdbPath,
+      apiSha256: candidate.apiSha256,
+      wcdbSha256: candidate.wcdbSha256,
+      manifestTag: candidate.manifestTag,
+      manifestCommit: candidate.manifestCommit,
+      manifestVerified: candidate.candidateManifestVerified
+    }
+  }
+
+  private makeCandidateFallbackSelection(
+    policy: CompiledWcdbPolicy,
+    candidate: CandidateRuntimeState,
+    legacy: LegacyRuntimeState,
+    category: string,
+    reason: string,
+    stage: FallbackStage
+  ): NativeRuntimeSelection {
+    if (!COMPILED_LEGACY_FALLBACK_ENABLED) {
+      return {
+        mode: 'none',
+        selectedMode: 'none',
+        requestedMode: policy.requestedMode,
+        policySource: policy.policySource,
+        fallbackOccurred: true,
+        fallbackStage: stage,
+        fallbackReasonCategory: 'legacy-fallback-disabled',
+        fallbackReason: redactSensitiveLogText(`${category};legacy operational verification failed;automatic legacy fallback disabled`),
+        candidateManifestVerified: candidate.candidateManifestVerified,
+        candidateApiSha256Verified: candidate.candidateApiSha256Verified,
+        candidateWcdbSha256Verified: candidate.candidateWcdbSha256Verified,
+        legacyApiSha256Verified: legacy.legacyApiSha256Verified,
+        legacyWcdbSha256Verified: legacy.legacyWcdbSha256Verified,
+        utilityPid: process.pid,
+        initialized: this.initialized,
+        apiPath: '',
+        wcdbPath: '',
+        apiSha256: null,
+        wcdbSha256: null,
+        manifestTag: null,
+        manifestCommit: null,
+        manifestVerified: false
+      }
+    }
+
+    if (legacy.legacyApiSha256Verified && legacy.legacyWcdbSha256Verified) {
+      return {
+        mode: 'production',
+        selectedMode: 'legacy',
+        requestedMode: policy.requestedMode,
+        policySource: policy.policySource,
+        fallbackOccurred: true,
+        fallbackStage: stage,
+        fallbackReasonCategory: category,
+        fallbackReason: redactSensitiveLogText(reason),
+        candidateManifestVerified: candidate.candidateManifestVerified,
+        candidateApiSha256Verified: candidate.candidateApiSha256Verified,
+        candidateWcdbSha256Verified: candidate.candidateWcdbSha256Verified,
+        legacyApiSha256Verified: legacy.legacyApiSha256Verified,
+        legacyWcdbSha256Verified: legacy.legacyWcdbSha256Verified,
+        utilityPid: process.pid,
+        initialized: this.initialized,
+        apiPath: legacy.apiPath,
+        wcdbPath: legacy.wcdbPath,
+        apiSha256: legacy.apiSha256,
+        wcdbSha256: legacy.wcdbSha256,
+        manifestTag: null,
+        manifestCommit: null,
+        manifestVerified: false
+      }
+    }
+
+    return {
+      mode: 'none',
+      selectedMode: 'none',
+      requestedMode: policy.requestedMode,
+      policySource: policy.policySource,
+      fallbackOccurred: true,
+      fallbackStage: stage,
+      fallbackReasonCategory: 'legacy-integrity-failure',
+      fallbackReason: redactSensitiveLogText(`${category};${reason};legacy-integrity-failure`),
+      candidateManifestVerified: candidate.candidateManifestVerified,
+      candidateApiSha256Verified: candidate.candidateApiSha256Verified,
+      candidateWcdbSha256Verified: candidate.candidateWcdbSha256Verified,
+      legacyApiSha256Verified: legacy.legacyApiSha256Verified,
+      legacyWcdbSha256Verified: legacy.legacyWcdbSha256Verified,
+      utilityPid: process.pid,
+      initialized: this.initialized,
+      apiPath: '',
+      wcdbPath: '',
+      apiSha256: null,
+      wcdbSha256: null,
+      manifestTag: null,
+      manifestCommit: null,
+      manifestVerified: false
+    }
+  }
+
+  private resolveNativeRuntime(): NativeRuntimeSelection {
+    if (this.runtimeModeOverride === 'legacy') {
+      return this.resolveForcedLegacyRuntime()
+    }
+    if (this.runtimeModeOverride === 'candidate') {
+      return this.resolveCompiledCandidateRuntime(COMPILED_WCDB_POLICY)
+    }
+    return this.resolveCompiledCandidateRuntime(COMPILED_WCDB_POLICY)
+  }
+
+  private resolveForcedLegacyRuntime(): NativeRuntimeSelection {
+    const policy = COMPILED_WCDB_POLICY || DEFAULT_CANDIDATE_POLICY
+    return this.makeLegacySelection(policy, this.verifyLegacyRuntime(policy))
+  }
+
+  private resolveCompiledLegacyRuntime(policy: CompiledWcdbPolicy): NativeRuntimeSelection {
+    const legacy: LegacyRuntimeState = {
+      apiPath: normalize(resolve(this.getLibraryPath())),
+      wcdbPath: normalize(resolve(this.getWindowsCoreLibraryPath())),
+      apiSha256: null,
+      wcdbSha256: null,
+      legacyApiSha256Verified: false,
+      legacyWcdbSha256Verified: false
+    }
+    return {
+      mode: 'production',
+      selectedMode: 'legacy',
+      requestedMode: policy.requestedMode,
+      policySource: policy.policySource,
+      fallbackOccurred: false,
+      fallbackStage: 'none',
+      fallbackReasonCategory: null,
+      fallbackReason: null,
+      candidateManifestVerified: false,
+      candidateApiSha256Verified: false,
+      candidateWcdbSha256Verified: false,
+      legacyApiSha256Verified: legacy.legacyApiSha256Verified,
+      legacyWcdbSha256Verified: legacy.legacyWcdbSha256Verified,
+      utilityPid: process.pid,
+      initialized: this.initialized,
+      apiPath: legacy.apiPath,
+      wcdbPath: legacy.wcdbPath,
+      apiSha256: null,
+      wcdbSha256: null,
+      manifestTag: null,
+      manifestCommit: null,
+      manifestVerified: false
+    }
+  }
+
+  private resolveCompiledCandidateRuntime(policy: CompiledWcdbPolicy): NativeRuntimeSelection {
+    let candidate = emptyCandidateRuntimeState()
+    try {
+      candidate = this.validateCompiledCandidate(policy)
+    } catch (error) {
+      const validation = error instanceof CandidateValidationError
+        ? error
+        : new CandidateValidationError('candidate-validation-error', candidate, 'candidate validation failed')
+      const legacy = this.verifyLegacyRuntime(policy)
+      return this.makeCandidateFallbackSelection(
+        policy,
+        validation.state,
+        legacy,
+        validation.category,
+        validation.category,
+        'pre-load'
+      )
+    }
+
+    return this.makeCandidateSelection(policy, candidate, this.verifyLegacyRuntime(policy))
+  }
+
+  private verifyLegacyRuntime(policy: CompiledWcdbPolicy): LegacyRuntimeState {
+    const state: LegacyRuntimeState = {
+      apiPath: normalize(resolve(this.getLibraryPath())),
+      wcdbPath: normalize(resolve(this.getWindowsCoreLibraryPath())),
+      apiSha256: null,
+      wcdbSha256: null,
+      legacyApiSha256Verified: false,
+      legacyWcdbSha256Verified: false
+    }
+    try {
+      const root = this.getResourceDirectory()
+      const rootReal = normalize(realpathSync(root))
+      const apiPath = this.resolvePackageFile(root, rootReal, 'wcdb_api.dll', 'legacy-api')
+      const wcdbPath = this.resolvePackageFile(root, rootReal, 'WCDB.dll', 'legacy-wcdb')
+      state.apiPath = apiPath
+      state.wcdbPath = wcdbPath
+      state.apiSha256 = sha256File(apiPath)
+      state.wcdbSha256 = sha256File(wcdbPath)
+      state.legacyApiSha256Verified = state.apiSha256 === String(policy.legacyApiSha256 || '').toUpperCase()
+      state.legacyWcdbSha256Verified = state.wcdbSha256 === String(policy.legacyWcdbSha256 || '').toUpperCase()
+    } catch {
+      // The caller decides whether a missing or malformed legacy runtime is
+      // acceptable. No filesystem path is included in the diagnostic state.
+    }
+    return state
+  }
+
+  private validateCompiledCandidate(policy: CompiledWcdbPolicy): CandidateRuntimeState {
+    const state = emptyCandidateRuntimeState()
+    const root = this.getResourceDirectory()
+    let rootReal: string
+    try {
+      rootReal = normalize(realpathSync(root))
+      if (!statSync(rootReal).isDirectory()) throw new Error('resource root is not a directory')
+    } catch {
+      throw new CandidateValidationError('candidate-package-root-invalid', state, 'candidate package resource root is unavailable')
+    }
+
+    const relativeDirectory = String(policy.candidateRelativeDirectory || '')
+    if (!relativeDirectory || isAbsolute(relativeDirectory)
+        || relativeDirectory.split(/[\\/]/).some((part) => !part || part === '.' || part === '..')) {
+      throw new CandidateValidationError('candidate-relative-directory-invalid', state, 'candidate relative directory is invalid')
+    }
+    const candidateLexical = normalize(resolve(root, relativeDirectory))
+    if (!pathWithin(candidateLexical, root)) {
+      throw new CandidateValidationError('candidate-path-invalid', state, 'candidate directory escaped the package resource root')
+    }
+
+    let candidateDirectory: string
+    try {
+      candidateDirectory = normalize(realpathSync(candidateLexical))
+      if (!statSync(candidateDirectory).isDirectory()) throw new Error('not a directory')
+      this.assertNoReparseEscape(candidateLexical, rootReal)
+      if (!pathWithin(candidateDirectory, rootReal)) throw new Error('outside package')
+    } catch (error) {
+      if (error instanceof CandidateValidationError) throw error
+      throw new CandidateValidationError('candidate-missing', state, 'candidate directory is missing or invalid')
+    }
+
+    const resolveCandidateFile = (name: string, category: string): string => {
+      try {
+        return this.resolvePackageFile(candidateDirectory, candidateDirectory, name, category)
+      } catch (error) {
+        if (error instanceof CandidateValidationError) {
+          throw new CandidateValidationError(error.category, state, error.message)
+        }
+        throw new CandidateValidationError(category, state, `candidate ${name} is missing or invalid`)
+      }
+    }
+
+    state.apiPath = resolveCandidateFile('wcdb_api.dll', 'candidate-api-missing')
+    state.wcdbPath = resolveCandidateFile('WCDB.dll', 'candidate-wcdb-missing')
+    const manifestPath = resolveCandidateFile('manifest.json', 'candidate-manifest-missing')
+    state.apiSha256 = sha256File(state.apiPath)
+    state.wcdbSha256 = sha256File(state.wcdbPath)
+    state.candidateApiSha256Verified = state.apiSha256 === String(policy.candidateApiSha256 || '').toUpperCase()
+    state.candidateWcdbSha256Verified = state.wcdbSha256 === String(policy.candidateWcdbSha256 || '').toUpperCase()
+    if (!state.candidateApiSha256Verified) {
+      throw new CandidateValidationError('candidate-api-hash-mismatch', state, 'candidate wcdb_api.dll hash does not match the compiled policy')
+    }
+    if (!state.candidateWcdbSha256Verified) {
+      throw new CandidateValidationError('candidate-wcdb-hash-mismatch', state, 'candidate WCDB.dll hash does not match the compiled policy')
+    }
+
+    let manifest: any
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, ''))
+    } catch {
+      throw new CandidateValidationError('candidate-manifest-invalid', state, 'candidate manifest.json is invalid JSON')
+    }
+    if (!manifest || typeof manifest !== 'object') {
+      throw new CandidateValidationError('candidate-manifest-invalid', state, 'candidate manifest.json must contain an object')
+    }
+    state.manifestTag = typeof manifest.wcdb_tag === 'string' ? manifest.wcdb_tag : null
+    state.manifestCommit = typeof manifest.wcdb_commit === 'string' ? manifest.wcdb_commit : null
+    if (manifest.wcdb_tag !== policy.wcdbTag || manifest.wcdb_commit !== policy.wcdbCommit) {
+      throw new CandidateValidationError('candidate-manifest-revision-mismatch', state, 'candidate manifest WCDB revision does not match the compiled policy')
+    }
+    if (manifest.architecture !== 'x64' || manifest.configuration !== 'Release') {
+      throw new CandidateValidationError('candidate-manifest-platform-mismatch', state, 'candidate manifest is not an x64 Release runtime')
+    }
+    if (String(manifest.wcdb_api_dll?.sha256 || '').toUpperCase() !== state.apiSha256
+        || String(manifest.wcdb_dll?.sha256 || '').toUpperCase() !== state.wcdbSha256) {
+      throw new CandidateValidationError('candidate-manifest-hash-mismatch', state, 'candidate manifest hashes do not match adjacent artifacts')
+    }
+    const verification = manifest.verification
+    if (!verification || typeof verification !== 'object') {
+      throw new CandidateValidationError('candidate-manifest-verification-failed', state, 'candidate manifest verification section is missing')
+    }
+    for (const field of CANDIDATE_VERIFICATION_FIELDS) {
+      if (verification[field] !== true) {
+        throw new CandidateValidationError('candidate-manifest-verification-failed', state, `candidate manifest verification.${field} is not true`)
+      }
+    }
+    if (verification.mmfts_tokenizer !== false || verification.mmfts_error !== 'no_such_tokenizer') {
+      throw new CandidateValidationError('candidate-manifest-verification-failed', state, 'candidate MMFtsTokenizer limitation is not recorded correctly')
+    }
+    state.candidateManifestVerified = true
+    return state
+  }
+
+  private assertNoReparseEscape(pathValue: string, rootReal: string): void {
+    let current = normalize(resolve(pathValue))
+    const rootLexical = normalize(resolve(this.getResourceDirectory()))
+    while (pathWithin(current, rootLexical)) {
+      try {
+        const item = lstatSync(current)
+        if (item.isSymbolicLink()) {
+          const actual = normalize(realpathSync(current))
+          if (!pathWithin(actual, rootReal)) {
+            throw new CandidateValidationError('candidate-reparse-escape', emptyCandidateRuntimeState(), 'candidate reparse point escapes the package')
+          }
+        }
+      } catch (error) {
+        if (error instanceof CandidateValidationError) throw error
+      }
+      if (samePath(current, rootLexical)) break
+      const parent = dirname(current)
+      if (samePath(parent, current)) break
+      current = parent
+    }
+  }
+
+  private resolvePackageFile(baseDirectory: string, rootReal: string, name: string, category: string): string {
+    const requested = normalize(resolve(baseDirectory, name))
+    if (!pathWithin(requested, baseDirectory)) {
+      throw new CandidateValidationError('candidate-path-invalid', emptyCandidateRuntimeState(), 'runtime file escaped its package directory')
+    }
+    let actual: string
+    try {
+      actual = normalize(realpathSync(requested))
+      if (!statSync(actual).isFile()) throw new Error('not a regular file')
+    } catch {
+      throw new CandidateValidationError(category, emptyCandidateRuntimeState(), `runtime ${name} is missing or invalid`)
+    }
+    if (!pathWithin(actual, rootReal) || !samePath(dirname(actual), baseDirectory)) {
+      throw new CandidateValidationError('candidate-path-invalid', emptyCandidateRuntimeState(), `runtime ${name} is not adjacent and package-contained`)
+    }
+    return actual
+  }
+
+  private prepareWindowsDllSearchPath(libraryPath: string, wcdbCorePath: string): { success: boolean; error?: string } {
     if (process.platform === 'darwin') {
       const dylibDir = dirname(libraryPath)
       const currentDyld = process.env.DYLD_LIBRARY_PATH || ''
@@ -113,9 +709,8 @@ export class WcdbCore {
 
     if (process.platform !== 'win32') return { success: true }
 
-    const wcdbCorePath = this.getWindowsCoreLibraryPath()
     if (!existsSync(wcdbCorePath)) {
-      return { success: false, error: `WCDB 依赖库不存在: ${wcdbCorePath}` }
+      return { success: false, error: 'WCDB dependency library is unavailable' }
     }
 
     const dllDir = dirname(libraryPath)
@@ -131,41 +726,124 @@ export class WcdbCore {
   async initialize(): Promise<{ success: boolean; error?: string }> {
     if (this.initialized) return { success: true }
 
+    const runtime = this.nativeRuntimeSelection || this.resolveNativeRuntime()
+    this.nativeRuntimeSelection = runtime
+    if (runtime.selectedMode === 'none') {
+      const error = runtime.fallbackReasonCategory === 'legacy-fallback-disabled'
+        ? 'WCDB packaged candidate integrity validation failed; installation may be damaged and no operational legacy fallback is available'
+        : 'WCDB native runtime integrity verification failed; refusing to load native DLLs'
+      return { success: false, error }
+    }
+
+    const firstAttempt = this.tryInitializeRuntime(runtime)
+    if (firstAttempt.success) return firstAttempt
+
+    // Candidate load/bind/init errors are the only errors eligible for the
+    // single legacy fallback. Business errors happen after this method returns
+    // success and therefore cannot silently change the selected runtime.
+    if (COMPILED_WCDB_POLICY?.requestedMode === 'candidate-preferred'
+        && runtime.selectedMode === 'candidate'
+        && !runtime.fallbackOccurred) {
+      this.cleanupNativeAttempt()
+      const legacy = this.verifyLegacyRuntime(COMPILED_WCDB_POLICY)
+      const fallback = this.makeCandidateFallbackSelection(
+        COMPILED_WCDB_POLICY,
+        {
+          apiPath: runtime.apiPath,
+          wcdbPath: runtime.wcdbPath,
+          apiSha256: runtime.apiSha256,
+          wcdbSha256: runtime.wcdbSha256,
+          manifestTag: runtime.manifestTag,
+          manifestCommit: runtime.manifestCommit,
+          candidateManifestVerified: runtime.candidateManifestVerified,
+          candidateApiSha256Verified: runtime.candidateApiSha256Verified,
+          candidateWcdbSha256Verified: runtime.candidateWcdbSha256Verified
+        },
+        legacy,
+        firstAttempt.category,
+        firstAttempt.category,
+        firstAttempt.stage
+      )
+      this.nativeRuntimeSelection = fallback
+      if (fallback.selectedMode !== 'legacy') {
+        return { success: false, error: 'WCDB candidate initialization failed; installation may be damaged and no operational legacy fallback is available' }
+      }
+
+      const legacyAttempt = this.tryInitializeRuntime(fallback)
+      if (legacyAttempt.success) return legacyAttempt
+      this.cleanupNativeAttempt()
+      this.nativeRuntimeSelection = {
+        ...fallback,
+        mode: 'none',
+        selectedMode: 'none',
+        fallbackStage: 'legacy-load',
+        fallbackReasonCategory: 'legacy-load-failure',
+        fallbackReason: redactSensitiveLogText(`${firstAttempt.category};${legacyAttempt.category}`),
+        apiPath: '',
+        wcdbPath: '',
+        apiSha256: null,
+        wcdbSha256: null,
+        initialized: false
+      }
+      return { success: false, error: 'WCDB candidate and legacy initialization both failed' }
+    }
+
+    this.cleanupNativeAttempt()
+    return { success: false, error: `WCDB native initialization failed: ${firstAttempt.category}` }
+  }
+
+  private tryInitializeRuntime(runtime: NativeRuntimeSelection): { success: true } | NativeAttemptError & { success: false } {
+    this.nativeInitAttempted = false
     try {
-      this.koffi = require('koffi')
-      const libraryPath = this.getLibraryPath()
-      if (!existsSync(libraryPath)) {
-        return { success: false, error: `WCDB 原生库不存在: ${libraryPath}` }
+      if (!runtime.apiPath || !runtime.wcdbPath) {
+        throw new NativeAttemptError('load', 'runtime-path-unavailable', 'selected runtime paths are unavailable')
+      }
+      if (!existsSync(runtime.apiPath) || !existsSync(runtime.wcdbPath)) {
+        throw new NativeAttemptError('load', 'runtime-file-missing', 'selected runtime files are unavailable')
       }
 
-      const dllSearchRes = this.prepareWindowsDllSearchPath(libraryPath)
-      if (!dllSearchRes.success) return dllSearchRes
-
-      this.lib = this.koffi.load(libraryPath)
-
-      // 绑定已确定暴露的符号
-      this.wcdbInit = this.lib.func('int32 wcdb_init()')
-      this.wcdbShutdown = this.lib.func('int32 wcdb_shutdown()')
-      this.wcdbOpenAccount = this.lib.func('int32 wcdb_open_account(const char* path, const char* key, _Out_ int64* handle)')
-      this.wcdbCloseAccount = this.lib.func('int32 wcdb_close_account(int64 handle)')
-      this.wcdbFreeString = this.lib.func('void wcdb_free_string(void* ptr)')
-      this.wcdbGetLogs = this.lib.func('int32 wcdb_get_logs(_Out_ void** outJson)')
-      this.wcdbGetSnsTimeline = this.lib.func('int32 wcdb_get_sns_timeline(int64 handle, int32 limit, int32 offset, const char* username, const char* keyword, int32 startTime, int32 endTime, _Out_ void** outJson)')
-      this.wcdbExecQuery = this.lib.func('int32 wcdb_exec_query(int64 handle, const char* kind, const char* path, const char* sql, _Out_ void** outJson)')
-
-      // 预留符号：native 若未实现则保持 null，特性降级
-      const tryBind = (decl: string): any => {
-        try { return this.lib.func(decl) } catch { return null }
+      // Native wrapper resolution is pinned to the already-selected adjacent
+      // WCDB.dll. An inherited WCDB_DLL_PATH cannot redirect this process.
+      process.env.WCDB_DLL_PATH = runtime.wcdbPath
+      const dllSearchRes = this.prepareWindowsDllSearchPath(runtime.apiPath, runtime.wcdbPath)
+      if (!dllSearchRes.success) {
+        throw new NativeAttemptError('load', 'dependency-load-failure', dllSearchRes.error || 'native dependency unavailable')
       }
-      this.wcdbExecQueryWithParams = tryBind('int32 wcdb_exec_query_with_params(int64 handle, const char* kind, const char* path, const char* sql, const char* argsJson, _Out_ void** outJson)')
-      this.wcdbExportMessageChunk = tryBind('int32 wcdb_export_message_chunk(int64 handle, const char* kind, const char* path, const char* tableName, int64 afterRid, int32 maxRows, int32 startTime, int32 endTime, const char* extraColsJson, _Out_ void** outJson)')
-      this.wcdbGetMessages = tryBind('int32 wcdb_get_messages(int64 handle, const char* username, int32 limit, int32 offset, _Out_ void** outJson)')
-      this.wcdbStartMonitorPipe = tryBind('int32 wcdb_start_monitor_pipe()')
-      this.wcdbStopMonitorPipe = tryBind('int32 wcdb_stop_monitor_pipe()')
-      this.wcdbGetMonitorPipeName = tryBind('int32 wcdb_get_monitor_pipe_name(_Out_ void** outName)')
-      this.wcdbSetMyWxid = tryBind('int32 wcdb_set_my_wxid(int64 handle, const char* wxid)')
-      this.wcdbSetClientInfo = tryBind('int32 wcdb_set_client_info(const char* applicationId, const char* clientType, const char* appVersion)')
-      this.wcdbSetAppVersion = tryBind('int32 wcdb_set_app_version(const char* version)')
+
+      try {
+        this.koffi = require('koffi')
+        this.nativeLoadAttempted = true
+        this.lib = this.koffi.load(runtime.apiPath)
+      } catch (error: any) {
+        throw new NativeAttemptError('load', runtime.selectedMode === 'candidate' ? 'candidate-load-failure' : 'legacy-load-failure', redactSensitiveLogText(error?.message || String(error)))
+      }
+
+      try {
+        // Bind all required symbols before calling any native initialization.
+        this.wcdbInit = this.lib.func('int32 wcdb_init()')
+        this.wcdbShutdown = this.lib.func('void wcdb_shutdown()')
+        this.wcdbOpenAccount = this.lib.func('int32 wcdb_open_account(const char* path, const char* key, _Out_ int64* handle)')
+        this.wcdbCloseAccount = this.lib.func('int32 wcdb_close_account(int64 handle)')
+        this.wcdbFreeString = this.lib.func('void wcdb_free_string(void* ptr)')
+        this.wcdbGetLogs = this.lib.func('int32 wcdb_get_logs(_Out_ void** outJson)')
+        this.wcdbGetSnsTimeline = this.lib.func('int32 wcdb_get_sns_timeline(int64 handle, int32 limit, int32 offset, const char* username, const char* keyword, int32 startTime, int32 endTime, _Out_ void** outJson)')
+        this.wcdbExecQuery = this.lib.func('int32 wcdb_exec_query(int64 handle, const char* kind, const char* path, const char* sql, _Out_ void** outJson)')
+
+        const tryBind = (decl: string): any => {
+          try { return this.lib.func(decl) } catch { return null }
+        }
+        this.wcdbExecQueryWithParams = tryBind('int32 wcdb_exec_query_with_params(int64 handle, const char* kind, const char* path, const char* sql, const char* argsJson, _Out_ void** outJson)')
+        this.wcdbExportMessageChunk = tryBind('int32 wcdb_export_message_chunk(int64 handle, const char* kind, const char* path, const char* tableName, int64 afterRid, int32 maxRows, int32 startTime, int32 endTime, const char* extraColsJson, _Out_ void** outJson)')
+        this.wcdbGetMessages = tryBind('int32 wcdb_get_messages(int64 handle, const char* username, int32 limit, int32 offset, _Out_ void** outJson)')
+        this.wcdbStartMonitorPipe = tryBind('int32 wcdb_start_monitor_pipe()')
+        this.wcdbStopMonitorPipe = tryBind('int32 wcdb_stop_monitor_pipe()')
+        this.wcdbGetMonitorPipeName = tryBind('int32 wcdb_get_monitor_pipe_name(_Out_ void** outName)')
+        this.wcdbSetMyWxid = tryBind('int32 wcdb_set_my_wxid(int64 handle, const char* wxid)')
+        this.wcdbSetClientInfo = tryBind('int32 wcdb_set_client_info(const char* applicationId, const char* clientType, const char* appVersion)')
+        this.wcdbSetAppVersion = tryBind('int32 wcdb_set_app_version(const char* version)')
+      } catch (error: any) {
+        throw new NativeAttemptError('bind', runtime.selectedMode === 'candidate' ? 'candidate-abi-bind-failure' : 'legacy-abi-bind-failure', redactSensitiveLogText(error?.message || String(error)))
+      }
 
       // Keep the normal native initialization prerequisite. The commercial
       // license check was intentionally removed; it must not be reintroduced here.
@@ -179,15 +857,16 @@ export class WcdbCore {
         returnCode: this.wcdbSetClientInfo ? setVersionResult : null,
         applicationId: 'ciphertalk',
         clientType: 'desktop',
-        appVersion: this.appVersion,
+        appVersion: redactSensitiveLogText(this.appVersion),
         fallbackSetAppVersionCalled: !this.wcdbSetClientInfo && Boolean(this.wcdbSetAppVersion),
         fallbackSetAppVersionReturnCode: !this.wcdbSetClientInfo && this.wcdbSetAppVersion ? setVersionResult : null,
         licenseCheckCalled: false
       })
       if (setVersionResult !== 0) {
-        return { success: false, error: this.mapStatusCode(setVersionResult) }
+        throw new NativeAttemptError('initialize', runtime.selectedMode === 'candidate' ? 'candidate-init-failure' : 'legacy-init-failure', this.mapStatusCode(setVersionResult))
       }
 
+      this.nativeInitAttempted = true
       const initResult = this.wcdbInit()
       console.error('[wcdbCore][diagnostic] native call=wcdb_init', {
         returnCode: initResult,
@@ -195,14 +874,55 @@ export class WcdbCore {
         licenseCheckCalled: false
       })
       if (initResult !== 0) {
-        return { success: false, error: this.mapStatusCode(initResult) }
+        throw new NativeAttemptError('initialize', runtime.selectedMode === 'candidate' ? 'candidate-init-failure' : 'legacy-init-failure', this.mapStatusCode(initResult))
       }
 
       this.initialized = true
       return { success: true }
-    } catch (e: any) {
-      return { success: false, error: `WCDB 初始化异常: ${e.message || String(e)}` }
+    } catch (error) {
+      if (error instanceof NativeAttemptError) return Object.assign(error, { success: false })
+      return Object.assign(
+        new NativeAttemptError('load', runtime.selectedMode === 'candidate' ? 'candidate-load-failure' : 'legacy-load-failure', redactSensitiveLogText(error instanceof Error ? error.message : String(error))),
+        { success: false }
+      )
     }
+  }
+
+  private nativeInitAttempted = false
+
+  private cleanupNativeAttempt(): void {
+    this.stopMonitor()
+    if (this.handle !== null && this.wcdbCloseAccount) {
+      try { this.wcdbCloseAccount(this.handle) } catch { /* ignore failed-attempt cleanup */ }
+    }
+    if (this.nativeInitAttempted && this.wcdbShutdown) {
+      try { this.wcdbShutdown() } catch { /* ignore failed-attempt cleanup */ }
+    }
+    if (this.lib?.unload) {
+      try { this.lib.unload() } catch { /* ignore failed-attempt cleanup */ }
+    }
+    this.handle = null
+    this.initialized = false
+    this.lib = null
+    this.koffi = null
+    this.nativeInitAttempted = false
+    this.wcdbInit = null
+    this.wcdbShutdown = null
+    this.wcdbOpenAccount = null
+    this.wcdbCloseAccount = null
+    this.wcdbFreeString = null
+    this.wcdbGetLogs = null
+    this.wcdbGetSnsTimeline = null
+    this.wcdbExecQuery = null
+    this.wcdbSetAppVersion = null
+    this.wcdbSetClientInfo = null
+    this.wcdbExecQueryWithParams = null
+    this.wcdbExportMessageChunk = null
+    this.wcdbGetMessages = null
+    this.wcdbStartMonitorPipe = null
+    this.wcdbStopMonitorPipe = null
+    this.wcdbGetMonitorPipeName = null
+    this.wcdbSetMyWxid = null
   }
 
   // ============== 路径解析 ==============
@@ -280,16 +1000,16 @@ export class WcdbCore {
       const result = this.wcdbOpenAccount(nativeSessionDbPath, hexKey, handleOut)
       console.error('[wcdbCore][diagnostic] native call=wcdb_open_account (wcdb_open)', {
         returnCode: result,
-        normalizedAccountDirectory,
-        nativeSessionDbPath,
-        wxid,
+        accountPathProvided: Boolean(normalizedAccountDirectory),
+        wxidProvided: Boolean(wxid),
+        databasePathProvided: Boolean(nativeSessionDbPath),
         ...describeKey(hexKey),
         handle: handleOut[0]
       })
       if (result === 0 && handleOut[0] > 0) {
         return { success: true, handle: handleOut[0], matchedPath: nativeSessionDbPath, errors }
       }
-      errors.push(`${nativeSessionDbPath} => ${this.mapStatusCode(result)}`)
+      errors.push(`database attempt => ${this.mapStatusCode(result)}`)
     }
     return { success: false, errors }
   }
@@ -302,8 +1022,8 @@ export class WcdbCore {
       const normalizedWxid = String(wxid || '').trim()
       console.error('[wcdbCore][diagnostic] account verification input', {
         operation: 'open',
-        normalizedAccountDirectory: normalizedDbPath,
-        wxid: normalizedWxid,
+        accountPathProvided: Boolean(normalizedDbPath),
+        wxidProvided: Boolean(normalizedWxid),
         ...describeKey(normalizedHexKey)
       })
       if (
@@ -321,8 +1041,8 @@ export class WcdbCore {
           called: false,
           returnCode: null,
           blockedBy: 'wcdb_init',
-          normalizedAccountDirectory: normalizedDbPath,
-          wxid: normalizedWxid,
+          accountPathProvided: Boolean(normalizedDbPath),
+          wxidProvided: Boolean(normalizedWxid),
           reason: initRes.error || 'wcdb_init failed',
           ...describeKey(normalizedHexKey)
         })
@@ -337,13 +1057,13 @@ export class WcdbCore {
 
       const dbStoragePath = this.resolveDbStoragePath(normalizedDbPath, normalizedWxid)
       if (!dbStoragePath) {
-        console.error('数据库目录不存在:', normalizedDbPath)
+        console.error('数据库目录不存在')
         return false
       }
 
       const sessionDbPaths = this.getCandidateSessionDbs(dbStoragePath)
       if (sessionDbPaths.length === 0) {
-        console.error('未找到 session.db 文件:', dbStoragePath)
+        console.error('未找到 session.db 文件')
         return false
       }
 
@@ -374,21 +1094,13 @@ export class WcdbCore {
 
       return true
     } catch (e) {
-      console.error('打开数据库异常:', e)
+      console.error('打开数据库异常:', redactSensitiveLogText(e instanceof Error ? e.message : String(e)))
       return false
     }
   }
 
   close(): void {
-    if (this.handle !== null && this.wcdbCloseAccount) {
-      try { this.wcdbCloseAccount(this.handle) } catch (e) { console.error('关闭 WCDB 句柄失败:', e) }
-    }
-    if (this.initialized && this.wcdbShutdown) {
-      try { this.wcdbShutdown() } catch (e) { console.error('WCDB shutdown 失败:', e) }
-    }
-    this.handle = null
-    this.initialized = false
-    this.lib = null
+    this.cleanupNativeAttempt()
     this.currentPath = null
     this.currentKey = null
     this.currentWxid = null
@@ -406,8 +1118,8 @@ export class WcdbCore {
       const normalizedWxid = String(wxid || '').trim()
       console.error('[wcdbCore][diagnostic] account verification input', {
         operation: 'testConnection',
-        normalizedAccountDirectory: normalizedDbPath,
-        wxid: normalizedWxid,
+        accountPathProvided: Boolean(normalizedDbPath),
+        wxidProvided: Boolean(normalizedWxid),
         ...describeKey(normalizedHexKey)
       })
       if (this.handle !== null && this.currentPath === normalizedDbPath && this.currentKey === normalizedHexKey && this.currentWxid === normalizedWxid) {
@@ -425,8 +1137,8 @@ export class WcdbCore {
           called: false,
           returnCode: null,
           blockedBy: 'wcdb_init',
-          normalizedAccountDirectory: normalizedDbPath,
-          wxid: normalizedWxid,
+          accountPathProvided: Boolean(normalizedDbPath),
+          wxidProvided: Boolean(normalizedWxid),
           reason: initRes.error || 'wcdb_init failed',
           ...describeKey(normalizedHexKey)
         })
@@ -434,18 +1146,17 @@ export class WcdbCore {
       }
 
       const dbStoragePath = this.resolveDbStoragePath(normalizedDbPath, normalizedWxid)
-      if (!dbStoragePath) return { success: false, error: `未找到账号目录或 db_storage: ${normalizedDbPath}` }
+      if (!dbStoragePath) return { success: false, error: '未找到账号目录或 db_storage' }
 
       const sessionDbPaths = this.getCandidateSessionDbs(dbStoragePath)
-      if (sessionDbPaths.length === 0) return { success: false, error: `未找到 session.db 文件: ${dbStoragePath}` }
+      if (sessionDbPaths.length === 0) return { success: false, error: '未找到 session.db 文件' }
 
       const openResult = this.tryOpenWithCandidates(sessionDbPaths, normalizedHexKey, normalizedWxid, normalizedDbPath)
       if (!openResult.success || !openResult.handle || !openResult.matchedPath) {
         const logs = await this.printLogs()
         console.error('[wcdbCore] 数据库验证失败', {
-          normalizedAccountDirectory: normalizedDbPath,
-          dbStoragePath: normalizeWcdbPath(dbStoragePath),
-          wxid: normalizedWxid,
+          accountPathProvided: Boolean(normalizedDbPath),
+          wxidProvided: Boolean(normalizedWxid),
           ...describeKey(normalizedHexKey),
           attempts: openResult.errors,
           nativeLogs: logs,
@@ -485,8 +1196,9 @@ export class WcdbCore {
 
       return { success: true, sessionCount: 0 }
     } catch (e) {
-      console.error('测试连接异常:', e)
-      return { success: false, error: String(e) }
+      const error = redactSensitiveLogText(e instanceof Error ? e.message : String(e))
+      console.error('测试连接异常:', error)
+      return { success: false, error }
     }
   }
 
@@ -645,7 +1357,8 @@ export class WcdbCore {
       if (!batch.success) return { success: false, error: batch.error }
       const rows = batch.rows || []
       if (rows.length === 0) { done = true; break }
-      for (const row of rows) {
+      const rowsToReturn = rows.slice(0, Math.max(0, maxRows - out.length))
+      for (const row of rowsToReturn) {
         const serverIdRaw = row.server_id ?? row.msg_svr_id ?? row.msgSvrId ?? row.MsgSvrID ?? null
         const compact: Record<string, any> = {
           __rid: row.__rid,
@@ -661,8 +1374,9 @@ export class WcdbCore {
         for (const c of pickedExtras) compact[c] = row[c]
         out.push(compact)
       }
-      lastRid = rows[rows.length - 1].__rid
-      if (rows.length < 2000) { done = true; break }
+      if (rowsToReturn.length > 0) lastRid = rowsToReturn[rowsToReturn.length - 1].__rid
+      if (rows.length < 2000 && rowsToReturn.length === rows.length) { done = true; break }
+      if (out.length >= maxRows) break
     }
     return { success: true, rows: out, lastRid, done }
   }
@@ -892,6 +1606,7 @@ export class WcdbCore {
       case -5: return '查询执行失败'
       case -6: return 'WCDB 尚未初始化'
       case -7: return 'WCDB 表结构不匹配'
+      case -18: return '当前 native 实现不支持此接口'
       default: return `WCDB 错误码: ${code}`
     }
   }

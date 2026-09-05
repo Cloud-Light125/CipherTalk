@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC_PNG="${1:-${ROOT_DIR}/public/logo.png}"
+SRC_PNG="${1:-${ROOT_DIR}/icon.png}"
 OUT_ICNS="${2:-${ROOT_DIR}/public/icon.icns}"
 OUT_DOCK_PNG="${3:-${ROOT_DIR}/public/icon-dock.png}"
 OUT_TRAY_PNG="${4:-${ROOT_DIR}/public/tray-mac.png}"

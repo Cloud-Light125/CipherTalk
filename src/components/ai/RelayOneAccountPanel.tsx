@@ -352,7 +352,7 @@ export default function RelayOneAccountPanel({ onProviderApplied, showMessage, h
         <Alert status="warning">
           <Alert.Content>
             <Alert.Title>系统凭据加密不可用</Alert.Title>
-            <Alert.Description>本次登录令牌只保存在内存中，退出 CipherTalk 后需要重新登录。</Alert.Description>
+            <Alert.Description>本次登录令牌只保存在内存中，退出 CloudLight WeChat 后需要重新登录。</Alert.Description>
           </Alert.Content>
         </Alert>
       )}

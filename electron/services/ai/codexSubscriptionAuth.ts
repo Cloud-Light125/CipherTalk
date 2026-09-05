@@ -61,7 +61,7 @@ function getCodexHomeSafe(): string {
   const home = path.resolve(getCipherTalkCodexHome())
   const cliHome = path.resolve(path.dirname(getCodexCliAuthPath()))
   if (home.toLowerCase() === cliHome.toLowerCase()) {
-    throw new Error('密语的 ChatGPT 登录目录不能设置为电脑上的 ~/.codex')
+    throw new Error('CloudLight WeChat 的 ChatGPT 登录目录不能设置为电脑上的 ~/.codex')
   }
   return home
 }

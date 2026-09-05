@@ -8,7 +8,6 @@
  * - id === -1 && type === 'monitor' 为 native pipe 的变更上行事件
  */
 import { WcdbCore } from './services/wcdbCore'
-import { normalize, resolve } from 'path'
 
 const parentPort = process.parentPort
 
@@ -29,9 +28,9 @@ try {
 function describeDiagnosticPayload(type: string, payload: any): Record<string, unknown> {
   if (type === 'setPaths') {
     return {
-      resourcesPath: String(payload?.resourcesPath || ''),
-      userDataPath: String(payload?.userDataPath || ''),
-      appVersion: String(payload?.appVersion || '')
+      resourcesPathProvided: Boolean(String(payload?.resourcesPath || '').trim()),
+      userDataPathProvided: Boolean(String(payload?.userDataPath || '').trim()),
+      appVersion: redactSensitiveLogText(payload?.appVersion || '')
     }
   }
   if (type !== 'testConnection' && type !== 'open') return {}
@@ -39,8 +38,8 @@ function describeDiagnosticPayload(type: string, payload: any): Record<string, u
   const dbPath = String(payload?.dbPath || '').trim()
   const hexKey = String(payload?.hexKey || '').trim()
   return {
-    normalizedAccountDirectory: dbPath ? normalize(resolve(dbPath)) : '',
-    wxid: String(payload?.wxid || '').trim(),
+    accountPathProvided: Boolean(dbPath),
+    wxidProvided: Boolean(String(payload?.wxid || '').trim()),
     keyPresent: hexKey.length > 0,
     keyLength: hexKey.length,
     keyLengthExpected: 64,
@@ -50,7 +49,10 @@ function describeDiagnosticPayload(type: string, payload: any): Record<string, u
 }
 
 function redactSensitiveLogText(value: unknown): string {
-  return String(value || '').replace(/[0-9a-fA-F]{64}/g, (token) => `[redacted-hex:${token.length}]`)
+  return String(value || '')
+    .replace(/[0-9a-fA-F]{64}/g, (token) => `[redacted-hex:${token.length}]`)
+    .replace(/[A-Za-z]:[\\/][^"'`\r\n,}\]]+/g, '[redacted-path]')
+    .replace(/\\\\[^"'`\r\n,}\]]+/g, '[redacted-path]')
 }
 
 // 串行化所有请求：每个请求（含游标 open→fetch→close 全过程）跑完后下一个才开始。
@@ -71,7 +73,7 @@ async function handleMessage(msg: any) {
     let result: any
     switch (type) {
       case 'setPaths':
-        core.setPaths(payload.resourcesPath, payload.userDataPath, payload.appVersion)
+        core.setPaths(payload.resourcesPath, payload.userDataPath, payload.appVersion, payload.runtimeMode)
         result = { success: true }
         break
       case 'testConnection':
@@ -91,6 +93,9 @@ async function handleMessage(msg: any) {
         break
       case 'isConnected':
         result = core.isConnected()
+        break
+      case 'getNativeRuntimeInfo':
+        result = core.getNativeRuntimeInfo()
         break
       case 'execQuery':
         result = await core.execQuery(payload.kind, payload.path, payload.sql)
@@ -138,7 +143,10 @@ async function handleMessage(msg: any) {
       })
     }
     parentPort.postMessage({ id, result })
-    if (shouldExitAfterReply) clearInterval(keepAliveTimer)
+    if (shouldExitAfterReply) {
+      clearInterval(keepAliveTimer)
+      setImmediate(() => process.exit(0))
+    }
   } catch (e: any) {
     const error = redactSensitiveLogText(e?.message || String(e))
     console.error(`[wcdbUtility][diagnostic] failed id=${id} type=${type}`, {

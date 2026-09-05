@@ -1,6 +1,10 @@
 import os from 'os'
 import path from 'path'
 
+export const APP_DISPLAY_NAME = 'CloudLight WeChat'
+export const APP_DATA_PARENT_DIRECTORY = 'CloudLight'
+export const APP_DATA_DIRECTORY = APP_DISPLAY_NAME
+
 function getElectronAppSafe(): any | null {
   try {
     const moduleName = 'electron'
@@ -21,11 +25,11 @@ export function getUserDataPath(): string {
     return app.getPath('userData')
   }
 
-  if (process.platform === 'darwin') {
-    return path.join(os.homedir(), 'Library', 'Application Support', 'CipherTalk')
-  }
-  const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming')
-  return path.join(appData, 'ciphertalk')
+  return getDefaultDataRoot()
+}
+
+export function getDefaultDataRoot(): string {
+  return path.join(getDocumentsPath(), APP_DATA_PARENT_DIRECTORY, APP_DATA_DIRECTORY)
 }
 
 export function getCipherTalkCodexHome(): string {

@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 
 const target = process.env.CIPHERTALK_BUILD_TARGET
+const isFinalCanaryBuild = process.env.CIPHERTALK_BUILD_WCDB_FINAL_CANARY === '1'
 const base = pkg.build || {}
 
 function appendUnique(items = [], extras = []) {
@@ -41,7 +42,11 @@ function getExtraResources(buildTarget) {
         to: 'resources/wedecrypt/',
         filter: ['**/*']
       },
-      ...common
+      ...common,
+      {
+        from: 'icon.png',
+        to: 'icon.png'
+      }
     ]
   }
 
@@ -56,8 +61,8 @@ function getExtraResources(buildTarget) {
       },
       ...common,
       {
-        from: 'public/icon.ico',
-        to: 'icon.ico'
+        from: 'icon.png',
+        to: 'icon.png'
       }
     ]
 
@@ -67,6 +72,24 @@ function getExtraResources(buildTarget) {
         to: 'xinnian.ico'
       })
     }
+
+    const finalStagingRoot = path.join(__dirname, '..', 'build', 'wcdb-final-canary', 'staging', 'wcdb-capi')
+    const candidateSource = fs.existsSync(finalStagingRoot)
+      ? 'build/wcdb-final-canary/staging/wcdb-capi'
+      : 'build/wcdb-api-capi/runtime'
+    winResources.push({
+      from: candidateSource,
+      to: 'resources/wcdb-capi-candidate',
+      filter: [
+        'wcdb_api.dll',
+        'WCDB.dll',
+        'manifest.json',
+        'MSVCP140.dll',
+        'VCRUNTIME140.dll',
+        'VCRUNTIME140_1.dll',
+        'packaging-manifest.json'
+      ]
+    })
 
     return winResources
   }
@@ -120,6 +143,7 @@ function getFiles(buildTarget) {
     '!plugin-workspace/**/*',
     '!public/**/*',
     '!release/**/*',
+    '!build/wcdb-promotion-canary/**/*',
     '!resources/**/*',
     '!src/**/*',
     '!tools/**/*',
@@ -188,8 +212,14 @@ function getAsarUnpack(buildTarget) {
   return baseAsarUnpack
 }
 
+const directories = {
+  ...(base.directories || {}),
+  ...(isFinalCanaryBuild ? { output: 'build/wcdb-final-canary/output' } : {})
+}
+
 module.exports = {
   ...base,
+  directories,
   publish: null,
   win: target === 'win' ? { ...(base.win || {}), files: [] } : base.win,
   mac: target === 'mac' ? { ...(base.mac || {}), files: [] } : base.mac,

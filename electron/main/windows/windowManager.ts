@@ -20,7 +20,7 @@ import { attachWindowStartupDiagnostics, markStartupMilestone, logStartupError }
 import type { ImageViewerOpenOptions, MainProcessContext, ReplyTileEntry, WindowManager } from '../context'
 import { anchorNativeWindowAboveWeChat, probeWeChatWindow, watchWeChatWindowEvents } from '../../services/wechatWindowTracker'
 
-const MAIN_WINDOW_ROUTES = new Set(['/home', '/agent', '/settings', '/pets', '/diary', '/export'])
+const MAIN_WINDOW_ROUTES = new Set(['/agent', '/settings', '/pets', '/diary', '/export'])
 
 function supportsReplyTileWindow(): boolean {
   return process.platform === 'win32' || process.platform === 'darwin'
@@ -44,16 +44,9 @@ function getThemeQuery(ctx: MainProcessContext): Record<string, string> {
 
 function getAppIconPath(ctx: MainProcessContext): string {
   const isDev = !!process.env.VITE_DEV_SERVER_URL
-
-  if (process.platform === 'darwin') {
-    return isDev
-      ? join(__dirname, '../public/icon.icns')
-      : join(process.resourcesPath, 'icon.icns')
-  }
-
   return isDev
-    ? join(__dirname, '../public/icon.ico')
-    : join(process.resourcesPath, 'icon.ico')
+    ? join(__dirname, '../icon.png')
+    : join(process.resourcesPath, 'icon.png')
 }
 
 function loadNativeImageIfValid(iconPath: string, purpose: string): ReturnType<typeof nativeImage.createFromPath> | null {
@@ -84,10 +77,8 @@ function getWindowIconOptions(ctx: MainProcessContext): Pick<BrowserWindowConstr
 
 function getDockIconPath(ctx: MainProcessContext): string {
   const isDev = !!process.env.VITE_DEV_SERVER_URL
-  const devPaddedPath = join(__dirname, '../public/icon-dock.png')
-  const devFallbackPath = join(__dirname, '../public/logo.png')
   return isDev
-    ? (existsSync(devPaddedPath) ? devPaddedPath : devFallbackPath)
+    ? join(__dirname, '../icon.png')
     : join(process.resourcesPath, 'icon.png')
 }
 
@@ -97,22 +88,13 @@ function getDockIconPath(ctx: MainProcessContext): string {
  */
 export function getNotificationIconPath(): string | null {
   const isDev = !!process.env.VITE_DEV_SERVER_URL
-  const candidates = isDev
-    ? [join(__dirname, '../public/logo.png'), join(__dirname, '../public/icon-dock.png')]
-    : [join(process.resourcesPath, 'icon.png')]
-  return candidates.find(p => existsSync(p)) || null
+  const iconPath = isDev
+    ? join(__dirname, '../icon.png')
+    : join(process.resourcesPath, 'icon.png')
+  return existsSync(iconPath) ? iconPath : null
 }
 
 function getTrayIconPath(ctx: MainProcessContext): string {
-  if (process.platform === 'darwin') {
-    const isDev = !!process.env.VITE_DEV_SERVER_URL
-    const devTrayPath = join(__dirname, '../public/tray-mac.png')
-    const packagedTrayPath = join(process.resourcesPath, 'tray-mac.png')
-
-    if (isDev && existsSync(devTrayPath)) return devTrayPath
-    if (!isDev && existsSync(packagedTrayPath)) return packagedTrayPath
-  }
-
   return getAppIconPath(ctx)
 }
 
@@ -497,27 +479,9 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
       focusMainWindow()
     }
 
-    const togglePetWindow = () => {
-      const configService = ctx.getConfigService()
-      const enabled = Boolean(configService?.get('petDesktopEnabled')) && manager.isPetWindowOpen()
-      if (enabled) {
-        manager.closePetWindow()
-        configService?.set('petDesktopEnabled', false)
-        ctx.broadcastToWindows('config:changed', { key: 'petDesktopEnabled', value: false })
-        return
-      }
-
-      configService?.set('petDesktopEnabled', true)
-      ctx.broadcastToWindows('config:changed', { key: 'petDesktopEnabled', value: true })
-      const currentPet = configService?.get('petCurrent')
-      if (currentPet) manager.openPetWindow()
-    }
-
     const showTrayMenu = async () => {
       const tray = ctx.getTray()
       if (!tray) return
-      const configService = ctx.getConfigService()
-      const petEnabled = Boolean(configService?.get('petDesktopEnabled')) && manager.isPetWindowOpen()
       const mainWindow = ctx.getMainWindow()
       const mainVisible = Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized())
 
@@ -527,14 +491,7 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
           click: toggleMainWindow,
         },
         { type: 'separator' },
-        { label: 'AI 助手', click: () => focusMainWindow('/agent') },
         { label: '导出', click: () => focusMainWindow('/export') },
-        {
-          label: '桌宠',
-          type: 'checkbox',
-          checked: petEnabled,
-          click: togglePetWindow,
-        },
         { label: '设置', click: () => focusMainWindow('/settings') },
         { type: 'separator' },
         {
@@ -562,7 +519,7 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
       tray.setIgnoreDoubleClickEvents(true)
     }
 
-    tray.setToolTip('密语 CipherTalk')
+    tray.setToolTip('CloudLight WeChat')
     tray.on('click', () => { void showTrayMenu() })
     tray.on('right-click', () => { void showTrayMenu() })
 
@@ -634,8 +591,8 @@ export function createWindowManager(ctx: MainProcessContext): WindowManager {
         app.quit()
       })
 
-      // 启动屏阶段已成功连库：直接落地首页，避免首帧闪现新增账号引导页
-      const initialHash = ctx.getStartupDbConnected() ? '/home' : ''
+      // 启动屏阶段已成功连库：直接落地默认的导出数据页，避免首帧闪现新增账号引导页
+      const initialHash = ctx.getStartupDbConnected() ? '/export' : ''
       if (process.env.VITE_DEV_SERVER_URL) {
         win.loadURL(`${process.env.VITE_DEV_SERVER_URL}?${getThemeQueryParams(ctx)}${initialHash ? `#${initialHash}` : ''}`)
         setupDevToolsShortcut(win)

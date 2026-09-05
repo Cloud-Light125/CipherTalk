@@ -841,7 +841,7 @@ function DatabaseTab({ showMessage }: DatabaseTabProps) {
             <Card className="h-fit">
               <Card.Header>
                 <Card.Title>图片解密</Card.Title>
-                <Card.Description>您只负责获取密钥，其他的交给密语-CipherTalk。</Card.Description>
+                <Card.Description>您只负责获取密钥，其他的交给 CloudLight WeChat。</Card.Description>
               </Card.Header>
               <Card.Content>
                 <Fieldset>

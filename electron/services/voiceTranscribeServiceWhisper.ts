@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, createWriteStream, statSync, unlinkSync, writeFi
 import { spawn, ChildProcess } from 'child_process'
 import * as https from 'https'
 import * as http from 'http'
-import { getAppDataPath, getAppPath, getTempPath, isElectronPackaged } from './runtimePaths'
+import { getAppPath, getTempPath, getUserDataPath, isElectronPackaged } from './runtimePaths'
 
 interface ModelConfig {
     name: string
@@ -106,7 +106,7 @@ export class VoiceTranscribeServiceWhisper {
     private downloadCancels = new Map<string, DownloadCancelState>()
 
     constructor() {
-        this.modelsDir = join(getAppDataPath(), 'ciphertalk', 'whisper-models')
+        this.modelsDir = join(getUserDataPath(), 'whisper-models')
         
         // whisper.cpp 的可执行文件路径
         let resourcesPath: string

@@ -416,7 +416,7 @@ export class RelayOneService {
   private async doEnsureManagedKeys(force: boolean, activate: boolean): Promise<RelayOneEnsureKeysResult> {
     this.requireSession()
     const configService = this.getConfigService()
-    if (!configService) throw new Error('CipherTalk 配置服务尚未就绪')
+    if (!configService) throw new Error('CloudLight WeChat 配置服务尚未就绪')
 
     const storedState = getRelayOneManagedState(configService)
     if (!force && storedState && RELAYONE_MANAGED_GROUPS.every((target) =>

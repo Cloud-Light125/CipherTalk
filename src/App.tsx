@@ -8,7 +8,6 @@ import BottomDock from './components/BottomDock'
 import RouteGuard from './components/RouteGuard'
 import DecryptProgressOverlay from './components/DecryptProgressOverlay'
 import WelcomePage from './pages/WelcomePage'
-import HomePage from './pages/HomePage'
 import ChatPage from './pages/ChatPage'
 import AgreementPage from './pages/AgreementPage'
 import DataManagementPage from './pages/DataManagementPage'
@@ -47,7 +46,7 @@ import { applyWindowChromeToDocument, syncWindowControlsOverlayToDocument } from
 import type { MemoryMigrationStatusInfo } from './types/electron'
 import './App.css'
 
-const MAIN_WINDOW_NAV_ROUTES = new Set(['/home', '/agent', '/personas', '/settings', '/pets', '/diary', '/export'])
+const MAIN_WINDOW_NAV_ROUTES = new Set(['/agent', '/personas', '/settings', '/pets', '/diary', '/export'])
 
 function App() {
   const navigate = useNavigate()
@@ -277,9 +276,9 @@ function App() {
             setDbConnected(true, dbPath)
             // 预加载用户信息
             await preloadUserInfo()
-            // 如果当前在欢迎页，跳转到首页
+            // 如果当前在欢迎页，进入默认的导出数据页
             if (window.location.hash === '#/' || window.location.hash === '') {
-              navigate('/home')
+              navigate('/export')
             }
             return
           }
@@ -293,9 +292,9 @@ function App() {
             setDbConnected(true, dbPath)
             // 预加载用户信息
             await preloadUserInfo()
-            // 如果当前在欢迎页，跳转到首页
+            // 如果当前在欢迎页，进入默认的导出数据页
             if (window.location.hash === '#/' || window.location.hash === '') {
-              navigate('/home')
+              navigate('/export')
             }
           } else {
             console.log('自动连接失败:', result.error)
@@ -457,7 +456,7 @@ function App() {
               <h2>用户协议与隐私政策 <span style={{ fontSize: '14px', fontWeight: 'normal', opacity: 0.6 }}>v{configService.CURRENT_AGREEMENT_VERSION}.0</span></h2>
             </div>
             <div className="agreement-window-body">
-              <p className="agreement-intro">欢迎使用密语！在使用本软件前，请仔细阅读并同意以下条款：</p>
+              <p className="agreement-intro">欢迎使用 CloudLight WeChat！在使用本软件前，请仔细阅读并同意以下条款：</p>
 
               <div className="agreement-scroll">
                 <h3>一、用户协议</h3>
@@ -553,7 +552,7 @@ function App() {
 
   // 主窗口 - 完整布局
   const disableContentOverflow = ['/data-management', '/settings', '/mcp', '/agent', '/personas', '/diary', '/pets'].includes(location.pathname)
-  const fullPageRoutes = ['/home']
+  const fullPageRoutes: string[] = []
   const isFullPage = fullPageRoutes.includes(location.pathname)
   const edgeToEdgeRoutes: string[] = []
   const isEdgeToEdge = edgeToEdgeRoutes.includes(location.pathname)
@@ -564,7 +563,7 @@ function App() {
   return (
     <div className={`app-container${navLayout === 'sidebar' ? ' app-container--sidebar' : ''}`}>
       <Toast.Provider className="ct-toast-region" placement="top" />
-      {navLayout === 'sidebar' && <Sidebar autoCollapse={isAgentPage || location.pathname === '/home'} />}
+      {navLayout === 'sidebar' && <Sidebar autoCollapse={isAgentPage} />}
       <div className="app-shell">
       <TitleBar showTitle={false} />
       {pendingMemoryMigrationStatus && (
@@ -622,11 +621,11 @@ function App() {
           <RouteGuard>
             <Routes>
               <Route path="/" element={<WelcomePage />} />
-              <Route path="/home" element={<HomePage />} />
-              <Route path="/analytics" element={<Navigate to="/home" replace />} />
-              <Route path="/annual-report" element={<Navigate to="/home" replace />} />
-              <Route path="/group-analytics-window" element={<Navigate to="/home" replace />} />
-              <Route path="/annual-report-window" element={<Navigate to="/home" replace />} />
+              <Route path="/home" element={<Navigate to="/export" replace />} />
+              <Route path="/analytics" element={<Navigate to="/export" replace />} />
+              <Route path="/annual-report" element={<Navigate to="/export" replace />} />
+              <Route path="/group-analytics-window" element={<Navigate to="/export" replace />} />
+              <Route path="/annual-report-window" element={<Navigate to="/export" replace />} />
               <Route path="/data-management" element={<DataManagementPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/mcp" element={<McpPage />} />
@@ -635,7 +634,7 @@ function App() {
               <Route path="/diary" element={<DiaryPage />} />
               <Route path="/pets" element={<PetsPage />} />
               <Route path="/export" element={<ExportPage />} />
-              <Route path="/device-connect" element={<Navigate to="/home" replace />} />
+              <Route path="/device-connect" element={<Navigate to="/export" replace />} />
               <Route path="/chat-history/:sessionId/:messageId" element={<ChatHistoryPage />} />
               <Route path="/plugin/:pluginId/:viewId" element={<PluginViewPage />} />
             </Routes>

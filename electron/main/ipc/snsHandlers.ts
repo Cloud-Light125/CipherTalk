@@ -27,7 +27,7 @@ export function registerSnsHandlers(ctx: MainProcessContext): void {
           ctx.getLogService()?.warn('SNS', '朋友圈功能需要先连接数据库')
           return {
             success: false,
-            error: '请先在首页配置并连接数据库后再使用朋友圈功能'
+            error: '请先在导出数据页面配置并连接数据库后再使用朋友圈功能'
           }
         }
         ctx.getLogService()?.warn('SNS', '获取朋友圈时间线失败', { error: result.error })

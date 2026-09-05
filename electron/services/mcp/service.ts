@@ -136,7 +136,7 @@ export class McpReadService {
 
     throw new McpToolError(
       'APP_NOT_RUNNING',
-      'CipherTalk 主应用未就绪，无法代理查询。',
+      'CloudLight WeChat 主应用未就绪，无法代理查询。',
       '已尝试自动拉起主应用，但内部 MCP 代理未在限定时间内就绪。'
     )
   }
@@ -259,7 +259,7 @@ export class McpReadService {
       headers: proxyConfig.token ? { Authorization: `Bearer ${proxyConfig.token}` } : {}
     })
     if (!response.ok) {
-      throw new McpToolError('APP_NOT_RUNNING', 'CipherTalk 主应用内部 MCP 代理不可用。')
+      throw new McpToolError('APP_NOT_RUNNING', 'CloudLight WeChat 主应用内部 MCP 代理不可用。')
     }
     return this.callProxy<McpHealthPayload>('health_check')
   }

@@ -3,7 +3,7 @@ import * as path from 'path'
 import * as https from 'https'
 import * as http from 'http'
 import * as fzstd from 'fzstd'
-import { getDocumentsPath, getExePath } from '../runtimePaths'
+import { getDefaultDataRoot } from '../runtimePaths'
 import { dbAdapter } from '../dbAdapter'
 import { findAccountDir } from './accountUtils'
 import { decodeMessageContent } from './rowDecoders'
@@ -19,23 +19,7 @@ import type { ChatServiceState } from './state'
 export function getDecryptedDbDir(state: ChatServiceState): string {
   const cachePath = state.configService.get('cachePath')
   if (cachePath) return cachePath
-
-  if (process.env.VITE_DEV_SERVER_URL) {
-    const documentsPath = getDocumentsPath()
-    return path.join(documentsPath, 'CipherTalkData')
-  }
-
-  const exePath = getExePath()
-  const installDir = path.dirname(exePath)
-
-  const isOnCDrive = /^[cC]:/i.test(installDir) || installDir.startsWith('\\')
-
-  if (isOnCDrive) {
-    const documentsPath = getDocumentsPath()
-    return path.join(documentsPath, 'CipherTalkData')
-  }
-
-  return path.join(installDir, 'CipherTalkData')
+  return getDefaultDataRoot()
 }
 
 /**

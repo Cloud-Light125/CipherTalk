@@ -461,7 +461,7 @@ export default function PosterStyleWindow() {
         })
         .join('\n')
       : (context.sampleLines || []).join('\n')
-    const prompt = `你是 CipherTalk 海报样式设计 Agent。请为聊天记录分享海报生成一段 CSS 主题。
+    const prompt = `你是 CloudLight WeChat 海报样式设计 Agent。请为聊天记录分享海报生成一段 CSS 主题。
 
 只输出 CSS，不要解释，不要 Markdown，除 CSS 外不要写任何文字。
 
@@ -528,7 +528,7 @@ ${sampleLines || '无'}`
       const domtoimage = (await import('dom-to-image-more')).default
       const dataUrl = await (domtoimage as any).toPng(node, getPosterExportOptions(node))
       const link = document.createElement('a')
-      link.download = `密语聊天记录-${Date.now()}.png`
+      link.download = `CloudLight-WeChat-聊天记录-${Date.now()}.png`
       link.href = dataUrl
       link.click()
       setStatusText('海报已保存')
@@ -782,7 +782,7 @@ ${sampleLines || '无'}`
                     })}
                   </div>
 
-                  <div className="poster-card__footer">由 密语 CipherTalk 导出</div>
+                  <div className="poster-card__footer">由 CloudLight WeChat 导出</div>
                 </div>
               </div>
             )}

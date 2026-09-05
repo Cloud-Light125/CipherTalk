@@ -1535,7 +1535,7 @@ export default function AgentPage() {
     setShareSaving(true)
     setShareError('')
     try {
-      const fileName = `CipherTalk-Agent-${sanitizeAgentShareFileName(sharePreviewData.title)}-${formatAgentShareFileDate()}.png`
+      const fileName = `CloudLight-WeChat-Agent-${sanitizeAgentShareFileName(sharePreviewData.title)}-${formatAgentShareFileDate()}.png`
       const saveResult = await window.electronAPI.dialog.saveFile({
         title: '保存 Agent 分享图',
         defaultPath: fileName,

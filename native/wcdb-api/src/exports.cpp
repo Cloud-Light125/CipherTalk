@@ -5,6 +5,7 @@
 #include "runtime.hpp"
 
 #include <cstdlib>
+#include <exception>
 
 extern "C" {
 
@@ -18,7 +19,11 @@ WCDB_API_EXPORT int32_t wcdb_check_license(void)
 
 WCDB_API_EXPORT int32_t wcdb_close_account(int64_t handle)
 {
-    return wcdb_native::runtime().close_account(handle);
+    try {
+        return wcdb_native::runtime().close_account(handle);
+    } catch (const std::exception&) {
+        return wcdb_native::kStatusInternal;
+    }
 }
 
 WCDB_API_EXPORT int32_t wcdb_close_message_cursor(int64_t handle, int64_t cursor)
@@ -35,7 +40,14 @@ WCDB_API_EXPORT int32_t wcdb_exec_query(
     const char* sql,
     void** out_json)
 {
-    return wcdb_native::execute_query(handle, kind, path, sql, out_json);
+    if (out_json != nullptr) {
+        *out_json = nullptr;
+    }
+    try {
+        return wcdb_native::execute_query(handle, kind, path, sql, out_json);
+    } catch (const std::exception&) {
+        return wcdb_native::kStatusQueryFailed;
+    }
 }
 
 WCDB_API_EXPORT int32_t wcdb_export_message_chunk(
@@ -89,7 +101,14 @@ WCDB_API_EXPORT void wcdb_free_string(void* value)
 
 WCDB_API_EXPORT int32_t wcdb_get_logs(void** out_json)
 {
-    return wcdb_native::runtime().get_logs(out_json);
+    if (out_json != nullptr) {
+        *out_json = nullptr;
+    }
+    try {
+        return wcdb_native::runtime().get_logs(out_json);
+    } catch (const std::exception&) {
+        return wcdb_native::kStatusInternal;
+    }
 }
 
 WCDB_API_EXPORT int32_t wcdb_get_sns_timeline(
@@ -117,7 +136,11 @@ WCDB_API_EXPORT int32_t wcdb_get_sns_timeline(
 
 WCDB_API_EXPORT int32_t wcdb_init(void)
 {
-    return wcdb_native::runtime().init();
+    try {
+        return wcdb_native::runtime().init();
+    } catch (const std::exception&) {
+        return wcdb_native::kStatusInternal;
+    }
 }
 
 WCDB_API_EXPORT int32_t wcdb_open_account(
@@ -125,7 +148,14 @@ WCDB_API_EXPORT int32_t wcdb_open_account(
     const char* key,
     int64_t* out_handle)
 {
-    return wcdb_native::runtime().open_account(db_path, key, out_handle);
+    if (out_handle != nullptr) {
+        *out_handle = 0;
+    }
+    try {
+        return wcdb_native::runtime().open_account(db_path, key, out_handle);
+    } catch (const std::exception&) {
+        return wcdb_native::kStatusInternal;
+    }
 }
 
 WCDB_API_EXPORT int32_t wcdb_open_message_cursor(
@@ -164,7 +194,11 @@ WCDB_API_EXPORT int32_t wcdb_open_message_cursor_lite(
 
 WCDB_API_EXPORT int32_t wcdb_set_app_version(const char* version)
 {
-    return wcdb_native::runtime().set_app_version(version);
+    try {
+        return wcdb_native::runtime().set_app_version(version);
+    } catch (const std::exception&) {
+        return wcdb_native::kStatusInternal;
+    }
 }
 
 WCDB_API_EXPORT int32_t wcdb_set_client_info(
@@ -172,7 +206,11 @@ WCDB_API_EXPORT int32_t wcdb_set_client_info(
     const char* client_type,
     const char* app_version)
 {
-    return wcdb_native::runtime().set_client_info(application_id, client_type, app_version);
+    try {
+        return wcdb_native::runtime().set_client_info(application_id, client_type, app_version);
+    } catch (const std::exception&) {
+        return wcdb_native::kStatusInternal;
+    }
 }
 
 WCDB_API_EXPORT int32_t wcdb_set_my_wxid(int64_t handle, const char* wxid)
@@ -190,8 +228,11 @@ WCDB_API_EXPORT int32_t wcdb_set_trusted_time(int64_t unix_time)
 
 WCDB_API_EXPORT void wcdb_shutdown(void)
 {
-    wcdb_native::runtime().shutdown();
+    try {
+        wcdb_native::runtime().shutdown();
+    } catch (const std::exception&) {
+        // Shutdown is deliberately idempotent and must not throw across the C ABI.
+    }
 }
 
 } // extern "C"
-

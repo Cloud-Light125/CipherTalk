@@ -8,7 +8,7 @@ const rootDir = path.resolve(__dirname, '..')
 const entry = path.join(rootDir, 'dist-electron', 'mcp.js')
 
 if (!fs.existsSync(entry)) {
-  process.stderr.write('[CipherTalk MCP Runner] dist-electron/mcp.js not found, running build:mcp...\n')
+  process.stderr.write('[CloudLight WeChat MCP Runner] dist-electron/mcp.js not found, running build:mcp...\n')
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
   const build = spawnSync(npmCmd, ['run', 'build:mcp'], {
     cwd: rootDir,
@@ -18,7 +18,7 @@ if (!fs.existsSync(entry)) {
   })
 
   if (build.status !== 0 || !fs.existsSync(entry)) {
-    process.stderr.write('[CipherTalk MCP Runner] build:mcp failed, cannot start MCP server\n')
+    process.stderr.write('[CloudLight WeChat MCP Runner] build:mcp failed, cannot start MCP server\n')
     process.exit(build.status ?? 1)
   }
 }
@@ -55,6 +55,6 @@ child.on('exit', (code, signal) => {
 })
 
 child.on('error', (error) => {
-  process.stderr.write(`[CipherTalk MCP Runner] failed: ${String(error)}\n`)
+  process.stderr.write(`[CloudLight WeChat MCP Runner] failed: ${String(error)}\n`)
   process.exit(1)
 })

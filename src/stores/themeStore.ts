@@ -216,12 +216,12 @@ export const useThemeStore = create<ThemeState>()((set, get) => ({
       }
 
       // 一次性迁移：统一切换到左侧边栏布局（与窗口标题栏融为一体的微信式布局）
-      const migrated = await window.electronAPI.config.get('navLayoutMigratedV7') as boolean | undefined
+      const migrated = await window.electronAPI.config.get('navLayoutMigratedV8') as boolean | undefined
       if (!migrated) {
         navLayout = 'sidebar'
         try {
           await window.electronAPI.config.set('navLayout', 'sidebar')
-          await window.electronAPI.config.set('navLayoutMigratedV7', true)
+          await window.electronAPI.config.set('navLayoutMigratedV8', true)
         } catch (e) {
           console.error('迁移导航布局失败:', e)
         }

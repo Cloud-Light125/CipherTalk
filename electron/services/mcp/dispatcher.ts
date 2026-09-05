@@ -30,11 +30,11 @@ export async function executeMcpTool<T extends McpToolName>(
   switch (toolName) {
     case 'health_check': {
       const payload = getMcpHealthPayload()
-      return { summary: 'CipherTalk MCP health is available.', payload } as McpToolResult<T>
+      return { summary: 'CloudLight WeChat MCP health is available.', payload } as McpToolResult<T>
     }
     case 'get_status': {
       const payload = getMcpStatusPayload()
-      return { summary: 'CipherTalk MCP status loaded.', payload } as McpToolResult<T>
+      return { summary: 'CloudLight WeChat MCP status loaded.', payload } as McpToolResult<T>
     }
     case 'get_moments_timeline': {
       const payload = await readService.getMomentsTimeline(args as any)

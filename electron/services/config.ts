@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
-import { getUserDataPath } from './runtimePaths'
+import { getDefaultDataRoot, getUserDataPath } from './runtimePaths'
 import type { AccountProfile, AccountProfileInput, AccountProfilePatch } from '../../src/types/account'
 
 const ACCOUNT_FIELD_KEYS = new Set([
@@ -354,7 +354,7 @@ const defaults: ConfigSchema = {
   cachePath: '',
   lastOpenedDb: '',
   lastSession: '',
-  exportPath: '',
+  exportPath: getDefaultDataRoot(),
   theme: 'cloud-dancer',
   themeMode: 'system',
   language: 'zh-CN',
@@ -1131,6 +1131,6 @@ export class ConfigService {
     if (configured && configured.trim().length > 0) {
       return configured
     }
-    return path.join(getUserDataPath(), 'CipherTalk')
+    return getUserDataPath()
   }
 }

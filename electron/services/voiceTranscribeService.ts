@@ -472,15 +472,9 @@ export class VoiceTranscribeService {
         }
     }
 
-    /**
-     * 获取模型存储目录
-     * 注意：sherpa-onnx 的 C++ 底层无法正确处理中文路径，
-     * 所以强制使用 APPDATA 目录（通常不含中文）
-     */
+    /** 获取模型存储目录；跟随 CloudLight WeChat 的统一数据根目录。 */
     private resolveModelDir(): string {
-        // 强制使用 APPDATA 目录，避免中文路径问题
-        // Windows: C:\Users\<username>\AppData\Roaming\ciphertalk\models\sensevoice
-        return join(getAppDataPath(), 'ciphertalk', 'models', 'sensevoice')
+        return join(getUserDataPath(), 'models', 'sensevoice')
     }
 
     /**

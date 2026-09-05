@@ -8,6 +8,20 @@ import net from 'node:net'
 import { builtinModules } from 'module'
 
 const pkg = require('./package.json')
+const wcdbCompiledPolicy = {
+  requestedMode: 'candidate-preferred',
+  policySource: 'compiled-production-policy',
+  candidateRelativeDirectory: 'wcdb-capi-candidate',
+  candidateApiSha256: '1320DFA82C1A7D1AF5B66FBBA32A3731FEFE92DFF7A4B085159BCE70F95A1767',
+  candidateWcdbSha256: '057CE34A59AE38B2892E7C108D0BE6DB616E3CE00A2221FCC8BB694A443EA965',
+  wcdbTag: 'v2.1.16',
+  wcdbCommit: 'df808591b9f9a9ab42156006819c3550d5af13a3',
+  legacyApiSha256: '479D66298C17190D2FCD5CF42F0D5BC2EEAE7669F7380DB773ECB36CE918C68E',
+  legacyWcdbSha256: 'DE80DC7B9117076F7F77E5AB5D6EE8DC44F8D3829C10549A800AF2E4E219EBF8'
+}
+const wcdbElectronDefine = {
+  __CIPHERTALK_WCDB_COMPILED_POLICY__: JSON.stringify(wcdbCompiledPolicy)
+}
 const devServerHost = process.env.VITE_HOST || '127.0.0.1'
 const devServerPort = Number(process.env.VITE_PORT || process.env.PORT || 5321)
 const nodeBuiltinModules = new Set([
@@ -74,6 +88,7 @@ export default defineConfig(async () => {
         {
           entry: 'electron/main.ts',
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron',
               rollupOptions: {
@@ -88,6 +103,7 @@ export default defineConfig(async () => {
             options.reload()
           },
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron'
             }
@@ -96,6 +112,7 @@ export default defineConfig(async () => {
         {
           entry: 'electron/transcribeWorker.ts',
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron',
               rollupOptions: { external }
@@ -105,6 +122,7 @@ export default defineConfig(async () => {
         {
           entry: 'electron/imageDecryptWorker.ts',
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron',
               rollupOptions: { external }
@@ -114,6 +132,7 @@ export default defineConfig(async () => {
         {
           entry: 'electron/wcdbUtilityProcess.ts',
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron',
               rollupOptions: { external }
@@ -123,6 +142,7 @@ export default defineConfig(async () => {
         {
           entry: 'electron/aiAgentUtilityProcess.ts',
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron',
               rollupOptions: { external }
@@ -132,6 +152,7 @@ export default defineConfig(async () => {
         {
           entry: 'electron/aiExportUtilityProcess.ts',
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron',
               rollupOptions: { external }
@@ -141,6 +162,7 @@ export default defineConfig(async () => {
         {
           entry: 'electron/exportUtilityProcess.ts',
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron',
               rollupOptions: { external }
@@ -150,6 +172,7 @@ export default defineConfig(async () => {
         {
           entry: 'electron/mcp.ts',
           vite: {
+            define: wcdbElectronDefine,
             build: {
               outDir: 'dist-electron',
               rollupOptions: { external }
@@ -163,6 +186,9 @@ export default defineConfig(async () => {
       alias: {
         '@': resolve(__dirname, 'src')
       }
+    },
+    define: {
+      ...wcdbElectronDefine
     },
     build: {
       rollupOptions: {

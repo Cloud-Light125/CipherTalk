@@ -56,9 +56,9 @@ function guessFileNameFromUrl(url, contentType) {
   }
 }
 
-// 从 release-body.md 的一级标题 (## CipherTalk vX.X.X · 副标题) 中拿出副标题
+// 从 release-body.md 的一级标题 (## CloudLight WeChat vX.X.X · 副标题) 中拿出副标题
 function extractSubtitle(markdown) {
-  const m = String(markdown || '').match(/^##\s+CipherTalk\s+v\S+\s*[·•:\|\-]\s*(.+)$/m)
+  const m = String(markdown || '').match(/^##\s+CloudLight WeChat\s+v\S+\s*[·•:\|\-]\s*(.+)$/m)
   return m ? m[1].trim() : ''
 }
 
@@ -128,7 +128,7 @@ function buildSuccessMessage(context, releaseBody) {
 
   // 标题区：产品名 + 用 <code> 包装的版本号（"代码感"）+ 副标题
   const lines = [
-    `<b>CipherTalk</b>  <code>v${escapeHtml(version)}</code>`
+    `<b>CloudLight WeChat</b>  <code>v${escapeHtml(version)}</code>`
   ]
   if (subtitle) lines.push(`<i>${escapeHtml(subtitle)}</i>`)
 
@@ -172,7 +172,7 @@ function buildFailureMessage() {
     : ''
   const version = process.env.RELEASE_VERSION || process.env.GITHUB_REF_NAME || 'unknown'
   const lines = [
-    `<b>CipherTalk ${escapeHtml(version)} · 发布失败</b>`,
+    `<b>CloudLight WeChat ${escapeHtml(version)} · 发布失败</b>`,
     '',
     '请查看 Actions 运行日志定位原因。'
   ]

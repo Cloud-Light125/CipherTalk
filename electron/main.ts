@@ -1,5 +1,7 @@
 import { app, BrowserWindow, protocol, type Tray } from 'electron'
 import { randomBytes } from 'crypto'
+import { constants as fsConstants, copyFileSync, existsSync, mkdirSync } from 'fs'
+import { join, resolve } from 'path'
 import {
   getStartupDiagnosticsLogPath,
   installElectronStartupDiagnostics,
@@ -17,6 +19,7 @@ import { registerLocalProtocols, registerPluginProtocol } from './main/protocols
 import { registerPluginNavigationGuard } from './main/pluginNavigationGuard'
 import { pluginManagerService } from './services/pluginManagerService'
 import { initAiTelemetry } from './services/ai/telemetry'
+import { APP_DISPLAY_NAME, getDefaultDataRoot } from './services/runtimePaths'
 import {
   checkAndConnectOnStartup,
   startBackgroundSync,
@@ -34,6 +37,52 @@ const appWithQuitFlag = app as AppWithQuitFlag
 let dbService: DatabaseService | null = null
 let configService: ConfigService | null = null
 let logService: LogService | null = null
+
+function configureApplicationIdentityAndDataRoot(): void {
+  const previousUserData = app.getPath('userData')
+  app.setName(APP_DISPLAY_NAME)
+  const dataRoot = getDefaultDataRoot()
+  mkdirSync(dataRoot, { recursive: true })
+  migrateLegacyConfigIfNeeded(dataRoot, previousUserData)
+  app.setPath('userData', dataRoot)
+}
+
+function migrateLegacyConfigIfNeeded(dataRoot: string, previousUserData: string): void {
+  const configName = 'ciphertalk-config.db'
+  const targetConfig = join(dataRoot, configName)
+  if (existsSync(targetConfig)) return
+
+  const legacyRoots = [
+    previousUserData,
+    join(app.getPath('appData'), 'ciphertalk'),
+    join(app.getPath('appData'), 'CipherTalk'),
+  ]
+  const seen = new Set<string>()
+
+  for (const legacyRoot of legacyRoots) {
+    const normalizedRoot = resolve(legacyRoot).toLocaleLowerCase('en-US')
+    if (seen.has(normalizedRoot) || normalizedRoot === resolve(dataRoot).toLocaleLowerCase('en-US')) continue
+    seen.add(normalizedRoot)
+
+    const sourceConfig = join(legacyRoot, configName)
+    if (!existsSync(sourceConfig)) continue
+
+    try {
+      copyFileSync(sourceConfig, targetConfig, fsConstants.COPYFILE_EXCL)
+      for (const suffix of ['-wal', '-shm']) {
+        const sourceSidecar = `${sourceConfig}${suffix}`
+        const targetSidecar = `${targetConfig}${suffix}`
+        if (existsSync(sourceSidecar) && !existsSync(targetSidecar)) {
+          copyFileSync(sourceSidecar, targetSidecar, fsConstants.COPYFILE_EXCL)
+        }
+      }
+      return
+    } catch (error) {
+      if (existsSync(targetConfig)) return
+      console.warn('[Startup] 旧配置迁移失败，将使用新的数据目录:', error)
+    }
+  }
+}
 
 function configureWindowsGpuPolicy(): void {
   if (process.platform !== 'win32') return
@@ -68,6 +117,7 @@ function configureWindowsGpuPolicy(): void {
   }
 }
 
+configureApplicationIdentityAndDataRoot()
 configureWindowsGpuPolicy()
 installElectronStartupDiagnostics(app)
 initAiTelemetry('ciphertalk-main')
@@ -187,9 +237,9 @@ ctx.setWindowManager(createWindowManager(ctx))
 markStartupMilestone('startup:window-manager-created')
 
 // Windows 通知用 AppUserModelID 作为显示的应用名，必须与 electron-builder 的 appId 一致，
-// 否则 toast 标题会回退成 Electron 默认的 "electron.app.CipherTalk"。
+// 否则 toast 标题会回退成 Electron 默认名称。
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.ciphertalk.app')
+  app.setAppUserModelId('com.cloudlight.wechat')
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock()

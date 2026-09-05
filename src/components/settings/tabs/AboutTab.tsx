@@ -53,13 +53,13 @@ function AboutTab({ appVersion }: AboutTabProps) {
         <div className="flex min-w-0 flex-col items-start gap-5 sm:flex-row sm:items-center">
           <img
             src="./About.png"
-            alt="密语 CipherTalk"
+            alt="CloudLight WeChat"
             className="pointer-events-none h-auto w-32 shrink-0 object-contain select-none"
           />
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Typography.Heading level={2} className="text-2xl font-semibold text-foreground">
-                密语 CipherTalk
+                CloudLight WeChat
               </Typography.Heading>
               <Chip size="sm" variant="soft">
                 <Chip.Label>{appVersion ? formatDisplayVersion(appVersion) : 'v...'}</Chip.Label>

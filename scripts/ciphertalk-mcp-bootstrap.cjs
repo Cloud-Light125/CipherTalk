@@ -77,7 +77,7 @@ Module._load = function patchedLoad(request, parent, isMain) {
 
 const entry = String(process.env.CIPHERTALK_MCP_ENTRY || "").trim();
 if (!entry) {
-  process.stderr.write("[CipherTalk MCP Bootstrap] CIPHERTALK_MCP_ENTRY is not set\n");
+  process.stderr.write("[CloudLight WeChat MCP Bootstrap] CIPHERTALK_MCP_ENTRY is not set\n");
   process.exit(1);
 }
 

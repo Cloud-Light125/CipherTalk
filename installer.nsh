@@ -5,17 +5,17 @@ ManifestDPIAware true
 
 ; 左下角品牌栏（替换默认的 Nullsoft 字样）
 !macro customHeader
-  BrandingText "CipherTalk · 密语"
+  BrandingText "CloudLight WeChat"
 !macroend
 
 ; 自定义欢迎页（默认 assisted 安装器没有欢迎页，直接进目录选择）
 !macro customWelcomePage
-  !define MUI_WELCOMEPAGE_TITLE "欢迎安装 CipherTalk 密语"
-  !define MUI_WELCOMEPAGE_TEXT "CipherTalk 是一款安全的本地聊天记录工具。$\r$\n$\r$\n数据完全存储在本地，隐私尽在掌握。$\r$\n$\r$\n点击「下一步」开始安装。"
+  !define MUI_WELCOMEPAGE_TITLE "欢迎安装 CloudLight WeChat"
+  !define MUI_WELCOMEPAGE_TEXT "CloudLight WeChat 是一款安全的本地聊天记录工具。$\r$\n$\r$\n数据完全存储在本地，隐私尽在掌握。$\r$\n$\r$\n点击「下一步」开始安装。"
   !insertmacro MUI_PAGE_WELCOME
 !macroend
 
-; 自定义完成页（文案 + 保留“运行 CipherTalk”勾选框）
+; 自定义完成页（文案 + 保留“运行 CloudLight WeChat”勾选框）
 !macro customFinishPage
   Function StartApp
     ${if} ${isUpdated}
@@ -27,9 +27,9 @@ ManifestDPIAware true
   FunctionEnd
   !define MUI_FINISHPAGE_RUN
   !define MUI_FINISHPAGE_RUN_FUNCTION "StartApp"
-  !define MUI_FINISHPAGE_RUN_TEXT "立即启动 CipherTalk"
+  !define MUI_FINISHPAGE_RUN_TEXT "立即启动 CloudLight WeChat"
   !define MUI_FINISHPAGE_TITLE "安装完成"
-  !define MUI_FINISHPAGE_TEXT "CipherTalk 已成功安装到你的电脑。$\r$\n$\r$\n点击「完成」关闭向导，开始使用。"
+  !define MUI_FINISHPAGE_TEXT "CloudLight WeChat 已成功安装到你的电脑。$\r$\n$\r$\n点击「完成」关闭向导，开始使用。"
   !insertmacro MUI_PAGE_FINISH
 !macroend
 
@@ -40,10 +40,10 @@ ManifestDPIAware true
 
 ; 在安装开始前修正安装目录
 !macro preInit
-  ; 如果安装目录不以 CipherTalk 结尾，自动追加
+  ; 如果安装目录不以 CloudLight WeChat 结尾，自动追加
   ${WordFind} "$INSTDIR" "\" "-1" $R0
-  ${If} $R0 != "CipherTalk"
-    StrCpy $INSTDIR "$INSTDIR\CipherTalk"
+  ${If} $R0 != "CloudLight WeChat"
+    StrCpy $INSTDIR "$INSTDIR\CloudLight WeChat"
   ${EndIf}
 !macroend
 

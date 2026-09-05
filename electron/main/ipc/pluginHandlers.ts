@@ -879,7 +879,7 @@ export function registerPluginHandlers(ctx: MainProcessContext): void {
     const picked = await dialog.showOpenDialog({
       title: '选择插件安装包',
       properties: ['openFile'],
-      filters: [{ name: 'CipherTalk 插件', extensions: ['ctp', 'ctplugin', 'zip'] }],
+      filters: [{ name: 'CloudLight WeChat 插件', extensions: ['ctp', 'ctplugin', 'zip'] }],
     })
     const zipPath = picked.filePaths[0]
     if (picked.canceled || !zipPath) return { success: false, canceled: true }

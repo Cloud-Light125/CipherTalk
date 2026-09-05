@@ -556,7 +556,7 @@ class CodexSubscriptionService {
       await upsertCodexAccount(credentials)
       this.resetCaches()
       response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-      response.end(callbackHtml(true, '授权信息已保存到密语，可以关闭这个页面。'))
+      response.end(callbackHtml(true, '授权信息已保存到 CloudLight WeChat，可以关闭这个页面。'))
       this.closeServer()
       this.emitStatus(await this.getStatus())
     } catch (error) {

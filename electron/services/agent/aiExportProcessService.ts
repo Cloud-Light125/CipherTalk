@@ -142,7 +142,7 @@ export class AiExportProcessService {
           packaged: isElectronPackaged(),
         })
         worker = utilityProcess.fork(utilityPath, [], {
-          serviceName: 'CipherTalk AI Export',
+          serviceName: 'CloudLight WeChat AI Export',
           stdio: 'pipe',
           env: { ...getElectronWorkerEnv(), CT_AGENT_WCDB_PROXY: '1' },
         })

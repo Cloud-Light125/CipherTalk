@@ -38,8 +38,8 @@ function TitleBar({ className, rightContent, title, variant = 'app', showTitle =
 
   const titleNode = showTitle ? (
     <>
-      <img src="./logo.png" alt="密语" className="title-logo" />
-      <span className="titles">{displayTitle || 'CipherTalk'}</span>
+      <img src="./logo.png" alt="CloudLight WeChat" className="title-logo" />
+      <span className="titles">{displayTitle || 'CloudLight WeChat'}</span>
     </>
   ) : null
 

@@ -36,7 +36,7 @@ async function main() {
   if (mode === 'packaged') {
     const launcherPath = process.argv[3] || (
       process.platform === 'darwin'
-        ? path.join(cwd, 'CipherTalk.app', 'Contents', 'MacOS', 'ciphertalk-mcp')
+        ? path.join(cwd, 'CloudLight WeChat.app', 'Contents', 'MacOS', 'ciphertalk-mcp')
         : path.join(cwd, 'ciphertalk-mcp.cmd')
     )
     command = launcherPath
@@ -91,6 +91,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('[CipherTalk MCP Probe] failed:', error)
+  console.error('[CloudLight WeChat MCP Probe] failed:', error)
   process.exit(1)
 })

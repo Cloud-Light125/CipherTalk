@@ -10,11 +10,11 @@ const readService = new McpReadService()
 export function registerCipherTalkMcpTools(server: any) {
   server.registerTool('health_check', {
     title: 'Health Check',
-    description: 'Return CipherTalk MCP health information.'
+    description: 'Return CloudLight WeChat MCP health information.'
   }, async () => {
     try {
       const payload = await readService.healthCheck()
-      return createToolSuccess('CipherTalk MCP health is available.', payload)
+      return createToolSuccess('CloudLight WeChat MCP health is available.', payload)
     } catch (error) {
       return createToolError(error)
     }
@@ -22,11 +22,11 @@ export function registerCipherTalkMcpTools(server: any) {
 
   server.registerTool('get_status', {
     title: 'Get Status',
-    description: 'Return CipherTalk MCP runtime and configuration status.'
+    description: 'Return CloudLight WeChat MCP runtime and configuration status.'
   }, async () => {
     try {
       const payload = await readService.getStatus()
-      return createToolSuccess('CipherTalk MCP status loaded.', payload)
+      return createToolSuccess('CloudLight WeChat MCP status loaded.', payload)
     } catch (error) {
       return createToolError(error)
     }
@@ -223,7 +223,7 @@ export function registerCipherTalkMcpTools(server: any) {
 
   server.registerTool('transcribe_voice_message', {
     title: 'Transcribe Voice Message',
-    description: 'Transcribe one WeChat voice message into text using the current CipherTalk STT settings. Use get_messages or search_messages first to get the voice message cursor fields.',
+    description: 'Transcribe one WeChat voice message into text using the current CloudLight WeChat STT settings. Use get_messages or search_messages first to get the voice message cursor fields.',
     inputSchema: {
       sessionId: z.string().trim().min(1).describe('Required chat sessionId containing the voice message.'),
       localId: z.number().int().positive().describe('Voice message localId from message.cursor.localId.'),
@@ -242,7 +242,7 @@ export function registerCipherTalkMcpTools(server: any) {
 
   server.registerTool('transcribe_audio_file', {
     title: 'Transcribe Audio File',
-    description: 'Transcribe a local audio file such as mp3, wav, m4a, flac, ogg, opus, aac, or amr into text using the current CipherTalk STT settings.',
+    description: 'Transcribe a local audio file such as mp3, wav, m4a, flac, ogg, opus, aac, or amr into text using the current CloudLight WeChat STT settings.',
     inputSchema: {
       filePath: z.string().trim().min(1).describe('Absolute local path to the audio file.')
     },

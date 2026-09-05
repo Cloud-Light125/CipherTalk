@@ -1,7 +1,7 @@
 import { dirname, join } from 'path'
 import { existsSync } from 'fs'
 import { ConfigService } from '../config'
-import { getAppPath, getAppVersion, getDocumentsPath, getExePath, isElectronPackaged } from '../runtimePaths'
+import { getAppPath, getAppVersion, getDefaultDataRoot, getExePath, isElectronPackaged } from '../runtimePaths'
 import { findSessionDbPath } from '../dbStoragePaths'
 import type { McpHealthPayload, McpLaunchConfig, McpLauncherMode, McpStatusPayload } from './types'
 import { MCP_TOOL_NAMES } from './types'
@@ -75,18 +75,7 @@ function findAccountDir(baseDir: string, wxid: string): string | null {
 function getDecryptedDbDir(configService: ConfigService): string {
   const cachePath = String(configService.get('cachePath') || '')
   if (cachePath) return cachePath
-
-  if (!isElectronPackaged()) {
-    return join(getDocumentsPath(), 'CipherTalkData')
-  }
-
-  const installDir = dirname(getExePath())
-  const isOnCDrive = /^[cC]:/i.test(installDir) || installDir.startsWith('\\')
-  if (isOnCDrive) {
-    return join(getDocumentsPath(), 'CipherTalkData')
-  }
-
-  return join(installDir, 'CipherTalkData')
+  return getDefaultDataRoot()
 }
 
 function getLauncherMode(): McpLauncherMode {

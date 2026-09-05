@@ -32,6 +32,13 @@ dist-electron
 # Build output
 out
 release
+build/wcdb-capi/
+build/wcdb-api-capi/
+/build/wcdb-electron-canary/
+/build/wcdb-packaged-canary/
+/build/wcdb-promotion-canary/
+/build/wcdb-final-canary/
+/build/wcdb-reference-sources/
 .tmp-old-check/
 .tmp/release-announcement.json
 

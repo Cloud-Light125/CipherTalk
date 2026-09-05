@@ -545,7 +545,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
 
         // 发送系统通知
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('CipherTalk - 图片密钥获取成功', {
+          new Notification('CloudLight WeChat - 图片密钥获取成功', {
             body: '已成功获取图片密钥，可以继续下一步操作',
             icon: './logo.png'
           })
@@ -658,7 +658,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
           window.electronAPI.window.completeWelcome()
         }, 450)
       } else {
-        navigate('/home')
+        navigate('/export')
       }
     } catch (e) {
       setError(`连接失败: ${e}`)
@@ -684,7 +684,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
         window.electronAPI.window.completeWelcome()
       }, 450)
     } else {
-      navigate('/home')
+      navigate('/export')
     }
   }
 
@@ -767,7 +767,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
             缓存目录用于存储头像、表情与图片等本地媒体缓存。
           </Typography.Paragraph>
           {renderInfoList([
-            isMac ? '默认使用文稿目录下的 CipherTalkData' : '自动选择更适合存储的磁盘',
+            '默认使用“文档/CloudLight/CloudLight WeChat”目录',
             '需要预留足够空间',
             '后续仍可在设置中修改'
           ])}
@@ -869,8 +869,8 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
   const renderCacheStep = () => (
     <div className="flex min-w-0 flex-col gap-3.5">
       {renderTextField('缓存目录', cachePath, setCachePath, {
-        placeholder: isMac ? '~/Documents/CipherTalkData' : 'D:\\CipherTalkDB',
-        description: isMac ? '用于头像、表情与图片缓存，默认已选文稿目录。' : '用于头像、表情与图片缓存，已自动选择最佳磁盘。'
+        placeholder: isMac ? '~/Documents/CloudLight/CloudLight WeChat' : 'C:\\Users\\<用户名>\\Documents\\CloudLight\\CloudLight WeChat',
+        description: '用于保存配置、头像、表情、图片及其他本地数据；后续仍可修改。'
       })}
       <div className="flex flex-wrap items-center gap-2.5">
         <Button type="button" variant="primary" onPress={() => void handleSelectCachePath()}>
@@ -1216,7 +1216,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
             </Modal.Header>
             <Modal.Body>
               <p className="text-sm leading-6 text-muted">
-                直接读取微信内存未获取到密钥。继续后，密语会关闭并自动重新启动微信，然后在启动过程中再次尝试获取。
+                直接读取微信内存未获取到密钥。继续后，CloudLight WeChat 会关闭并自动重新启动微信，然后在启动过程中再次尝试获取。
               </p>
               <p className="mt-2 text-sm font-medium text-foreground">请先保存微信中正在编辑的内容。</p>
             </Modal.Body>
@@ -1246,9 +1246,9 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
           <Card.Content className="grid grid-cols-[minmax(260px,0.78fr)_minmax(360px,1fr)] items-center gap-6 pb-2 max-[940px]:grid-cols-1">
             <div className="flex min-w-0 items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <img src="./logo.png" alt="CipherTalk" className="size-11 shrink-0 rounded-lg shadow-[0_10px_24px_color-mix(in_oklch,var(--foreground)_12%,transparent)]" />
+                <img src="./logo.png" alt="CloudLight WeChat" className="size-11 shrink-0 rounded-lg shadow-[0_10px_24px_color-mix(in_oklch,var(--foreground)_12%,transparent)]" />
                 <div className="min-w-0">
-                  <Typography.Heading level={3} className="truncate">CipherTalk 初始化</Typography.Heading>
+                  <Typography.Heading level={3} className="truncate">CloudLight WeChat 初始化</Typography.Heading>
                   <Typography.Paragraph size="sm" color="muted" className="truncate">{currentStep.desc}</Typography.Paragraph>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState, type ReactElement, type CSSProperties, type Key } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Avatar, Button, ScrollShadow, Separator, Tabs, Tooltip } from '@heroui/react'
-import { House, Comment, Database, Gear, ChevronLeft, ChevronRight, ArrowDownToLine, Aperture, FaceRobot, Ghost, BookOpen, LogoMcp, PersonGear } from '@gravity-ui/icons'
+import { Avatar, Button, Disclosure, ScrollShadow, Separator, Tabs, Tooltip } from '@heroui/react'
+import { Comment, Database, Gear, ChevronLeft, ChevronRight, ArrowDownToLine, Aperture, FaceRobot, Ghost, BookOpen, LogoMcp, PersonGear } from '@gravity-ui/icons'
 import packageJson from '../../package.json'
 import { useAppStore } from '../stores/appStore'
 import { usePluginStore, ensurePluginStoreSubscribed, selectEnabledPlugins } from '../stores/pluginStore'
@@ -48,6 +48,7 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
  const [remotePhoneOpen, setRemotePhoneOpen] = useState(false)
  const [remoteConnected, setRemoteConnected] = useState(false)
   const [diaryEnabled, setDiaryEnabled] = useState(true)
+  const [otherExpanded, setOtherExpanded] = useState(false)
   const plugins = usePluginStore(state => state.plugins)
 
   useEffect(() => { ensurePluginStoreSubscribed() }, [])
@@ -82,6 +83,12 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
     return () => { mounted = false; off() }
   }, [])
 
+  useEffect(() => {
+    if (['/agent', '/personas', '/diary', '/pets', '/mcp'].includes(location.pathname)) {
+      setOtherExpanded(true)
+    }
+  }, [location.pathname])
+
  const openChatWindow = async () => {
     try {
       await window.electronAPI.window.openChatWindow()
@@ -98,23 +105,18 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
     }
   }
 
-  const navItems: NavItemConfig[] = [
-    { key: 'home', label: '首页', icon: <House width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/home' },
-    { key: 'agent', label: 'CT-Agent', icon: <FaceRobot width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/agent' },
-    { key: 'personas', label: 'AI 克隆', icon: <PersonGear width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/personas' },
-    { key: 'diary', label: '日记', icon: <BookOpen width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/diary' },
-    { key: 'pets', label: 'AI 宠物', icon: <Ghost width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/pets' },
+  const primaryNavItems: NavItemConfig[] = [
+    { key: 'export', label: '导出数据', icon: <ArrowDownToLine width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/export' },
     { key: 'chat', label: '聊天查看', icon: <Comment width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'action', onClick: openChatWindow },
     { key: 'moments', label: '朋友圈', icon: <Aperture width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'action', onClick: openMomentsWindow },
-    { key: 'export', label: '导出数据', icon: <ArrowDownToLine width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/export' },
     { key: 'data-management', label: '数据管理', icon: <Database width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/data-management' },
-    { key: 'mcp', label: 'MCP & Skills', icon: <LogoMcp width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/mcp' },
  ]
 
   // 插件侧边栏贡献点（声明式：只读 manifest，不执行插件代码）
+  const pluginNavItems: NavItemConfig[] = []
   for (const plugin of selectEnabledPlugins(plugins)) {
     for (const menu of plugin.contributes.sidebarMenus ?? []) {
-      navItems.push({
+      pluginNavItems.push({
         key: `plugin:${plugin.id}:${menu.id}`,
         label: menu.label,
         icon: <PluginIcon name={menu.icon} size={NAV_ICON_SIZE} />,
@@ -124,11 +126,11 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
     }
   }
 
-  const visibleNavItems = diaryEnabled ? navItems : navItems.filter((item) => item.key !== 'diary')
- const activeNavKey = navItems.find(item => item.type === 'route' && isActive(item.path))?.key
+ const topLevelNavItems = [...primaryNavItems, ...pluginNavItems]
+ const activeNavKey = topLevelNavItems.find(item => item.type === 'route' && isActive(item.path))?.key
 
  const handleNavSelectionChange = (key: Key) => {
-   const item = navItems.find(navItem => navItem.key === String(key))
+   const item = topLevelNavItems.find(navItem => navItem.key === String(key))
    if (!item) return
 
    if (item.type === 'route') {
@@ -137,6 +139,11 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
      item.onClick()
    }
  }
+
+  const handleNavItemPress = (item: NavItemConfig) => {
+    if (item.type === 'route') navigate(item.path)
+    else item.onClick()
+  }
 
   const renderNavButton = (opts: { label: string; icon: ReactElement; active?: boolean; onPress: () => void }) => {
     const button = (
@@ -203,6 +210,31 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
     )
   }
 
+  const renderNavTabs = (items: NavItemConfig[], ariaLabel: string) => {
+    if (items.length === 0) return null
+    const selectedKey = activeNavKey && items.some(item => item.key === activeNavKey) ? activeNavKey : undefined
+    return (
+      <Tabs
+        className={cn(collapsed ? 'w-fit' : 'w-full')}
+        orientation="vertical"
+        selectedKey={selectedKey}
+        onSelectionChange={handleNavSelectionChange}
+      >
+        <Tabs.ListContainer>
+          <Tabs.List
+            aria-label={ariaLabel}
+            className={cn(
+              'bg-transparent p-0',
+              collapsed ? 'w-fit items-center gap-1' : 'w-full gap-1'
+            )}
+          >
+            {items.map(renderNavTab)}
+          </Tabs.List>
+        </Tabs.ListContainer>
+      </Tabs>
+    )
+  }
+
   const profileAvatar = (
     <div className="relative">
       <Avatar size="md">
@@ -239,6 +271,16 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
       />
     </span>
   )
+
+  const aiNavItems: NavItemConfig[] = [
+    { key: 'pets', label: 'AI宠物', icon: <Ghost width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/pets' },
+    ...(diaryEnabled ? [{ key: 'diary', label: '日记', icon: <BookOpen width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route' as const, path: '/diary' }] : []),
+    { key: 'personas', label: 'AI克隆', icon: <PersonGear width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/personas' },
+    { key: 'agent', label: 'CT-agent', icon: <FaceRobot width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/agent' },
+    { key: 'mcp', label: 'MCP&skills', icon: <LogoMcp width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />, type: 'route', path: '/mcp' },
+    { key: 'remote-phone', label: '密语APP', icon: remotePhoneIcon, type: 'action', onClick: () => setRemotePhoneOpen(true) },
+    { key: 'device-connect', label: 'clawlink', icon: deviceConnectIcon, type: 'action', onClick: () => setDeviceConnectOpen(true) },
+  ]
 
   return (
     <>
@@ -280,25 +322,53 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
 
       {/* 主导航 */}
       <ScrollShadow hideScrollBar className="min-h-0 flex-1 px-3 pt-0.5" size={32}>
-        <nav className={cn(collapsed && 'flex justify-center')}>
-          <Tabs
-            className={cn(collapsed ? 'w-fit' : 'w-full')}
-            orientation="vertical"
-            selectedKey={activeNavKey}
-            onSelectionChange={handleNavSelectionChange}
-          >
-            <Tabs.ListContainer>
-              <Tabs.List
-                aria-label="主导航"
-                className={cn(
-                  'bg-transparent p-0',
-                  collapsed ? 'w-fit items-center gap-1' : 'w-full gap-1'
-                )}
-              >
-               {visibleNavItems.map(renderNavTab)}
-              </Tabs.List>
-            </Tabs.ListContainer>
-          </Tabs>
+        <nav className={cn('space-y-1', collapsed && 'flex flex-col items-center')}>
+          {renderNavTabs(primaryNavItems, '主导航')}
+
+          {collapsed ? (
+            renderNavButton({
+              label: '其他',
+              icon: <FaceRobot width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />,
+              active: aiNavItems.some(item => item.type === 'route' && isActive(item.path)),
+              onPress: () => {
+                setCollapsed(false)
+                setOtherExpanded(true)
+              },
+            })
+          ) : (
+            <Disclosure isExpanded={otherExpanded} onExpandedChange={setOtherExpanded} className="w-full">
+              <Disclosure.Heading className="m-0">
+                <Disclosure.Trigger
+                  className={cn(
+                    'flex h-12 w-full items-center gap-2 rounded-full px-3 text-base font-semibold text-foreground transition-colors hover:bg-default/10',
+                    aiNavItems.some(item => item.type === 'route' && isActive(item.path)) && 'bg-accent-soft text-accent-soft-foreground'
+                  )}
+                >
+                  <span className="flex w-6 shrink-0 items-center justify-center">
+                    <FaceRobot width={NAV_ICON_SIZE} height={NAV_ICON_SIZE} />
+                  </span>
+                  <span className="flex-1 text-left">其他</span>
+                  <Disclosure.Indicator className="size-4" />
+                </Disclosure.Trigger>
+              </Disclosure.Heading>
+              <Disclosure.Content>
+                <Disclosure.Body className="space-y-1 pb-1 pl-4 pt-1">
+                  {aiNavItems.map(item => (
+                    <div key={item.key}>
+                      {renderNavButton({
+                        label: item.label,
+                        icon: item.icon,
+                        active: item.type === 'route' && isActive(item.path),
+                        onPress: () => handleNavItemPress(item),
+                      })}
+                    </div>
+                  ))}
+                </Disclosure.Body>
+              </Disclosure.Content>
+            </Disclosure>
+          )}
+
+          {renderNavTabs(pluginNavItems, '插件导航')}
         </nav>
       </ScrollShadow>
 
@@ -307,16 +377,6 @@ function Sidebar({ autoCollapse = false }: { autoCollapse?: boolean }) {
         <Separator className="my-1.5" />
 
         <div className={cn('flex flex-col gap-1', collapsed && 'items-center')}>
-          {renderNavButton({
-            label: '密语 App',
-            icon: remotePhoneIcon,
-            onPress: () => setRemotePhoneOpen(true),
-          })}
-          {renderNavButton({
-            label: 'ClawLink',
-            icon: deviceConnectIcon,
-            onPress: () => setDeviceConnectOpen(true),
-          })}
           {renderNavButton({
             label: '设置',
             icon: <Gear width={SIDEBAR_ACTION_ICON_SIZE} height={SIDEBAR_ACTION_ICON_SIZE} />,

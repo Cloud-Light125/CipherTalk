@@ -1,7 +1,7 @@
 {
-  "name": "ciphertalk",
-  "version": "2026.904.0",
-  "description": "密语 - 微信聊天记录查看工具",
+  "name": "cloudlight-wechat",
+  "version": "2026.905.0",
+  "description": "CloudLight WeChat - 微信聊天记录查看工具",
   "author": "Cloud-Light125",
   "homepage": "https://269332.xyz",
   "repository": {
@@ -9,6 +9,9 @@
     "url": "https://github.com/Cloud-Light125/CipherTalk-SafeFork-1.git"
   },
   "license": "CC-BY-NC-SA-4.0",
+  "engines": {
+    "node": ">=22.0.0 <23"
+  },
   "main": "dist-electron/main.js",
   "allowScripts": {
     "electron": true,
@@ -46,6 +49,7 @@
     "mcp": "node scripts/mcp-runner.js",
     "mcp:probe": "node scripts/mcp-probe.js",
     "test:mcp-lifecycle": "npm run build:mcp && node scripts/test-mcp-stdio-lifecycle.cjs",
+    "test:wcdb-electron-canary": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify-wcdb-electron-canary.ps1",
     "cli": "npm --prefix CipherTalk-CLI run dev --",
     "cli:install": "npm --prefix CipherTalk-CLI install",
     "cli:typecheck": "npm --prefix CipherTalk-CLI run typecheck",
@@ -163,8 +167,8 @@
     "zustand": "^5.0.2"
   },
   "build": {
-    "appId": "com.ciphertalk.app",
-    "productName": "CipherTalk",
+    "appId": "com.cloudlight.wechat",
+    "productName": "CloudLight WeChat",
     "compression": "maximum",
     "npmRebuild": false,
     "afterPack": "scripts/clean-locales.js",
@@ -173,7 +177,7 @@
       "output": "release"
     },
     "win": {
-      "icon": "public/icon.ico",
+      "icon": "icon.png",
       "target": "nsis",
       "requestedExecutionLevel": "asInvoker",
       "files": [
@@ -184,7 +188,7 @@
       ]
     },
     "mac": {
-      "icon": "public/icon.icns",
+      "icon": "icon.png",
       "target": "dmg",
       "category": "public.app-category.utilities",
       "hardenedRuntime": true,
@@ -236,8 +240,8 @@
         ]
       },
       {
-        "from": "public/icon.ico",
-        "to": "icon.ico"
+        "from": "icon.png",
+        "to": "icon.png"
       },
       {
         "from": "public/tray-mac.png",

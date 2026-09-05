@@ -137,7 +137,7 @@ export class HtmlExportGenerator {
     </div>
 
     <footer class="chat-footer">
-      由 <strong>CipherTalk</strong> 导出 · ${new Date(exportData.meta.exportTime).toLocaleString('zh-CN')}
+      由 <strong>CloudLight WeChat</strong> 导出 · ${new Date(exportData.meta.exportTime).toLocaleString('zh-CN')}
     </footer>
   </div>
 

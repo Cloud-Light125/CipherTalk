@@ -50,7 +50,7 @@ const localSecrets = loadLocalSecretEnv()
 const aiApiKey = process.env.AI_API_KEY || localSecrets.AI_API_KEY || ''
 const aiApiUrl = process.env.AI_API_URL || localSecrets.AI_API_URL || 'https://api.openai.com/v1/chat/completions'
 const aiModel = process.env.AI_MODEL || localSecrets.AI_MODEL || 'gpt-5.4'
-const PRODUCT_NAME = 'CipherTalk'
+const PRODUCT_NAME = 'CloudLight WeChat'
 
 const PRIMARY_AUTHOR_LOGINS = new Set(['ILoveBingLu'])
 const PRIMARY_AUTHOR_NAMES = new Set(['ILoveBingLu', 'BingLu', 'ILoveBinglu'])
@@ -193,7 +193,7 @@ async function generateAiBody(context) {
     '只能基于输入中的 commits 和 pull requests 生成，不得编造任何功能或修复。',
     '输出必须是中文 Markdown，风格要自然，像真实产品版本说明，不要写成死板模板。',
     '标题必须包含软件名，不能只写版本号。',
-    '第一行使用格式：## CipherTalk vX.Y.Z · 一句简短版本名',
+    '第一行使用格式：## CloudLight WeChat vX.Y.Z · 一句简短版本名',
     '第二段使用一行引用块（>）写一句导语，概括这次更新的重心。',
     '正文优先使用以下结构：',
     '### 这次更新',

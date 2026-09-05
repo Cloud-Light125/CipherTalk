@@ -2,7 +2,7 @@ import { join } from 'path'
 import { existsSync, rmSync, promises as fsp } from 'fs'
 import { app } from 'electron'
 import { ConfigService } from './config'
-import { getUserDataPath } from './runtimePaths'
+import { getDefaultDataRoot, getUserDataPath } from './runtimePaths'
 import type { AccountProfile } from '../../src/types/account'
 
 /**
@@ -21,37 +21,11 @@ import type { AccountProfile } from '../../src/types/account'
 export class CacheService {
   constructor(private configService: ConfigService) {}
 
-  /**
-   * 获取有效的缓存路径
-   * - 如果配置了 cachePath，使用配置的路径
-   * - 开发环境：使用文档目录
-   * - 生产环境：
-   *   - C 盘安装：使用文档目录
-   *   - 其他盘安装：使用软件安装目录
-   */
+  /** 获取有效缓存路径；显式账号配置优先，否则统一使用应用数据根目录。 */
   getEffectiveCachePath(): string {
     const cachePath = this.configService.get('cachePath')
     if (cachePath) return cachePath
-
-    // 开发环境使用文档目录
-    if (process.env.VITE_DEV_SERVER_URL) {
-      const documentsPath = app.getPath('documents')
-      return join(documentsPath, 'CipherTalkData')
-    }
-
-    // 生产环境
-    const exePath = app.getPath('exe')
-    const installDir = require('path').dirname(exePath)
-
-    // 检查是否安装在 C 盘
-    const isOnCDrive = /^[cC]:/i.test(installDir) || installDir.startsWith('\\\\')
-
-    if (isOnCDrive) {
-      const documentsPath = app.getPath('documents')
-      return join(documentsPath, 'CipherTalkData')
-    }
-
-    return join(installDir, 'CipherTalkData')
+    return getDefaultDataRoot()
   }
 
   /**
