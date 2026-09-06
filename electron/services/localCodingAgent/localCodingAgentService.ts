@@ -386,7 +386,7 @@ export class LocalCodingAgentService {
     await this.spawnCollect(git, ['add', '-A'], root, 60_000)
     const commit = await this.spawnCollect(
       git,
-      ['-c', 'user.name=CipherTalk', '-c', 'user.email=ciphertalk.local@example.invalid', 'commit', '--allow-empty', '-m', 'baseline'],
+      ['-c', 'user.name=CloudLight WeChat', '-c', 'user.email=cloudlight-wechat.local@example.invalid', 'commit', '--allow-empty', '-m', 'baseline'],
       root,
       60_000,
     )

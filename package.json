@@ -1,12 +1,12 @@
 {
   "name": "cloudlight-wechat",
-  "version": "2026.906.2",
+  "version": "2026.906.3",
   "description": "CloudLight WeChat - 微信聊天记录查看工具",
   "author": "Cloud-Light125",
   "homepage": "https://269332.xyz",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Cloud-Light125/CipherTalk.git"
+    "url": "https://github.com/Cloud-Light125/CloudLight-WeChat.git"
   },
   "license": "CC-BY-NC-SA-4.0",
   "engines": {

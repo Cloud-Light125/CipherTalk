@@ -5,7 +5,7 @@ const { execSync } = require('child_process')
 const rootDir = path.resolve(__dirname, '..')
 const releaseDir = path.join(rootDir, 'release')
 const owner = process.env.GITHUB_REPOSITORY_OWNER || 'Cloud-Light125'
-const repo = (process.env.GITHUB_REPOSITORY || `${owner}/CipherTalk`).split('/')[1] || 'CipherTalk'
+const repo = (process.env.GITHUB_REPOSITORY || `${owner}/CloudLight-WeChat`).split('/')[1] || 'CloudLight-WeChat'
 const currentTag = process.env.RELEASE_TAG || process.env.GITHUB_REF_NAME || ''
 const pkg = require(path.join(rootDir, 'package.json'))
 
@@ -108,7 +108,7 @@ async function fetchPullRequest(prNumber) {
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${ghToken}`,
-      'User-Agent': 'CipherTalk-Release-Context'
+      'User-Agent': 'CloudLight-WeChat-Release-Context'
     }
   })
 

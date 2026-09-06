@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你对密语 CipherTalk 项目的关注！我们欢迎社区贡献，让这个项目变得更好。
+感谢你对 CloudLight WeChat 项目的关注！我们欢迎社区贡献，让这个项目变得更好。
 
 ## 🤝 如何贡献
 
@@ -49,8 +49,8 @@
 ```bash
 # Fork 项目到你的 GitHub 账号
 # 克隆你的 fork
-git clone https://github.com/Cloud-Light125/CipherTalk.git
-cd CipherTalk
+git clone https://github.com/Cloud-Light125/CloudLight-WeChat.git
+cd CloudLight-WeChat
 
 # 安装依赖
 npm install
@@ -245,4 +245,4 @@ export default React.memo(ChatMessage)
 
 ---
 
-再次感谢你的贡献！让我们一起打造更好的密语 CipherTalk！
+再次感谢你的贡献！让我们一起打造更好的 CloudLight WeChat！

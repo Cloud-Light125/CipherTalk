@@ -102,7 +102,7 @@ function buildManifest(safePlatformKey) {
   const manifest = {
     name: addonName,
     version: 'source-present-selfbuilt',
-    vendor: 'CipherTalk',
+    vendor: 'CloudLight WeChat',
     source: 'native/image-decrypt',
     safeNativePlatforms,
     activeBinaries,

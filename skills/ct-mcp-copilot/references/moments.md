@@ -1,4 +1,4 @@
-# CipherTalk MCP Moments Playbook
+# CloudLight WeChat MCP Moments Playbook
 
 ## When to switch to moments
 

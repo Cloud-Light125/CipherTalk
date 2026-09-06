@@ -278,7 +278,7 @@ function Assert-NoForbiddenPackageContent {
 
 function Resolve-ProcessSnapshot {
     return @(Get-Process -ErrorAction SilentlyContinue |
-        Where-Object { $_.ProcessName -match '(?i)^(electron|ciphertalk)$' } |
+        Where-Object { $_.ProcessName -match '(?i)^(electron|CloudLight WeChat|ciphertalk)$' } |
         Select-Object -ExpandProperty Id)
 }
 
@@ -463,7 +463,7 @@ function Invoke-PackagedPromotionCanary {
     Start-Sleep -Milliseconds 750
     $afterPids = @(Resolve-ProcessSnapshot)
     $residualPids = @($afterPids | Where-Object { $beforePids -notcontains $_ })
-    if ($residualPids.Count -ne 0) { throw "Residual Electron/CipherTalk processes remain: $($residualPids -join ', ')" }
+    if ($residualPids.Count -ne 0) { throw "Residual Electron/CloudLight WeChat/legacy ciphertalk processes remain: $($residualPids -join ', ')" }
     Assert-NormalResult $result
     Assert-NegativeResults $result
     return [ordered]@{

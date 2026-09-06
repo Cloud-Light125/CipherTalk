@@ -289,13 +289,13 @@ function Assert-NoForbiddenPackageContent {
 }
 
 function Resolve-ProcessSnapshot {
-    return @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -match '(?i)^(electron|ciphertalk)$' } | Select-Object -ExpandProperty Id)
+    return @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -match '(?i)^(electron|CloudLight WeChat|ciphertalk)$' } | Select-Object -ExpandProperty Id)
 }
 
 function Resolve-AppSmokeProcesses {
     param([Parameter(Mandatory = $true)][AllowEmptyCollection()][int[]] $BeforePids, [Parameter(Mandatory = $true)][int] $RootPid)
     return @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
-        $_.ProcessName -match '(?i)^ciphertalk$' -and ($_.Id -eq $RootPid -or $BeforePids -notcontains $_.Id)
+        $_.ProcessName -match '(?i)^(electron|CloudLight WeChat|ciphertalk)$' -and ($_.Id -eq $RootPid -or $BeforePids -notcontains $_.Id)
     })
 }
 
@@ -430,7 +430,7 @@ function Invoke-PackagedCanary {
     Start-Sleep -Milliseconds 750
     $afterPids = @(Resolve-ProcessSnapshot)
     $residualPids = @($afterPids | Where-Object { $beforePids -notcontains $_ })
-    if ($residualPids.Count -ne 0) { throw "Residual Electron/CipherTalk processes remain: $($residualPids -join ', ')." }
+    if ($residualPids.Count -ne 0) { throw "Residual Electron/CloudLight WeChat/legacy ciphertalk processes remain: $($residualPids -join ', ')." }
     return [ordered]@{ result = $result; epipeCount = $epipeCount; residualProcessCount = $residualPids.Count; stdoutPath = [IO.Path]::GetFullPath($stdoutFile); stderrPath = [IO.Path]::GetFullPath($stderrFile); compiledMain = [IO.Path]::GetFullPath($compiledMain) }
 }
 
@@ -481,7 +481,7 @@ function Invoke-AppSmoke {
     try {
         $process = Start-Process -FilePath $AppExecutable -ArgumentList @('--user-data-dir', $userDataRoot, '--disable-gpu', '--no-sandbox') -PassThru -RedirectStandardOutput $smokeStdoutFile -RedirectStandardError $smokeStderrFile
         if ($process.WaitForExit(60000)) {
-            $failureMessage = 'CipherTalk.exe exited before the 60-second smoke interval.'
+            $failureMessage = 'CloudLight WeChat.exe exited before the 60-second smoke interval.'
         } else {
             $process.Refresh()
             $runProcesses = @(Resolve-AppSmokeProcesses $beforePids $process.Id)
@@ -491,14 +491,14 @@ function Invoke-AppSmoke {
                 Sort-Object @{ Expression = { if ($_.Id -eq $process.Id) { 0 } else { 1 } } }, Id |
                 Select-Object -First 1
             if (-not $windowProcess) {
-                $failureMessage = 'No current-run CipherTalk process exposed a main window handle after 60 seconds.'
+                $failureMessage = 'No current-run CloudLight WeChat process exposed a main window handle after 60 seconds.'
             } else {
                 $closeTargetPid = [int]$windowProcess.Id
                 $closeRequested = $windowProcess.CloseMainWindow()
                 if (-not $closeRequested) {
-                    $failureMessage = "CloseMainWindow was not accepted by current-run CipherTalk PID $closeTargetPid."
+                    $failureMessage = "CloseMainWindow was not accepted by current-run CloudLight WeChat PID $closeTargetPid."
                 } elseif (-not (Wait-AppSmokeProcessExit $beforePids $process.Id 15000)) {
-                    $failureMessage = "Current-run CipherTalk PID tree did not exit normally after closing PID $closeTargetPid."
+                    $failureMessage = "Current-run CloudLight WeChat PID tree did not exit normally after closing PID $closeTargetPid."
                 }
             }
         }
@@ -519,8 +519,8 @@ function Invoke-AppSmoke {
     $afterPids = @(Resolve-ProcessSnapshot)
     $residualPids = @($afterPids | Where-Object { $beforePids -notcontains $_ })
     if ($residualPids.Count -ne 0) { throw "Residual app smoke processes remain: $($residualPids -join ', ')." }
-    if ($failureMessage) { throw "Formal CipherTalk.exe smoke close failed: $failureMessage forcedCleanup=$forcedCleanup; residualProcessCount=$($residualPids.Count)." }
-    if ($forcedCleanup -ne $false -or $closeRequested -ne $true) { throw 'Formal CipherTalk.exe smoke did not close normally.' }
+    if ($failureMessage) { throw "Formal CloudLight WeChat.exe smoke close failed: $failureMessage forcedCleanup=$forcedCleanup; residualProcessCount=$($residualPids.Count)." }
+    if ($forcedCleanup -ne $false -or $closeRequested -ne $true) { throw 'Formal CloudLight WeChat.exe smoke did not close normally.' }
     return [ordered]@{ executable = $AppExecutable; userDataDir = $userDataRoot; durationSeconds = [Math]::Round(([DateTime]::UtcNow - $startedAt).TotalSeconds, 1); closeRequested = $closeRequested; closeTargetPid = $closeTargetPid; forcedCleanup = $forcedCleanup; javascriptErrorCount = $javascriptErrorCount; epipeCount = $epipeCount; residualProcessCount = $residualPids.Count; stdoutPath = $smokeStdoutFile; stderrPath = $smokeStderrFile }
 }
 

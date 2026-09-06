@@ -56,7 +56,7 @@ export type CodexSubscriptionFetchOptions = {
   userAgent?: string
 }
 
-/** 密语存放 ChatGPT 登录的根目录；禁止被 CIPHERTALK_CODEX_HOME 指向本机 Codex 的 ~/.codex。 */
+/** CloudLight WeChat 存放 ChatGPT 登录的根目录；禁止被 CIPHERTALK_CODEX_HOME 指向本机 Codex 的 ~/.codex。 */
 function getCodexHomeSafe(): string {
   const home = path.resolve(getCipherTalkCodexHome())
   const cliHome = path.resolve(path.dirname(getCodexCliAuthPath()))
@@ -201,7 +201,7 @@ export async function removeCodexAccount(id: string): Promise<void> {
   }
 }
 
-/** 本机 Codex CLI 的凭据文件路径（尊重 CODEX_HOME 覆盖），密语只读不写。 */
+/** 本机 Codex CLI 的凭据文件路径（尊重 CODEX_HOME 覆盖），CloudLight WeChat 只读不写。 */
 export function getCodexCliAuthPath(): string {
   const codexHome = String(process.env.CODEX_HOME || '').trim() || path.join(os.homedir(), '.codex')
   return path.resolve(codexHome, 'auth.json')
@@ -458,7 +458,7 @@ export function createCodexSubscriptionFetch(options: CodexSubscriptionFetchOpti
     headers.delete('authorization')
     headers.set('Authorization', `Bearer ${credentials.accessToken}`)
     headers.set('originator', 'ciphertalk')
-    headers.set('User-Agent', options.userAgent || `CipherTalk/${process.platform}-${process.arch}`)
+    headers.set('User-Agent', options.userAgent || `CloudLight-WeChat/${process.platform}-${process.arch}`)
     if (credentials.accountId) headers.set('ChatGPT-Account-Id', credentials.accountId)
     else headers.delete('ChatGPT-Account-Id')
 

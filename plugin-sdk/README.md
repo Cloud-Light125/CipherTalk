@@ -1,7 +1,9 @@
 # ciphertalk-plugin-sdk
 
-[CipherTalk（密语）](https://github.com/Cloud-Light125/CipherTalk) 插件开发套件——
+[CloudLight WeChat](https://github.com/Cloud-Light125/CloudLight-WeChat) 插件开发套件——
 一个包装齐全部开发所需：
+
+公开包名 `ciphertalk-plugin-sdk` 为兼容名称，继续用于插件安装、导入和版本兼容。
 
 | 入口 | 内容 |
 |---|---|
@@ -94,7 +96,7 @@ function App() {
 每类能力对应一个权限，在 `manifest.json` 声明、用户启用时确认。
 
 完整参考（manifest 全字段、全 API、权限清单、UI 组件、限额、FAQ）见主仓库
-[PLUGIN_DEV_GUIDE.md](https://github.com/Cloud-Light125/CipherTalk/blob/main/PLUGIN_DEV_GUIDE.md)。
+[PLUGIN_DEV_GUIDE.md](https://github.com/Cloud-Light125/CloudLight-WeChat/blob/main/PLUGIN_DEV_GUIDE.md)。
 
 ## 版本
 

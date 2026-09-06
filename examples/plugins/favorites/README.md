@@ -1,6 +1,6 @@
 # 收藏查询导出（com.ciphertalk.example.favorites）
 
-查询并导出微信收藏库（`favorite/favorite.db`，SQLCipher 加密库）的 CipherTalk 插件。
+查询并导出微信收藏库（`favorite/favorite.db`，SQLCipher 加密库）的 CloudLight WeChat 插件。
 
 ## 功能
 
@@ -15,7 +15,7 @@
 ## 依赖宿主版本
 
 插件使用宿主新增的 `favorites.list` 方法（权限 `favorites:read`）。
-若宿主不支持会提示升级——需 CipherTalk 主程序包含 `pluginHandlers.ts` 中的收藏路由（本仓库源码已含）。
+若宿主不支持会提示升级——需 CloudLight WeChat 主程序包含 `pluginHandlers.ts` 中的收藏路由（本仓库源码已含）。
 
 ## 注意事项
 
@@ -29,4 +29,4 @@
 node plugin-sdk/cli.cjs pack examples/plugins/favorites
 ```
 
-产物：`com.ciphertalk.example.favorites-<版本>.ctp`，在 CipherTalk 设置 → 插件 → 安装。
+产物：`com.ciphertalk.example.favorites-<版本>.ctp`，在 CloudLight WeChat 设置 → 插件 → 安装。

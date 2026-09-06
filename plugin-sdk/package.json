@@ -1,14 +1,14 @@
 {
   "name": "ciphertalk-plugin-sdk",
   "version": "1.1.0",
-  "description": "CipherTalk（密语）插件开发套件 —— 数据 API + React UI 组件库（/ui）+ 脚手架 CLI，一个包全搞定：在沙箱中调用聊天数据、媒体、转写、搜索、导出、AI 等宿主能力",
+  "description": "CloudLight WeChat 插件开发套件（公开包名 ciphertalk-plugin-sdk，保留兼容名称）—— 数据 API + React UI 组件库（/ui）+ 脚手架 CLI，一个包全搞定：在沙箱中调用聊天数据、媒体、转写、搜索、导出、AI 等宿主能力",
   "keywords": ["ciphertalk", "密语", "plugin", "sdk", "ui", "react", "wechat"],
   "license": "CC-BY-NC-SA-4.0",
   "author": "Cloud-Light125",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Cloud-Light125/CipherTalk.git",
+    "url": "git+https://github.com/Cloud-Light125/CloudLight-WeChat.git",
     "directory": "plugin-sdk"
   },
   "main": "./ciphertalk-plugin-sdk.js",

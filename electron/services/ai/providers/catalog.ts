@@ -340,7 +340,7 @@ async function fetchModelsDevData(): Promise<any> {
     try {
       const response = await fetchImpl(url, {
         signal: controller.signal,
-        headers: { 'User-Agent': 'CipherTalk' }
+        headers: { 'User-Agent': 'CloudLight-WeChat' }
       })
       if (!response.ok) {
         throw new Error(`请求失败: ${response.status}`)

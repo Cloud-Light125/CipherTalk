@@ -24,7 +24,7 @@ async function fetchLogo(providerId) {
   try {
     const response = await fetch(`${SOURCE}/logos/${providerId}.svg`, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'CipherTalk' }
+      headers: { 'User-Agent': 'CloudLight-WeChat' }
     })
     if (!response.ok) return ''
     const svg = await response.text()

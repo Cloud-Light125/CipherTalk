@@ -11,7 +11,7 @@
 - Git、CMake 3.20 或更高版本
 - GitHub 操作使用命令级代理 `http://127.0.0.1:7897`；脚本不改变系统或 Git 全局代理
 
-官方 WCDB 源码及其 `sqlcipher`、`openssl`、`zstd` 子模块只放在 `build\wcdb-capi\source\wcdb`。它们不会提交到 CipherTalk。官方 `LICENSE` 与第三方许可证保留在该源码 checkout 中；本 probe 没有复制其他仓库的代码片段，也没有复制 `echo-chat-analyzer` 或 `weixin-cli` 的代码。
+官方 WCDB 源码及其 `sqlcipher`、`openssl`、`zstd` 子模块只放在 `build\wcdb-capi\source\wcdb`。它们不会提交到 CloudLight WeChat。官方 `LICENSE` 与第三方许可证保留在该源码 checkout 中；本 probe 没有复制其他仓库的代码片段，也没有复制 `echo-chat-analyzer` 或 `weixin-cli` 的代码。
 
 ## 构建
 
@@ -98,7 +98,7 @@ build\wcdb-capi\runtime\manifest.json
 ## 已知限制与未执行项
 
 - 直接 C API 不等于 WCDB CommonCore 的完整初始化；FTS tokenizer/module 注册仍需单独验证。普通 `sqlite_master` 查询（包括本 probe 的基础 schema 查询）不能代表 WCDB CommonCore/FTS tokenizer 已初始化，普通表可读也不代表 `MATCH` 可用。
-- `WCDB_ZSTD=ON` 只保证官方构建启用 zstd；probe 返回原始 SQLite 值，不复制 CipherTalk 的业务级 zstd 解码。
+- `WCDB_ZSTD=ON` 只保证官方构建启用 zstd；probe 返回原始 SQLite 值，不复制 CloudLight WeChat 的业务级 zstd 解码。
 - 64 位 key 的 passphrase/raw 语义、每数据库独立 key、不同 page size/cipher compatibility 必须通过真实数据库分别验收。
 - WAL 只读可见性需要在数据库仍被使用的真实环境中验证；probe 不 checkpoint、不删除 `-wal`/`-shm`、不写库。WAL 文件 presence 只能证明文件存在，不能作为 WAL 内容正确性的验收。
 - manifest 会记录实际导入依赖；MSVC runtime 的最终打包仍是 production 阶段事项。未知依赖不会被下载或静默带入。

@@ -47,7 +47,7 @@ export const RELAYONE_MANAGED_GROUPS: RelayOneManagedGroupTarget[] = [
 export const RELAYONE_CHAT_KINDS: RelayOneManagedKind[] = ['plus-pool', 'cc-max', 'grok']
 
 export function relayOneManagedKeyName(groupName: string, wxid: string): string {
-  return wxid ? `CipherTalk-${groupName}-${wxid}` : `CipherTalk-${groupName}`
+  return wxid ? `CloudLight-WeChat-${groupName}-${wxid}` : `CloudLight-WeChat-${groupName}`
 }
 
 export function relayOneProtocolForKind(kind: RelayOneManagedKind): RelayOneManagedProtocol {

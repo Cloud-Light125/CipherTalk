@@ -9,7 +9,7 @@ const electronBinary = require('electron')
 
 const rootDir = path.resolve(__dirname, '..')
 const mcpEntry = path.join(rootDir, 'dist-electron', 'mcp.js')
-const readyLine = '[CipherTalk MCP] stdio server started'
+const readyLine = '[CloudLight WeChat MCP] stdio server started'
 
 function startMcpServer() {
   assert.ok(

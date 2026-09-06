@@ -1,4 +1,4 @@
-/** CipherTalk 插件 SDK 类型声明（与 ciphertalk-plugin-sdk.js 对应） */
+/** CloudLight WeChat 插件 SDK 类型声明（与 ciphertalk-plugin-sdk.js 对应） */
 
 export interface SessionSummary {
   sessionId: string

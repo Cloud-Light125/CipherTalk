@@ -1,4 +1,4 @@
-# CipherTalk MCP Export Playbook
+# CloudLight WeChat MCP Export Playbook
 
 ## Goal
 

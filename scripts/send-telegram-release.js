@@ -5,6 +5,9 @@ const rootDir = path.resolve(__dirname, '..')
 const releaseDir = path.join(rootDir, 'release')
 const contextPath = path.join(releaseDir, 'release-context.json')
 const releaseBodyPath = path.join(releaseDir, 'release-body.md')
+const pkg = require(path.join(rootDir, 'package.json'))
+const PRODUCT_NAME = String(pkg.build?.productName || '').trim() || 'CloudLight WeChat'
+const PROJECT_REPOSITORY = 'Cloud-Light125/CloudLight-WeChat'
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''
 const TELEGRAM_CHAT_IDS = String(process.env.TELEGRAM_CHAT_IDS || '')
@@ -56,9 +59,14 @@ function guessFileNameFromUrl(url, contentType) {
   }
 }
 
-// 从 release-body.md 的一级标题 (## CloudLight WeChat vX.X.X · 副标题) 中拿出副标题
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// 从 release-body.md 的一级标题 (## <产品名> vX.X.X · 副标题) 中拿出副标题
 function extractSubtitle(markdown) {
-  const m = String(markdown || '').match(/^##\s+CloudLight WeChat\s+v\S+\s*[·•:\|\-]\s*(.+)$/m)
+  const titlePattern = new RegExp(`^##\\s+${escapeRegExp(PRODUCT_NAME)}\\s+v\\S+\\s*[·•:\\|\\-]\\s*(.+)$`, 'm')
+  const m = String(markdown || '').match(titlePattern)
   return m ? m[1].trim() : ''
 }
 
@@ -107,7 +115,7 @@ function buildButtons(version) {
   return {
     inline_keyboard: [
       [
-        { text: '下载', url: `https://github.com/Cloud-Light125/CipherTalk/releases/tag/v${encodeURIComponent(version)}` },
+        { text: '下载', url: `https://github.com/${PROJECT_REPOSITORY}/releases/tag/v${encodeURIComponent(version)}` },
         { text: '主页', url: 'https://269332.xyz' }
       ],
       [
@@ -128,7 +136,7 @@ function buildSuccessMessage(context, releaseBody) {
 
   // 标题区：产品名 + 用 <code> 包装的版本号（"代码感"）+ 副标题
   const lines = [
-    `<b>CloudLight WeChat</b>  <code>v${escapeHtml(version)}</code>`
+    `<b>${escapeHtml(PRODUCT_NAME)}</b>  <code>v${escapeHtml(version)}</code>`
   ]
   if (subtitle) lines.push(`<i>${escapeHtml(subtitle)}</i>`)
 
@@ -172,7 +180,7 @@ function buildFailureMessage() {
     : ''
   const version = process.env.RELEASE_VERSION || process.env.GITHUB_REF_NAME || 'unknown'
   const lines = [
-    `<b>CloudLight WeChat ${escapeHtml(version)} · 发布失败</b>`,
+    `<b>${escapeHtml(PRODUCT_NAME)} ${escapeHtml(version)} · 发布失败</b>`,
     '',
     '请查看 Actions 运行日志定位原因。'
   ]

@@ -119,7 +119,7 @@ export class McpReadService {
 
     if (!this.launchAttempted) {
       this.launchAttempted = true
-      process.stderr.write('[CipherTalk MCP] proxy unavailable, launching desktop app\n')
+      process.stderr.write('[CloudLight WeChat MCP] proxy unavailable, launching desktop app\n')
       launchMainApplication()
     }
 

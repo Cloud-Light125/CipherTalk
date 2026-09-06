@@ -64,6 +64,6 @@ native 日志只保存 stage、SQLite rc、extended rc 和不含敏感内容的�
 
 ## 预期限制
 
-直接 SQLite C API 不等价于完整 WCDB CommonCore 初始化。当前微信 FTS5 数据库的 `MMFtsTokenizer` 不由本候选伪造；零内容 MATCH 初始化查询预期仍为 `no such tokenizer`，manifest 中的 `mmfts_tokenizer` 必须保持 `false`。CipherTalk 当前不直接依赖微信原始 FTS 库；若未来要求完整原始 FTS parity，需要单独实现并单独验收。
+直接 SQLite C API 不等价于完整 WCDB CommonCore 初始化。当前微信 FTS5 数据库的 `MMFtsTokenizer` 不由本候选伪造；零内容 MATCH 初始化查询预期仍为 `no such tokenizer`，manifest 中的 `mmfts_tokenizer` 必须保持 `false`。CloudLight WeChat 当前不直接依赖微信原始 FTS 库；若未来要求完整原始 FTS parity，需要单独实现并单独验收。
 
 该候选不是生产替换物，也不代表高级业务接口、完整 WCDB/FTS parity 或发布包已经完成。

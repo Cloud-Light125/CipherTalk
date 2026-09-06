@@ -1,5 +1,5 @@
 /**
- * CipherTalk 插件 SDK（单文件 ESM，无依赖）。
+ * CloudLight WeChat 插件 SDK（单文件 ESM，无依赖；公开包名保留 ciphertalk-plugin-sdk）。
  *
  * 用法：
  *   import { connect } from './ciphertalk-plugin-sdk.js'

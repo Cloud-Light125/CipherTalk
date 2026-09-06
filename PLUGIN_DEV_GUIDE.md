@@ -1,6 +1,6 @@
-# CipherTalk 插件开发指南
+# CloudLight WeChat 插件开发指南
 
-CipherTalk 插件是纯前端应用（HTML/JS/CSS），运行在独立沙箱 iframe 中，
+CloudLight WeChat 插件是纯前端应用（HTML/JS/CSS），运行在独立沙箱 iframe 中，
 通过 SDK 调用宿主能力（数据查询、媒体、转写、搜索、导出、AI 等）。
 任何框架都可以用（React/Vue/Svelte/原生），构建产物是静态文件即可。
 
@@ -46,7 +46,7 @@ const { sessions } = await api.data.sessions.list({ limit: 50 })
 document.body.textContent = `共 ${sessions.length} 个会话`
 ```
 
-**加载调试：** CipherTalk 设置 → 插件 → 打开「插件开发者模式」→
+**加载调试：** CloudLight WeChat 设置 → 插件 → 打开「插件开发者模式」→
 「加载本地插件目录」选中 `my-plugin/`，启用（确认权限）后侧边栏出现菜单入口。
 
 ## 2. 脚手架 CLI
@@ -592,7 +592,7 @@ node plugin-sdk/cli.cjs pack my-plugin
 
 ### 如何调试插件
 
-宿主的 DevTools 只在**从源码运行的开发版**（`npm run dev` 起的 CipherTalk）里可用；
+宿主的 DevTools 只在**从源码运行的开发版**（`npm run dev` 起的 CloudLight WeChat）里可用；
 **正式安装版禁用了 DevTools**（F12 / 右键「检查」都没有，与「插件开发者模式」无关）。
 所以按场景选调试方式：
 
@@ -600,7 +600,7 @@ node plugin-sdk/cli.cjs pack my-plugin
   `npm run dev` 后浏览器直接打开它，Chrome DevTools 全功能断点、实时改样式。
   局限：`connect()` 依赖宿主握手，浏览器里不会 resolve，涉及 `api.*` 的代码会一直
   等待——把它们放在「已连接才执行」分支里，或先用假数据 mock。
-- **完整联调（含 `api.*` 真实数据）** → 需要开发版宿主：从 CipherTalk 源码
+- **完整联调（含 `api.*` 真实数据）** → 需要开发版宿主：从 CloudLight WeChat 源码
   `npm run dev` 启动，`F12` 或 `Ctrl+Shift+I` 开 DevTools，在 Console / Sources
   顶部的 frame（iframe）下拉里切到插件帧（`localhost:5173` 或 `ct-plugin://…`）断点。
 - **正式安装版里排错** → 没有 DevTools，用 `api.ui.toast()` 或直接在页面上渲染

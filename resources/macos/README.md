@@ -1,6 +1,6 @@
 # macOS Native Resources
 
-这个目录是 CipherTalk 的 macOS 原生产物落点。
+这个目录是 CloudLight WeChat 的 macOS 原生产物落点。
 
 当前仓库会长期保留的静态文件：
 

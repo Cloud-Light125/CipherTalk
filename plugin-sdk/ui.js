@@ -1,5 +1,5 @@
 /**
- * CipherTalk 插件 UI 组件库（React，单文件 ESM，SDK 的 `/ui` 子路径导出）。
+ * CloudLight WeChat 插件 UI 组件库（React，单文件 ESM，SDK 的 `/ui` 子路径导出）。
  *
  * 这些组件是宿主注入的 `.ct-*` 样式类的薄封装——**不自带 CSS**，观感与暗色
  * 全部由宿主在握手时注入的组件库提供（见本包 connect()）。

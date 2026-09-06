@@ -36,7 +36,7 @@ async function shutdown(code = 0) {
     await mcpServer?.close?.()
   } catch (error) {
     if (!isClosedPipeError(error)) {
-      writeDiagnostic(`[CipherTalk MCP] close error: ${String(error)}\n`)
+      writeDiagnostic(`[CloudLight WeChat MCP] close error: ${String(error)}\n`)
     }
   } finally {
     clearTimeout(forceExitTimer)
@@ -81,12 +81,12 @@ function installProcessHandlers() {
     if (isClosedPipeError(error)) {
       process.exit(0)
     }
-    writeDiagnostic(`[CipherTalk MCP] uncaughtException: ${String(error)}\n`)
+    writeDiagnostic(`[CloudLight WeChat MCP] uncaughtException: ${String(error)}\n`)
     void shutdown(1)
   })
 
   process.on('unhandledRejection', (error) => {
-    writeDiagnostic(`[CipherTalk MCP] unhandledRejection: ${String(error)}\n`)
+    writeDiagnostic(`[CloudLight WeChat MCP] unhandledRejection: ${String(error)}\n`)
     void shutdown(1)
   })
 }
@@ -98,9 +98,9 @@ export async function bootstrapCipherTalkMcpServer() {
     mcpServer = createCipherTalkMcpServer()
     const transport = new StdioServerTransport()
     await mcpServer.connect(transport)
-    writeDiagnostic('[CipherTalk MCP] stdio server started\n')
+    writeDiagnostic('[CloudLight WeChat MCP] stdio server started\n')
   } catch (error) {
-    writeDiagnostic(`[CipherTalk MCP] startup failed: ${String(error)}\n`)
+    writeDiagnostic(`[CloudLight WeChat MCP] startup failed: ${String(error)}\n`)
     await shutdown(1)
   }
 }

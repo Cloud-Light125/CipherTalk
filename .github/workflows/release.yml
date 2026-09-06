@@ -22,6 +22,9 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      product_name: ${{ steps.version.outputs.product_name }}
+      win_artifact_name: ${{ steps.version.outputs.win_artifact_name }}
+      mac_artifact_name: ${{ steps.version.outputs.mac_artifact_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -35,13 +38,28 @@ jobs:
           node-version: 22.12.0
           cache: npm
 
-      - name: Read package version
+      - name: Read package release metadata
         id: version
         shell: pwsh
         run: |
           $pkg = Get-Content package.json -Raw | ConvertFrom-Json
-          "version=$($pkg.version)" >> $env:GITHUB_OUTPUT
+          $version = "$($pkg.version)".Trim()
+          $productName = "$($pkg.build.productName)".Trim()
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            Write-Error "package.json version is empty"
+            exit 1
+          }
+          if ([string]::IsNullOrWhiteSpace($productName)) {
+            Write-Error "package.json build.productName is empty"
+            exit 1
+          }
+          $winArtifactName = "$productName-$version-Setup.exe"
+          $macArtifactName = "$productName-$version-Setup.dmg"
+          "version=$version" >> $env:GITHUB_OUTPUT
           "tag=${env:GITHUB_REF_NAME}" >> $env:GITHUB_OUTPUT
+          "product_name=$productName" >> $env:GITHUB_OUTPUT
+          "win_artifact_name=$winArtifactName" >> $env:GITHUB_OUTPUT
+          "mac_artifact_name=$macArtifactName" >> $env:GITHUB_OUTPUT
 
       - name: Validate tag matches package version
         shell: pwsh
@@ -116,8 +134,7 @@ jobs:
       - name: Validate build artifacts
         shell: pwsh
         run: |
-          $version = "${{ needs.prepare-meta.outputs.version }}"
-          $installer = "release/CipherTalk-$version-Setup.exe"
+          $installer = "release/${{ needs.prepare-meta.outputs.win_artifact_name }}"
           if (-not (Test-Path $installer)) {
             Write-Error "Installer not found: $installer"
             exit 1
@@ -128,7 +145,7 @@ jobs:
         with:
           name: release-binaries-windows
           path: |
-            release/CipherTalk-${{ needs.prepare-meta.outputs.version }}-Setup.exe
+            release/${{ needs.prepare-meta.outputs.win_artifact_name }}
           if-no-files-found: error
 
   build-macos:
@@ -180,8 +197,7 @@ jobs:
 
       - name: Validate build artifacts
         run: |
-          version="${{ needs.prepare-meta.outputs.version }}"
-          dmg="release/CipherTalk-${version}-Setup.dmg"
+          dmg="release/${{ needs.prepare-meta.outputs.mac_artifact_name }}"
           if [ ! -f "$dmg" ]; then
             echo "DMG not found: $dmg" >&2
             exit 1
@@ -192,7 +208,7 @@ jobs:
         with:
           name: release-binaries-macos
           path: |
-            release/CipherTalk-${{ needs.prepare-meta.outputs.version }}-Setup.dmg
+            release/${{ needs.prepare-meta.outputs.mac_artifact_name }}
           if-no-files-found: error
 
   generate-release-body:
@@ -274,9 +290,8 @@ jobs:
       - name: Validate release package
         shell: pwsh
         run: |
-          $version = "${{ needs.prepare-meta.outputs.version }}"
-          $installer = "release/CipherTalk-$version-Setup.exe"
-          $macInstaller = "release/CipherTalk-$version-Setup.dmg"
+          $installer = "release/${{ needs.prepare-meta.outputs.win_artifact_name }}"
+          $macInstaller = "release/${{ needs.prepare-meta.outputs.mac_artifact_name }}"
           if (-not (Test-Path $installer)) {
             Write-Error "Installer not found: $installer"
             exit 1
@@ -295,13 +310,13 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ needs.prepare-meta.outputs.tag }}
-          name: CipherTalk v${{ needs.prepare-meta.outputs.version }}
+          name: ${{ needs.prepare-meta.outputs.product_name }} v${{ needs.prepare-meta.outputs.version }}
           body_path: release/release-body.md
           fail_on_unmatched_files: false
           overwrite_files: false
           files: |
-            release/CipherTalk-${{ needs.prepare-meta.outputs.version }}-Setup.exe
-            release/CipherTalk-${{ needs.prepare-meta.outputs.version }}-Setup.dmg
+            release/${{ needs.prepare-meta.outputs.win_artifact_name }}
+            release/${{ needs.prepare-meta.outputs.mac_artifact_name }}
 
   mirror-r2:
     runs-on: windows-latest
@@ -370,39 +385,61 @@ jobs:
           $env:AWS_DEFAULT_REGION = "auto"
           $endpoint = "https://$($env:R2_ACCOUNT_ID).r2.cloudflarestorage.com"
           $bucket = "s3://$($env:R2_BUCKET_NAME)"
-          $version = "${{ needs.prepare-meta.outputs.version }}"
-          $currentInstaller = "CipherTalk-$version-Setup.exe"
-          $currentMacInstaller = "CipherTalk-$version-Setup.dmg"
+          $productName = "${{ needs.prepare-meta.outputs.product_name }}"
+          $currentInstaller = "${{ needs.prepare-meta.outputs.win_artifact_name }}"
+          $currentMacInstaller = "${{ needs.prepare-meta.outputs.mac_artifact_name }}"
 
-          $existingInstallers = aws s3 ls $bucket --endpoint-url $endpoint | ForEach-Object {
-            $line = $_.ToString().Trim()
-            if ($line -match 'CipherTalk-.*-Setup\.exe$') {
-              ($line -split '\s+')[-1]
+          function Invoke-AwsChecked {
+            param([Parameter(Mandatory = $true)][string[]] $Arguments)
+            & aws @Arguments
+            if ($LASTEXITCODE -ne 0) {
+              throw "AWS CLI command failed with exit code $LASTEXITCODE: aws $($Arguments -join ' ')"
             }
-          } | Where-Object { $_ }
+          }
 
-          $existingMacInstallers = aws s3 ls $bucket --endpoint-url $endpoint | ForEach-Object {
-            $line = $_.ToString().Trim()
-            if ($line -match 'CipherTalk-.*-Setup\.dmg$') {
-              ($line -split '\s+')[-1]
-            }
-          } | Where-Object { $_ }
+          $listArguments = @(
+            's3api', 'list-objects-v2',
+            '--bucket', $env:R2_BUCKET_NAME,
+            '--endpoint-url', $endpoint,
+            '--query', 'Contents[].Key',
+            '--output', 'json'
+          )
+          $rawKeys = & aws @listArguments 2>&1
+          $listExitCode = $LASTEXITCODE
+          if ($listExitCode -ne 0) {
+            throw "Unable to list R2 objects; AWS CLI exited with code $listExitCode: $($rawKeys -join ' ')"
+          }
+          try {
+            $parsedKeys = ($rawKeys -join [Environment]::NewLine) | ConvertFrom-Json
+          } catch {
+            throw "Unable to parse R2 object listing as JSON: $($_.Exception.Message)"
+          }
+          $objectKeys = if ($null -eq $parsedKeys) { @() } else { @($parsedKeys) }
+          $escapedProductName = [regex]::Escape($productName)
+          $winInstallerPattern = "^$escapedProductName-[^/]+-Setup\.exe$"
+          $macInstallerPattern = "^$escapedProductName-[^/]+-Setup\.dmg$"
+          $existingInstallers = @($objectKeys | Where-Object {
+            $_ -is [string] -and $_ -match $winInstallerPattern
+          })
+          $existingMacInstallers = @($objectKeys | Where-Object {
+            $_ -is [string] -and $_ -match $macInstallerPattern
+          })
 
           foreach ($installer in $existingInstallers) {
             if ($installer -ne $currentInstaller) {
-              aws s3 rm "$bucket/$installer" --endpoint-url $endpoint
+              Invoke-AwsChecked @('s3', 'rm', "$bucket/$installer", '--endpoint-url', $endpoint)
             }
           }
 
           foreach ($installer in $existingMacInstallers) {
             if ($installer -ne $currentMacInstaller) {
-              aws s3 rm "$bucket/$installer" --endpoint-url $endpoint
+              Invoke-AwsChecked @('s3', 'rm', "$bucket/$installer", '--endpoint-url', $endpoint)
             }
           }
 
-          aws s3 cp "release/$currentInstaller" "$bucket/$currentInstaller" --endpoint-url $endpoint
-          aws s3 cp "release/$currentMacInstaller" "$bucket/$currentMacInstaller" --endpoint-url $endpoint
-          aws s3 cp "electron/assets/models-dev.json" "$bucket/models-dev.json" --endpoint-url $endpoint --content-type "application/json"
+          Invoke-AwsChecked @('s3', 'cp', "release/$currentInstaller", "$bucket/$currentInstaller", '--endpoint-url', $endpoint)
+          Invoke-AwsChecked @('s3', 'cp', "release/$currentMacInstaller", "$bucket/$currentMacInstaller", '--endpoint-url', $endpoint)
+          Invoke-AwsChecked @('s3', 'cp', 'electron/assets/models-dev.json', "$bucket/models-dev.json", '--endpoint-url', $endpoint, '--content-type', 'application/json')
 
   notify-telegram-success:
     runs-on: windows-latest

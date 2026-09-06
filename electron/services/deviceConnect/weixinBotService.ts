@@ -1052,7 +1052,7 @@ class WeixinBotService {
       const response = await fetch(attachment.url || '', {
         headers: {
           Accept: '*/*',
-          'User-Agent': 'Mozilla/5.0 MicroMessenger CipherTalk',
+          'User-Agent': 'Mozilla/5.0 MicroMessenger CloudLight-WeChat',
         },
         signal: controller.signal,
       })

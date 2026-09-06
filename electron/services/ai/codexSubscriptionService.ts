@@ -370,7 +370,7 @@ class CodexSubscriptionService {
       const headers = new Headers({
         Authorization: `Bearer ${accessToken}`,
         originator: 'ciphertalk',
-        'User-Agent': `CipherTalk/${process.platform}-${process.arch}`,
+        'User-Agent': `CloudLight-WeChat/${process.platform}-${process.arch}`,
       })
       if (accountId) headers.set('ChatGPT-Account-Id', accountId)
       return usageFetch(USAGE_URL, { method: 'GET', headers })
@@ -468,7 +468,7 @@ class CodexSubscriptionService {
       const headers = new Headers({
         Authorization: `Bearer ${accessToken}`,
         originator: 'ciphertalk',
-        'User-Agent': `CipherTalk/${process.platform}-${process.arch}`,
+        'User-Agent': `CloudLight-WeChat/${process.platform}-${process.arch}`,
       })
       if (accountId) headers.set('ChatGPT-Account-Id', accountId)
       return modelsFetch(`${MODELS_URL}?client_version=${MODELS_CLIENT_VERSION}`, { method: 'GET', headers })
@@ -535,7 +535,7 @@ class CodexSubscriptionService {
     const state = url.searchParams.get('state')
     if (!pending || state !== pending.state) {
       response.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
-      response.end(callbackHtml(false, '登录状态无效或已经过期，请回到密语重新登录。'))
+      response.end(callbackHtml(false, '登录状态无效或已经过期，请回到 CloudLight WeChat 重新登录。'))
       return
     }
 

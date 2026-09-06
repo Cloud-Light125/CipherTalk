@@ -226,7 +226,7 @@ function Assert-NoForbiddenPackageContent {
 
 function Resolve-ProcessSnapshot {
     return @(Get-Process -ErrorAction SilentlyContinue |
-        Where-Object { $_.ProcessName -match '(?i)^(electron|ciphertalk)$' } |
+        Where-Object { $_.ProcessName -match '(?i)^(electron|CloudLight WeChat|ciphertalk)$' } |
         Select-Object -ExpandProperty Id)
 }
 

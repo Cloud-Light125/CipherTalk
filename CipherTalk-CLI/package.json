@@ -7,12 +7,12 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Cloud-Light125/CipherTalk.git",
+    "url": "git+https://github.com/Cloud-Light125/CloudLight-WeChat.git",
     "directory": "CipherTalk-CLI"
   },
-  "homepage": "https://github.com/Cloud-Light125/CipherTalk/tree/main/CipherTalk-CLI",
+  "homepage": "https://github.com/Cloud-Light125/CloudLight-WeChat/tree/main/CipherTalk-CLI",
   "bugs": {
-    "url": "https://github.com/Cloud-Light125/CipherTalk/issues"
+    "url": "https://github.com/Cloud-Light125/CloudLight-WeChat/issues"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"

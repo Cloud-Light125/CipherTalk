@@ -14,7 +14,7 @@ async function main() {
   try {
     const response = await fetch(`${SOURCE}/api.json`, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'CipherTalk' }
+      headers: { 'User-Agent': 'CloudLight-WeChat' }
     })
     if (!response.ok) {
       throw new Error(`models.dev 请求失败: ${response.status}`)

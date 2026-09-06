@@ -1,5 +1,5 @@
 /**
- * 密豆：RelayOne 余额在 CipherTalk 里的展示单位，1 元 = 1000 密豆。
+ * 密豆：RelayOne 余额在 CloudLight WeChat 里的展示单位，1 元 = 1000 密豆。
  * 只是展示层换算——服务端计费、充值下单仍然按人民币，界面上不出现真实金额。
  */
 export const MIDOU_PER_CNY = 1000

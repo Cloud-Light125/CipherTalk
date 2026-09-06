@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CipherTalk 插件脚手架 CLI（零依赖，Node 18+）。
+ * CloudLight WeChat 插件脚手架 CLI（零依赖，Node 18+；公开命令名保留 ciphertalk-plugin）。
  *
  * 用法：
  *   node cli.cjs init <目录>     创建插件项目骨架
@@ -195,7 +195,7 @@ function pack(dirArg) {
   writeZip(outPath, files)
   const size = (fs.statSync(outPath).size / 1024).toFixed(1)
   ok(`已打包 ${files.length} 个文件 → ${outPath}（${size} KB）`)
-  console.log('  在 CipherTalk 中通过 设置 → 插件 → 安装插件 导入即可。')
+  console.log('  在 CloudLight WeChat 中通过 设置 → 插件 → 安装插件 导入即可。')
 }
 
 // ===== init =====
@@ -530,19 +530,19 @@ async function init(dirArg, opts = {}) {
     scaffoldReact(dir, manifest)
     ok(`React + HeroUI 插件骨架已创建:${dir}`)
     console.log(`  安装依赖：cd ${dirArg || '.'} && npm install
-  开发：npm run dev（热更新）+ CipherTalk 开发者模式加载本目录
+  开发：npm run dev（热更新）+ CloudLight WeChat 开发者模式加载本目录
   打包：npm run pack → <id>-<version>.ctp`)
   } else if (opts.vite) {
     scaffoldVite(dir, manifest)
     ok(`Vite 插件骨架已创建:${dir}`)
     console.log(`  安装依赖：cd ${dirArg || '.'} && npm install
-  开发：npm run dev（热更新）+ CipherTalk 开发者模式加载本目录
+  开发：npm run dev（热更新）+ CloudLight WeChat 开发者模式加载本目录
   打包：npm run pack → <id>-<version>.ctp`)
   } else {
     fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n')
     scaffoldVanilla(dir, manifest)
     ok(`插件骨架已创建:${dir}`)
-    console.log(`  开发：CipherTalk 设置 → 插件 → 开发者模式 → 加载本地插件目录
+    console.log(`  开发：CloudLight WeChat 设置 → 插件 → 开发者模式 → 加载本地插件目录
   打包：node ${path.relative(process.cwd(), __filename)} pack ${dirArg || '.'}`)
   }
 }
@@ -564,7 +564,7 @@ if (require.main === module) {
   } else if (command === 'init') {
     init(positional[0], { vite: useVite, react: useReact }).catch((e) => fail(String(e)))
   } else {
-    console.log(`CipherTalk 插件脚手架
+    console.log(`CloudLight WeChat 插件脚手架
 
 用法：
   node cli.cjs init <目录> [--vite|--react]   创建插件项目骨架

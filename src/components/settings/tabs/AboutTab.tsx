@@ -7,8 +7,8 @@ interface AboutTabProps {
   appVersion: string
 }
 
-const PROJECT_URL = 'https://github.com/Cloud-Light125/CipherTalk'
-const PROJECT_DISPLAY_NAME = 'Cloud-Light125/CipherTalk'
+const PROJECT_URL = 'https://github.com/Cloud-Light125/CloudLight-WeChat'
+const PROJECT_DISPLAY_NAME = 'Cloud-Light125/CloudLight-WeChat'
 const MAINTAINER_URL = 'https://github.com/Cloud-Light125'
 const WEBSITE_URL = 'https://269332.xyz'
 

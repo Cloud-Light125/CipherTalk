@@ -1,6 +1,6 @@
 # HeroUI 示例插件
 
-用**真正的 HeroUI v3 组件**写 CipherTalk 插件的最小模板：React 19 + Vite 6 +
+用**真正的 HeroUI v3 组件**写 CloudLight WeChat 插件的最小模板：React 19 + Vite 6 +
 HeroUI v3 + Tailwind v4，主题（含暗色）随宿主自动切换。
 
 > 插件跑在隔离 iframe 里，无法共享宿主的 React 组件实例——所以这里是插件
@@ -14,7 +14,7 @@ npm install
 npm run dev           # http://localhost:5173，HMR 热更新
 ```
 
-然后在 CipherTalk：设置 → 插件 → 打开「插件开发者模式」→ 加载本目录。
+然后在 CloudLight WeChat：设置 → 插件 → 打开「插件开发者模式」→ 加载本目录。
 manifest 里声明了 `devServer`，开发模式会直接走 dev server，改代码即时热更新。
 
 > vite base 按模式切换：dev 用 `/dist/`（对齐 manifest 的 `dist/index.html`

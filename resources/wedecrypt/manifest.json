@@ -1,7 +1,7 @@
 {
   "name": "ciphertalk-image-native",
   "version": "source-present-selfbuilt",
-  "vendor": "CipherTalk",
+  "vendor": "CloudLight WeChat",
   "source": "native/image-decrypt",
   "safeNativePlatforms": [
     "win32-x64"

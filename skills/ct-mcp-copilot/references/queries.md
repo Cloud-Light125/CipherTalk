@@ -1,4 +1,4 @@
-# CipherTalk MCP Query Playbook
+# CloudLight WeChat MCP Query Playbook
 
 ## Quick playbooks
 

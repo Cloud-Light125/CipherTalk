@@ -93,7 +93,7 @@ async function loadFavorites() {
   try {
     const caps = await api.capabilities()
     if (!caps.includes('favorites.list')) {
-      throw new Error('当前宿主版本不支持 favorites.list，请升级 CipherTalk 后重试')
+      throw new Error('当前宿主版本不支持 favorites.list，请升级 CloudLight WeChat 后重试')
     }
     // 宿主按页返回（单页上限 2000），翻到 truncated=false 为止；20 页保底防死循环
     const items = []
@@ -261,7 +261,7 @@ ${sections}
 
 ## 备注
 
-- 由 CipherTalk「收藏查询导出」插件自 favorite.db 直接解密导出
+- 由 CloudLight WeChat「收藏查询导出」插件自 favorite.db 直接解密导出
 - 链接类收藏（文章/链接）可直接点击跳转
 - 图片 / 视频 / 语音 / 文件类收藏本体存于微信收藏服务器与本地缓存，此处仅导出元信息
 `

@@ -1,6 +1,6 @@
 # 更新日志
 
-本文档记录了密语 CipherTalk 的所有重要更改。
+本文档记录了 CloudLight WeChat 的所有重要更改。
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目自 2026.6.8 起使用年月日日期版本号；
@@ -722,4 +722,4 @@
 
 ---
 
-更多详细信息请查看 [GitHub Releases](https://github.com/Cloud-Light125/CipherTalk/releases)。
+更多详细信息请查看 [GitHub Releases](https://github.com/Cloud-Light125/CloudLight-WeChat/releases)。
