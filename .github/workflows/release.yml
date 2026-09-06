@@ -4,7 +4,12 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: '已有的 Release tag，例如 v2026.906.3'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -46,6 +51,10 @@ jobs:
           $pkg = Get-Content package.json -Raw | ConvertFrom-Json
           $version = "$($pkg.version)".Trim()
           $productName = "$($pkg.build.productName)".Trim()
+          $tag = "$env:GITHUB_REF_NAME".Trim()
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $tag = "${{ inputs.release_tag }}".Trim()
+          }
           if ([string]::IsNullOrWhiteSpace($version)) {
             Write-Error "package.json version is empty"
             exit 1
@@ -54,10 +63,14 @@ jobs:
             Write-Error "package.json build.productName is empty"
             exit 1
           }
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            Write-Error "Release tag is empty"
+            exit 1
+          }
           $winArtifactName = "$productName-$version-Setup.exe"
           $macArtifactName = "$productName-$version-Setup.dmg"
           "version=$version" >> $env:GITHUB_OUTPUT
-          "tag=${env:GITHUB_REF_NAME}" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
           "product_name=$productName" >> $env:GITHUB_OUTPUT
           "win_artifact_name=$winArtifactName" >> $env:GITHUB_OUTPUT
           "mac_artifact_name=$macArtifactName" >> $env:GITHUB_OUTPUT
