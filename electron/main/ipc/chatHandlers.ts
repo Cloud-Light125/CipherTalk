@@ -27,6 +27,10 @@ function imageBufferToDataUrl(buffer: Buffer): string {
  * chat:new-messages 由 service 事件广播到所有未销毁窗口。
  */
 export function registerChatHandlers(ctx: MainProcessContext): void {
+  const configService = ctx.getConfigService()
+  if (configService) {
+    chatService.setConfigService(configService)
+  }
 
   // 监听增量消息推送
   chatService.on('new-messages', (data) => {

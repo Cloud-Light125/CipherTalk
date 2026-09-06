@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events'
 import { ChatServiceState } from './chat/state'
+import type { ConfigService } from './config'
 import { wcdbService } from './wcdbService'
 import { getRedEnvelopeStatuses, type RedEnvelopeStatus } from './chat/redEnvelopeQueries'
 import type { StatsPartialError } from './statsConstants'
@@ -80,6 +81,11 @@ class ChatService extends EventEmitter {
     return this.state.currentSessionId
   }
 
+  /** 让聊天窗口与启动流程始终读取同一个配置数据库实例。 */
+  setConfigService(configService: ConfigService): void {
+    this.state.configService = configService
+  }
+
   /**
    * 启动屏预加载：DB 连接成功后在后台预热会话列表、联系人和前几个会话的消息。
    * startup.ts 通过 Promise.race 加 5s 超时调用此方法，保证不会无限阻塞启动屏。
@@ -128,7 +134,12 @@ class ChatService extends EventEmitter {
       const decryptKey = String(this.state.configService.get('decryptKey') || '').trim()
 
       if (!wxid || !dbPath || !decryptKey) {
-        return { success: false, error: '数据库配置不完整' }
+        const missing = [
+          !wxid && '微信 ID',
+          !dbPath && '数据库目录',
+          !decryptKey && '解密密钥',
+        ].filter(Boolean).join('、')
+        return { success: false, error: `数据库配置不完整（缺少：${missing}）` }
       }
 
       const opened = await wcdbService.open(dbPath, decryptKey, wxid)

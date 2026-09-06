@@ -20,11 +20,8 @@ function getElectronAppSafe(): any | null {
 }
 
 export function getUserDataPath(): string {
-  const app = getElectronAppSafe()
-  if (app?.getPath) {
-    return app.getPath('userData')
-  }
-
+  // 不依赖 Electron app.setPath 的执行时机。部分服务会在主入口运行前因模块
+  // 导入而初始化；始终返回产品的新数据根目录，杜绝再次写入旧 AppData 目录。
   return getDefaultDataRoot()
 }
 

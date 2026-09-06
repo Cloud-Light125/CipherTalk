@@ -2,7 +2,18 @@ import { ConfigService } from '../config'
 import type { ChatSession, ContactInfo, Message } from './types'
 
 export class ChatServiceState {
-  configService = new ConfigService()
+  private configServiceInstance: ConfigService | null = null
+
+  get configService(): ConfigService {
+    if (!this.configServiceInstance) {
+      this.configServiceInstance = new ConfigService()
+    }
+    return this.configServiceInstance
+  }
+
+  set configService(service: ConfigService) {
+    this.configServiceInstance = service
+  }
 
   // 缓存：会话ID -> 所有包含该会话消息的数据库和表名（增量更新）
   sessionTableCache: Map<string, { dbPath: string; tableName: string }[]> = new Map()

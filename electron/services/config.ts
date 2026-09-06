@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
-import { getDefaultDataRoot, getUserDataPath } from './runtimePaths'
+import { getDefaultDataRoot } from './runtimePaths'
 import type { AccountProfile, AccountProfileInput, AccountProfilePatch } from '../../src/types/account'
 
 const ACCOUNT_FIELD_KEYS = new Set([
@@ -509,8 +509,10 @@ export class ConfigService {
   private dbPath: string
 
   constructor() {
-    const userDataPath = getUserDataPath()
-    this.dbPath = path.join(userDataPath, 'ciphertalk-config.db')
+    // ConfigService 单例可能在 Electron 主入口执行 app.setPath('userData', ...)
+    // 之前就因模块导入而被创建。直接使用稳定的数据根目录，避免不同服务因
+    // 初始化时序分别打开 %APPDATA% 与 Documents 下的两份配置库。
+    this.dbPath = path.join(getDefaultDataRoot(), 'ciphertalk-config.db')
     this.initDatabase()
   }
 
@@ -1131,6 +1133,6 @@ export class ConfigService {
     if (configured && configured.trim().length > 0) {
       return configured
     }
-    return getUserDataPath()
+    return getDefaultDataRoot()
   }
 }
