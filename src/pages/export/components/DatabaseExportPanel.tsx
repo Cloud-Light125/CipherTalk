@@ -20,6 +20,7 @@ export default function DatabaseExportPanel({ database, shared }: DatabaseExport
     searchKeyword,
     setSearchKeyword,
     isLoading,
+    scanError,
     loadDatabases,
     toggleSelectAll,
     startDatabaseExport
@@ -48,13 +49,18 @@ export default function DatabaseExportPanel({ database, shared }: DatabaseExport
         <div className="flex items-center justify-between gap-2">
           <Button variant="tertiary" size="sm" onPress={toggleSelectAll}>{allSelected ? '取消全选' : '全选'}</Button>
           <Typography type="body-xs" className="shrink-0 text-muted">
-            {selected.size > 0 ? `已选 ${selected.size} 个` : `共 ${filteredDatabases.length} 个数据库`}
+            {scanError
+              ? '数据库列表读取失败'
+              : selected.size > 0
+                ? `已选 ${selected.size} 个`
+                : `共 ${filteredDatabases.length} 个数据库`}
           </Typography>
         </div>
 
         <ScrollShadow hideScrollBar className="min-h-0 flex-1" size={32}>
           <DatabaseList
             isLoading={isLoading}
+            scanError={scanError}
             databases={filteredDatabases}
             selected={selected}
             onSelectionChange={setSelected}

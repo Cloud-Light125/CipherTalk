@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: '已有的 Release tag，例如 v2026.906.3'
+        description: '已有的 Release tag，例如 v2026.906.4'
         required: true
         type: string
 

@@ -7,7 +7,7 @@
 **一款现代化的微信聊天记录查看与分析工具**
 
 [![License](https://img.shields.io/badge/license-CC--BY--NC--SA--4.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2026.906.3-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-2026.906.4-green.svg)](package.json)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-0078D6.svg)](https://github.com/Cloud-Light125/CloudLight-WeChat/releases)
 [![Electron](https://img.shields.io/badge/Electron-39-47848F.svg?logo=electron)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react)](https://react.dev/)
@@ -28,8 +28,8 @@ CloudLight WeChat 面向需要整理、查看、检索、备份和归档微信�
 
 请从 [CloudLight WeChat Releases](https://github.com/Cloud-Light125/CloudLight-WeChat/releases) 获取安装包。当前版本的预期文件名为：
 
-- Windows：`CloudLight WeChat-2026.906.3-Setup.exe`
-- macOS：`CloudLight WeChat-2026.906.3-Setup.dmg`
+- Windows：`CloudLight WeChat-2026.906.4-Setup.exe`
+- macOS：`CloudLight WeChat-2026.906.4-Setup.dmg`
 
 Windows 用户下载 `.exe` 后按安装向导操作；macOS 用户打开 `.dmg` 并将应用拖入 Applications。首次使用时，请按应用内引导选择微信数据位置并完成必要的访问授权。
 

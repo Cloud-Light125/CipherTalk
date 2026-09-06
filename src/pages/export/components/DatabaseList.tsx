@@ -1,21 +1,36 @@
 import { Database as DatabaseIcon } from '@gravity-ui/icons'
-import { Spinner, ListBox, Chip, Label, Description, Typography, type Selection } from '@heroui/react'
+import { Alert, Spinner, ListBox, Chip, Label, Description, Typography, type Selection } from '@heroui/react'
 import type { DatabaseFile } from '../types'
 import { formatBytes } from '../utils'
 
 interface DatabaseListProps {
   isLoading: boolean
+  scanError: string | null
   databases: DatabaseFile[]
   selected: Set<string>
   onSelectionChange: (next: Set<string>) => void
 }
 
-export default function DatabaseList({ isLoading, databases, selected, onSelectionChange }: DatabaseListProps) {
+export default function DatabaseList({ isLoading, scanError, databases, selected, onSelectionChange }: DatabaseListProps) {
   if (isLoading) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 text-muted">
         <Spinner size="md" />
         <Typography type="body-sm">扫描中...</Typography>
+      </div>
+    )
+  }
+
+  if (scanError) {
+    return (
+      <div className="flex h-full items-center justify-center p-4">
+        <Alert status="danger" className="w-full max-w-sm">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>无法读取数据库列表</Alert.Title>
+            <Alert.Description>{scanError}</Alert.Description>
+          </Alert.Content>
+        </Alert>
       </div>
     )
   }

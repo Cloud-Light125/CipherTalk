@@ -18,7 +18,7 @@ import type {
   MomentsExportOptions,
   ContactExportOptions,
 } from './exportService'
-import type { DatabaseExportProgress, DatabaseExportResult, DatabaseScanResult } from './databaseExportService'
+import type { DatabaseExportContext, DatabaseExportProgress, DatabaseExportResult, DatabaseScanResult } from './databaseExportService'
 
 const UTILITY_FILE = 'exportUtilityProcess.js'
 const IDLE_EXIT_MS = 180_000
@@ -156,10 +156,10 @@ export class ExportProcessService {
     }
   }
 
-  async scanDatabases(): Promise<DatabaseScanResult> {
+  async scanDatabases(context: DatabaseExportContext): Promise<DatabaseScanResult> {
     // 扫描列表是轻量操作，不占用单任务槽
     try {
-      return await this.call<DatabaseScanResult>('scanDatabases', {})
+      return await this.call<DatabaseScanResult>('scanDatabases', { context })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       return { success: false, error: message }
@@ -172,6 +172,7 @@ export class ExportProcessService {
     requestId: string,
     selectedPaths: string[],
     outputDir: string,
+    context: DatabaseExportContext,
     onProgress?: ProgressFn,
   ): Promise<DatabaseExportResult> {
     if (this.activeRequestId && this.activeRequestId !== requestId) {
@@ -182,7 +183,7 @@ export class ExportProcessService {
     if (onProgress) this.progressHandlers.set(requestId, onProgress)
 
     try {
-      return await this.call<DatabaseExportResult>('exportDatabases', { requestId, selectedPaths, outputDir }, requestId)
+      return await this.call<DatabaseExportResult>('exportDatabases', { requestId, selectedPaths, outputDir, context }, requestId)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       return { success: false, error: message }

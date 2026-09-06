@@ -16,7 +16,7 @@ import { exportService } from './services/exportService'
 import { databaseExportService } from './services/databaseExportService'
 import type { ExportOptions, ExportProgress } from './services/exportService'
 import type { MomentsExportOptions, ContactExportOptions } from './services/exportService'
-import type { DatabaseExportProgress } from './services/databaseExportService'
+import type { DatabaseExportContext, DatabaseExportProgress } from './services/databaseExportService'
 
 const parentPort = process.parentPort
 
@@ -163,16 +163,18 @@ async function handleMessage(msg: any): Promise<void> {
 
       case 'scanDatabases': {
         // 扫描数据库列表：轻量操作，不参与单任务互斥
-        const result = await databaseExportService.scanDatabases()
+        const context = (payload as { context?: unknown } | undefined)?.context as DatabaseExportContext
+        const result = await databaseExportService.scanDatabases(context)
         parentPort!.postMessage({ id, result })
         break
       }
 
       case 'exportDatabases': {
-        const { requestId, selectedPaths, outputDir } = payload as {
+        const { requestId, selectedPaths, outputDir, context } = payload as {
           requestId: string
           selectedPaths: string[]
           outputDir: string
+          context: DatabaseExportContext
         }
         if (activeRequestId && activeRequestId !== requestId) {
           parentPort!.postMessage({ id, error: 'EXPORT_BUSY' })
@@ -184,6 +186,7 @@ async function handleMessage(msg: any): Promise<void> {
           const result = await databaseExportService.exportDatabases(
             selectedPaths,
             outputDir,
+            context,
             makeProgressSender(requestId, id),
           )
           parentPort!.postMessage({ id, result })

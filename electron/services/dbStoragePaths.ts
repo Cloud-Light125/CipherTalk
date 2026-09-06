@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, statSync } from 'fs'
-import { basename, join } from 'path'
+import { existsSync, lstatSync, readdirSync, statSync } from 'fs'
+import { basename, isAbsolute, join, normalize, relative, resolve as resolvePath, sep } from 'path'
 import { ConfigService } from './config'
 
 let configService: ConfigService | null = null
@@ -18,29 +18,50 @@ function getConfigService(): ConfigService {
  */
 export function resolveDbStoragePath(dbPath: string, wxid: string): string | null {
   if (!dbPath) return null
-  const normalized = dbPath.replace(/[\\/]+$/, '')
+  const normalized = normalize(resolvePath(dbPath.trim()))
 
-  if (basename(normalized).toLowerCase() === 'db_storage' && existsSync(normalized)) return normalized
+  if (basename(normalized).toLowerCase() === 'db_storage' && isRealDirectory(normalized)) return normalized
 
   const direct = join(normalized, 'db_storage')
-  if (existsSync(direct)) return direct
+  if (isRealDirectory(direct)) return normalize(direct)
 
-  if (wxid) {
-    const viaWxid = join(normalized, wxid, 'db_storage')
-    if (existsSync(viaWxid)) return viaWxid
+  const normalizedWxid = String(wxid || '').trim()
+  if (normalizedWxid) {
+    const viaWxid = normalize(join(normalized, normalizedWxid, 'db_storage'))
+    if (isPathInside(normalized, viaWxid) && isRealDirectory(viaWxid)) return viaWxid
     try {
-      const lowerWxid = wxid.toLowerCase()
-      for (const entry of readdirSync(normalized)) {
-        const entryPath = join(normalized, entry)
-        try { if (!statSync(entryPath).isDirectory()) continue } catch { continue }
-        const lowerEntry = entry.toLowerCase()
+      const lowerWxid = normalizedWxid.toLowerCase()
+      for (const entry of readdirSync(normalized, { withFileTypes: true })) {
+        if (entry.isSymbolicLink() || !entry.isDirectory()) continue
+        const entryPath = join(normalized, entry.name)
+        const lowerEntry = entry.name.toLowerCase()
         if (lowerEntry !== lowerWxid && !lowerEntry.startsWith(`${lowerWxid}_`)) continue
         const candidate = join(entryPath, 'db_storage')
-        if (existsSync(candidate)) return candidate
+        if (isRealDirectory(candidate)) return normalize(candidate)
       }
     } catch { /* ignore */ }
   }
   return null
+}
+
+function isRealDirectory(candidate: string): boolean {
+  try {
+    const info = lstatSync(candidate)
+    return info.isDirectory() && !info.isSymbolicLink()
+  } catch {
+    return false
+  }
+}
+
+function isPathInside(root: string, candidate: string): boolean {
+  const relativePath = relative(normalize(resolvePath(root)), normalize(resolvePath(candidate)))
+  const comparisonPath = process.platform === 'win32' ? relativePath.toLowerCase() : relativePath
+  return (
+    relativePath !== '' &&
+    comparisonPath !== '..' &&
+    !comparisonPath.startsWith(`..${sep}`) &&
+    !isAbsolute(relativePath)
+  )
 }
 
 /** 从配置直接取 db_storage；未配置或不存在返回 null */

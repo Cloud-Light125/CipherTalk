@@ -1,6 +1,6 @@
 {
   "name": "cloudlight-wechat",
-  "version": "2026.906.3",
+  "version": "2026.906.4",
   "description": "CloudLight WeChat - 微信聊天记录查看工具",
   "author": "Cloud-Light125",
   "homepage": "https://269332.xyz",
@@ -59,6 +59,7 @@
     "test:agent-stream-sanitizer": "node --experimental-strip-types scripts/test-openai-compatible-stream-sanitizer.ts",
     "test:diary-source-budget": "node --experimental-strip-types scripts/test-diary-source-budget.ts",
     "test:agent-context-reset": "node --experimental-strip-types scripts/test-agent-context-reset.ts",
+    "test:database-export": "node scripts/test-database-export.cjs",
     "test:codex-models": "node --experimental-strip-types scripts/test-codex-models-payload.ts",
     "test:video-lookup": "node --experimental-strip-types scripts/test-video-lookup.ts",
     "test:server-id-precision": "node --experimental-strip-types scripts/test-server-id-precision.ts",

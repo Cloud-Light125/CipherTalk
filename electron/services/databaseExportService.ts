@@ -10,11 +10,16 @@
  * BLOB / int64 / text / real / null 全部忠实还原。
  */
 import Database from 'better-sqlite3'
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'fs'
-import { basename, dirname, join, relative } from 'path'
+import { existsSync, lstatSync, mkdirSync, readdirSync, rmSync } from 'fs'
+import { basename, dirname, isAbsolute, join, normalize, relative, resolve, sep } from 'path'
 import { dbAdapter } from './dbAdapter'
-import { getDbStoragePath } from './dbStoragePaths'
-import { ConfigService } from './config'
+import { resolveDbStoragePath } from './dbStoragePaths'
+
+export interface DatabaseExportContext {
+  dbPath: string
+  wxid: string
+  hasDecryptKey: boolean
+}
 
 export interface DatabaseFileInfo {
   path: string
@@ -58,9 +63,46 @@ export interface DatabaseExportResult {
 const QUERY_KIND = 'message'
 const SELECT_BATCH = 1000
 const INSERT_CHUNK = 200
+const DATABASE_SCAN_ERROR = '无法读取当前账号的数据库目录，请检查账号配置后重试。'
+const INVALID_CONTEXT_ERROR = '数据库导出上下文缺失或无效，请检查账号配置后重试。'
+const INVALID_SELECTED_PATH_ERROR = '所选数据库不属于当前账号的 db_storage 目录，已拒绝导出。'
+const MISSING_DECRYPT_KEY_ERROR = '当前账号缺少有效的解密密钥，无法导出数据库。'
 
 function quoteIdent(name: string): string {
   return `"${String(name).replace(/"/g, '""')}"`
+}
+
+function normalizeAbsolutePath(value: string): string {
+  return normalize(resolve(value))
+}
+
+function isPathInside(root: string, candidate: string): boolean {
+  const relativePath = relative(normalizeAbsolutePath(root), normalizeAbsolutePath(candidate))
+  const comparisonPath = process.platform === 'win32' ? relativePath.toLowerCase() : relativePath
+  return (
+    relativePath !== '' &&
+    comparisonPath !== '..' &&
+    !comparisonPath.startsWith(`..${sep}`) &&
+    !isAbsolute(relativePath)
+  )
+}
+
+function isRealDirectory(path: string): boolean {
+  try {
+    const info = lstatSync(path)
+    return info.isDirectory() && !info.isSymbolicLink()
+  } catch {
+    return false
+  }
+}
+
+function isRegularFile(path: string): boolean {
+  try {
+    const info = lstatSync(path)
+    return info.isFile() && !info.isSymbolicLink()
+  } catch {
+    return false
+  }
 }
 
 function walkDbFiles(root: string, depth = 0, acc: string[] = []): string[] {
@@ -72,15 +114,76 @@ function walkDbFiles(root: string, depth = 0, acc: string[] = []): string[] {
     return acc
   }
   for (const entry of entries) {
-    const full = join(root, entry.name)
-    if (entry.isFile()) {
+    if (entry.isSymbolicLink()) continue
+    const full = normalizeAbsolutePath(join(root, entry.name))
+    if (!isPathInside(root, full)) continue
+
+    let info
+    try {
+      info = lstatSync(full)
+    } catch {
+      continue
+    }
+    if (info.isSymbolicLink()) continue
+
+    if (info.isFile()) {
       // 只收 .db 本体；.db-wal / .db-shm / .db-journal 因不以 .db 结尾自然被排除
       if (entry.name.toLowerCase().endsWith('.db')) acc.push(full)
-    } else if (entry.isDirectory()) {
+    } else if (info.isDirectory()) {
       walkDbFiles(full, depth + 1, acc)
     }
   }
   return acc
+}
+
+function isValidDatabaseExportContext(context: unknown): context is DatabaseExportContext {
+  if (!context || typeof context !== 'object') return false
+  const value = context as Partial<DatabaseExportContext>
+  return (
+    typeof value.dbPath === 'string' && value.dbPath.trim().length > 0 &&
+    typeof value.wxid === 'string' && value.wxid.trim().length > 0 &&
+    typeof value.hasDecryptKey === 'boolean'
+  )
+}
+
+function resolveExportRoot(context: unknown): { root: string } | { error: string } {
+  if (!isValidDatabaseExportContext(context)) return { error: INVALID_CONTEXT_ERROR }
+
+  const root = resolveDbStoragePath(context.dbPath.trim(), context.wxid.trim())
+  if (!root || !isRealDirectory(root)) return { error: DATABASE_SCAN_ERROR }
+  return { root: normalizeAbsolutePath(root) }
+}
+
+function isSafePathTree(root: string, candidate: string): boolean {
+  if (!isPathInside(root, candidate)) return false
+
+  const relativePath = relative(normalizeAbsolutePath(root), normalizeAbsolutePath(candidate))
+  const parts = relativePath.split(sep).filter(Boolean)
+  let current = normalizeAbsolutePath(root)
+  for (let index = 0; index < parts.length; index++) {
+    current = normalizeAbsolutePath(join(current, parts[index]))
+    let info
+    try {
+      info = lstatSync(current)
+    } catch {
+      return false
+    }
+    if (info.isSymbolicLink()) return false
+    if (index === parts.length - 1) {
+      if (!info.isFile()) return false
+    } else if (!info.isDirectory()) {
+      return false
+    }
+  }
+  return parts.length > 0
+}
+
+function validateSelectedPath(root: string, selectedPath: unknown): string | null {
+  if (typeof selectedPath !== 'string' || selectedPath.trim().length === 0) return null
+  const candidate = normalizeAbsolutePath(selectedPath)
+  if (!candidate.toLowerCase().endsWith('.db')) return null
+  if (!isSafePathTree(root, candidate)) return null
+  return isRegularFile(candidate) ? candidate : null
 }
 
 function pad2(n: number): string {
@@ -95,26 +198,20 @@ function formatTimestamp(): string {
   )
 }
 
-class DatabaseExportService {
-  private configService: ConfigService
-
-  constructor() {
-    this.configService = new ConfigService()
-  }
-
+export class DatabaseExportService {
   /** 扫描 db_storage 下所有 .db 文件（含体积），供前端左侧列出勾选。 */
-  async scanDatabases(): Promise<DatabaseScanResult> {
+  async scanDatabases(context: DatabaseExportContext): Promise<DatabaseScanResult> {
     try {
-      const root = getDbStoragePath()
-      if (!root) {
-        return { success: false, error: '未找到 db_storage 目录，请先在设置中配置微信数据目录' }
-      }
+      const resolved = resolveExportRoot(context)
+      if ('error' in resolved) return { success: false, error: resolved.error }
+      const { root } = resolved
+
       const files = walkDbFiles(root)
       const databases: DatabaseFileInfo[] = files
         .map((p) => {
           let size = 0
           try {
-            size = statSync(p).size
+            size = lstatSync(p).size
           } catch {
             /* ignore */
           }
@@ -130,8 +227,8 @@ class DatabaseExportService {
         })
         .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
       return { success: true, root, databases }
-    } catch (e) {
-      return { success: false, error: String(e) }
+    } catch {
+      return { success: false, error: DATABASE_SCAN_ERROR }
     }
   }
 
@@ -139,31 +236,37 @@ class DatabaseExportService {
   async exportDatabases(
     selectedPaths: string[],
     outputDir: string,
+    context: DatabaseExportContext,
     onProgress?: (progress: DatabaseExportProgress) => void
   ): Promise<DatabaseExportResult> {
     try {
+      const resolved = resolveExportRoot(context)
+      if ('error' in resolved) return { success: false, error: resolved.error }
+      const { root } = resolved
+
+      if (!isValidDatabaseExportContext(context) || !context.hasDecryptKey) {
+        return { success: false, error: MISSING_DECRYPT_KEY_ERROR }
+      }
       if (!Array.isArray(selectedPaths) || selectedPaths.length === 0) {
         return { success: false, error: '未选择任何数据库' }
       }
-      if (!getDbStoragePath()) {
-        return { success: false, error: '未找到 db_storage 目录，请先配置微信数据目录' }
-      }
-      const key = String(this.configService.get('decryptKey') || '').trim()
-      if (!key) {
-        return { success: false, error: '缺少解密密钥，请先在设置中完成数据库连接配置' }
+
+      const validatedPaths = selectedPaths.map((selectedPath) => validateSelectedPath(root, selectedPath))
+      if (validatedPaths.some((path): path is null => path === null)) {
+        return { success: false, error: INVALID_SELECTED_PATH_ERROR }
       }
 
       const subDir = join(outputDir, `数据库导出_${formatTimestamp()}`)
       mkdirSync(subDir, { recursive: true })
 
-      const total = selectedPaths.length
+      const total = validatedPaths.length
       let successCount = 0
       let failCount = 0
       const tableErrors: DatabaseTableError[] = []
       const usedNames = new Set<string>()
 
       for (let i = 0; i < total; i++) {
-        const srcPath = selectedPaths[i]
+        const srcPath = validatedPaths[i] as string
         const dbName = basename(srcPath)
         onProgress?.({ current: i, total, currentSession: dbName, detail: '', phase: 'exporting' })
 

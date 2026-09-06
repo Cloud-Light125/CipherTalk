@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { exportProcessService } from '../../services/exportProcessService'
 import type { ExportOptions, MomentsExportOptions } from '../../services/exportService'
+import type { DatabaseExportContext } from '../../services/databaseExportService'
 import type { MainProcessContext } from '../context'
 
 /**
@@ -13,6 +14,19 @@ import type { MainProcessContext } from '../context'
  */
 function genRequestId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function readDatabaseExportContext(ctx: MainProcessContext): DatabaseExportContext {
+  const configService = ctx.getConfigService()
+  const dbPath = String(configService?.get('dbPath') || '').trim()
+  const wxid = String(configService?.get('myWxid') || '').trim()
+  const decryptKey = String(configService?.get('decryptKey') || '').trim()
+
+  return {
+    dbPath,
+    wxid,
+    hasDecryptKey: /^[0-9a-fA-F]{64}$/.test(decryptKey)
+  }
 }
 
 export function registerExportHandlers(ctx: MainProcessContext): void {
@@ -60,15 +74,18 @@ export function registerExportHandlers(ctx: MainProcessContext): void {
 
   // 数据库导出（解密落地）
   ipcMain.handle('export:scanDatabases', async () => {
-    return exportProcessService.scanDatabases()
+    const context = readDatabaseExportContext(ctx)
+    return exportProcessService.scanDatabases(context)
   })
 
   ipcMain.handle('export:exportDatabases', async (event, selectedPaths: string[], outputDir: string) => {
     const requestId = genRequestId('databases')
+    const context = readDatabaseExportContext(ctx)
     return exportProcessService.exportDatabases(
       requestId,
       selectedPaths,
       outputDir,
+      context,
       (progress) => event.sender.send('export:progress', progress),
     )
   })
