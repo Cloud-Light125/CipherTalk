@@ -407,7 +407,7 @@ jobs:
             param([Parameter(Mandatory = $true)][string[]] $Arguments)
             & aws @Arguments
             if ($LASTEXITCODE -ne 0) {
-              throw "AWS CLI command failed with exit code $LASTEXITCODE: aws $($Arguments -join ' ')"
+              throw "AWS CLI command failed with exit code ${LASTEXITCODE}: aws $($Arguments -join ' ')"
             }
           }
 
@@ -421,7 +421,7 @@ jobs:
           $rawKeys = & aws @listArguments 2>&1
           $listExitCode = $LASTEXITCODE
           if ($listExitCode -ne 0) {
-            throw "Unable to list R2 objects; AWS CLI exited with code $listExitCode: $($rawKeys -join ' ')"
+            throw "Unable to list R2 objects; AWS CLI exited with code ${listExitCode}: $($rawKeys -join ' ')"
           }
           try {
             $parsedKeys = ($rawKeys -join [Environment]::NewLine) | ConvertFrom-Json
